@@ -1,0 +1,20 @@
+# .htaccess à la racine du site (C:/xampp/htdocs/loi/.htaccess)
+
+<IfModule mod_negotiation.c>
+  Options -Multiviews
+</IfModule>
+
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  # RewriteBase /loi/   # <- à décommenter uniquement si tu as un souci de base path
+
+  # Ne pas réécrire si la cible est déjà un fichier ou un dossier
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
+
+  # /p/123-titre-joli  ->  project.php?id=123
+  RewriteRule ^p/([0-9]+)-?([A-Za-z0-9-]*)$ project.php?id=$1 [QSA,L]
+</IfModule>
+# /tag/fiscalite -> index.php?tag=fiscalite
+RewriteRule ^tag/([A-Za-z0-9-]+)$ index.php?tag=$1 [QSA,L]

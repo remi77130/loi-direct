@@ -141,30 +141,6 @@ unset($_SESSION['comment_draft']);
           </button>
           <button id="shareBtn" class="btn">Partager (copier le lien)</button>
         </div>
-
-
-        <?php
-$tags = [];
-$tg = $mysqli->prepare('SELECT t.name, t.slug FROM project_tags pt JOIN tags t ON t.id=pt.tag_id WHERE pt.project_id=? ORDER BY t.name');
-$tg->bind_param('i', $id);
-$tg->execute();
-$r = $tg->get_result();
-$tags = $r->fetch_all(MYSQLI_ASSOC);
-$tg->close();
-?>
-<?php if ($tags): ?>
-  <div style="margin:10px 0; display:flex; flex-wrap:wrap; gap:6px">
-    <?php foreach ($tags as $tg): ?>
-      <a href="<?= tag_url($tg['slug']) ?>"
-         style="font-size:12px; padding:4px 8px; border:1px solid #334155; border-radius:999px; color:#cbd5e1; text-decoration:none; background:#0b1220">
-         #<?= htmlspecialchars($tg['name'], ENT_QUOTES) ?>
-      </a>
-    <?php endforeach; ?>
-  </div>
-<?php endif; ?>
-
-
-
       </article>
     <?php endif; ?>
   </div>

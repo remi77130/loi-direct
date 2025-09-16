@@ -1,82 +1,67 @@
 <?php
+// index.php
+
+
+
 declare(strict_types=1);
 session_start();
 require __DIR__ . '/db.php';
 require __DIR__ . '/auth.php';
 require __DIR__ . '/config.php';
 
+
 require_login();
 
+
 $user_id = (int)$_SESSION['user_id'];
-$mine    = isset($_GET['mine']) && $_GET['mine'] === '1';
-$q       = trim((string)($_GET['q'] ?? ''));         // recherche libre (texte + tags)
-$tagSlug = trim((string)($_GET['tag'] ?? ''));       // filtre par tag optionnel
+$mine   = isset($_GET['mine']) && $_GET['mine'] === '1';
+$q      = trim((string)($_GET['q'] ?? ''));   // recherche
+$tagSlug = trim((string)($_GET['tag'] ?? ''));   // filtre tag optionnel
+
 
 $page = max(1, (int)($_GET['page'] ?? 1));
 $per  = 10;
 $off  = ($page - 1) * $per;
 
-/* -------- Contexte (pour conserver les filtres) -------- */
+// Garde les filtres de contexte (hors recherche)
 $baseQuery = [];
-if ($mine)           $baseQuery['mine'] = 1;
-if ($tagSlug !== '') $baseQuery['tag']  = $tagSlug;
+if ($mine)            $baseQuery['mine'] = 1;
+if ($tagSlug !== '')  $baseQuery['tag']  = $tagSlug;
 
+// Base pour les liens paginés (on y rajoute 'q' plus bas si présent)
 $qsForPager = $baseQuery;
-if ($q !== '')       $qsForPager['q'] = $q;
+if ($q !== '')        $qsForPager['q'] = $q;
 
-/* -------- WHERE / JOINS -------- */
+
+/* --- WHERE --- */
 $where = "p.status = 'published'";
 $joins = "JOIN users u ON u.id = p.author_id
-          LEFT JOIN (
-            SELECT project_id, COUNT(*) AS cnt
-            FROM likes
-            GROUP BY project_id
-          ) l ON l.project_id = p.id";
+          LEFT JOIN (SELECT project_id, COUNT(*) AS cnt FROM likes GROUP BY project_id) l ON l.project_id = p.id";
 
-$types  = '';
+$types = '';
 $params = [];
 
-if ($mine) {
-  $where  .= " AND p.author_id = ?";
-  $types  .= 'i';
-  $params[] = $user_id;
+if ($mine) { $where .= " AND p.author_id = ?"; $types.='i'; $params[]=$user_id; }
+
+if (!empty($q)) { // si tu as déjà la recherche
+  $where .= " AND (p.title LIKE ? OR p.summary LIKE ? OR p.body_markdown LIKE ?)";
+  $like = '%'.$q.'%'; $types.='sss'; array_push($params,$like,$like,$like);
 }
 
 if ($tagSlug !== '') {
-  $joins  .= " JOIN project_tags pt ON pt.project_id = p.id
-               JOIN tags t ON t.id = pt.tag_id AND t.slug = ?";
-  $types  .= 's';
-  $params[] = $tagSlug;
+  $joins .= " JOIN project_tags pt ON pt.project_id = p.id
+              JOIN tags t ON t.id = pt.tag_id AND t.slug = ?";
+  $types.='s'; $params[]=$tagSlug;
 }
 
-if ($q !== '') {
-  // Recherche texte + tags (tolère #tag)
-  $joins  .= " LEFT JOIN project_tags qpt ON qpt.project_id = p.id
-               LEFT JOIN tags qt ON qt.id = qpt.tag_id";
-
-  $where  .= " AND (p.title LIKE ? OR p.summary LIKE ? OR p.body_markdown LIKE ?
-                    OR qt.name LIKE ? OR qt.slug LIKE ?)";
-  $like     = '%'.$q.'%';
-  $likeTag  = '%'.ltrim($q, '#').'%';
-
-  $types   .= 'sssss';
-  array_push($params, $like, $like, $like, $likeTag, $likeTag);
-}
-
-/* -------- SELECT principal -------- */
-$sql = "SELECT DISTINCT
-          p.id, p.title, p.summary, p.published_at,
-          u.pseudo AS author,
-          COALESCE(l.cnt,0) AS likes_count
+$sql = "SELECT p.id, p.title, p.summary, p.published_at, u.pseudo AS author, COALESCE(l.cnt,0) AS likes_count
         FROM law_projects p
         $joins
         WHERE $where
         ORDER BY p.published_at DESC
         LIMIT ? OFFSET ?";
 
-$types  .= 'ii';
-$params[] = $per;
-$params[] = $off;
+$types.='ii'; array_push($params, $per, $off);
 
 $stmt = $mysqli->prepare($sql) ?: exit('Prepare failed: '.$mysqli->error);
 $stmt->bind_param($types, ...$params);
@@ -85,36 +70,40 @@ $res = $stmt->get_result();
 $projects = $res->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-/* -------- Tags par projet (affichage des chips) -------- */
-$projectIds    = array_column($projects, 'id');
+
+$projectIds = array_column($projects, 'id');
 $tagsByProject = [];
 if ($projectIds) {
   $in = implode(',', array_map('intval', $projectIds));
   $qr = $mysqli->query("SELECT pt.project_id, t.name, t.slug
-                        FROM project_tags pt
-                        JOIN tags t ON t.id = pt.tag_id
+                        FROM project_tags pt JOIN tags t ON t.id=pt.tag_id
                         WHERE pt.project_id IN ($in)
                         ORDER BY t.name");
   while ($row = $qr->fetch_assoc()) {
-    $tagsByProject[(int)$row['project_id']][] = $row;
+    $pid = (int)$row['project_id'];
+    $tagsByProject[$pid][] = $row;
   }
 }
 
-/* -------- Count pour pagination -------- */
+/* Pagination identique (mêmes filtres sans LIMIT/OFFSET) */
 $countSql = "SELECT COUNT(DISTINCT p.id)
              FROM law_projects p
              $joins
              WHERE $where";
 $stmt = $mysqli->prepare($countSql) ?: exit('Prepare failed(count): '.$mysqli->error);
-$bindTypes  = substr($types, 0, -2);                        // retire les 'ii' de LIMIT/OFFSET
-$bindParams = array_slice($params, 0, count($params) - 2);
-if ($bindTypes !== '') $stmt->bind_param($bindTypes, ...$bindParams);
+if ($types !== '') {
+  // enlève les deux derniers 'i' de LIMIT/OFFSET pour binder que les filtres
+  $bindTypes = substr($types, 0, -2);
+  $bindParams = array_slice($params, 0, count($params)-2);
+  if ($bindTypes !== '') $stmt->bind_param($bindTypes, ...$bindParams);
+}
 $stmt->execute();
 $stmt->bind_result($totalRows);
 $stmt->fetch();
 $stmt->close();
 
 $totalPages = max(1, (int)ceil($totalRows / $per));
+
 ?>
 <!doctype html>
 <html lang="fr">
@@ -168,6 +157,9 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
   </div>
 </header>
 
+
+
+
 <main class="wrap">
 
 <?php if ($tagSlug !== ''): ?>
@@ -178,64 +170,76 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
   </div>
 <?php endif; ?>
 
-<?php if ($q !== ''): ?>
-  <div class="meta" style="margin-bottom:10px">Résultats pour « <?= htmlspecialchars($q,ENT_QUOTES); ?> »</div>
-<?php endif; ?>
 
 <?php if (!empty($_SESSION['flash_success'])): ?>
   <div class="card" style="border-color:#14532d;background:#052e16;color:#bbf7d0;margin-bottom:12px">
-    <?= htmlspecialchars($_SESSION['flash_success'], ENT_QUOTES); unset($_SESSION['flash_success']); ?>
+    <?php echo htmlspecialchars($_SESSION['flash_success'], ENT_QUOTES); unset($_SESSION['flash_success']); ?>
   </div>
 <?php endif; ?>
 
-<?php if (!$projects): ?>
-  <div class="empty">Aucun projet pour l’instant.</div>
-<?php else: ?>
-  <?php foreach ($projects as $p): ?>
-    <article class="card">
-      <h3 style="margin:0 0 6px"><?= htmlspecialchars($p['title'],ENT_QUOTES); ?></h3>
-      <div class="meta">
-        Par <?= htmlspecialchars($p['author'],ENT_QUOTES); ?>
-        • Publié le <?= htmlspecialchars(date('d/m/Y H:i', strtotime($p['published_at']??'')),ENT_QUOTES); ?>
-      </div>
-      <p><?= htmlspecialchars($p['summary'],ENT_QUOTES); ?></p>
 
-      <?php $slug = slugify($p['title']); ?>
-      <div style="margin-top:10px">
-        <a class="btn" href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>">Lire</a>
-      </div>
 
-      <?php if (!empty($tagsByProject[(int)$p['id']] ?? [])): ?>
-        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px">
-          <?php foreach ($tagsByProject[(int)$p['id']] as $tg): ?>
-            <a href="<?= tag_url($tg['slug']) ?>"
-               style="font-size:12px; padding:4px 8px; border:1px solid #334155; border-radius:999px; color:#cbd5e1; text-decoration:none; background:#0b1220">
-               #<?= htmlspecialchars($tg['name'], ENT_QUOTES) ?>
-            </a>
-          <?php endforeach; ?>
+  <?php if (!$projects): ?>
+    <div class="empty">Aucun projet pour l’instant.</div>
+  <?php else: ?>
+    <?php foreach ($projects as $p): ?>
+
+
+      <article class="card">
+
+
+
+
+        <h3 style="margin:0 0 6px"><?php echo htmlspecialchars($p['title'],ENT_QUOTES); ?></h3>
+        <div class="meta">
+          Par <?php echo htmlspecialchars($p['author'],ENT_QUOTES); ?>
+          • Publié le <?php echo htmlspecialchars(date('d/m/Y H:i', strtotime($p['published_at']??'')),ENT_QUOTES); ?>
         </div>
-      <?php endif; ?>
+        <p ><?php echo htmlspecialchars($p['summary'],ENT_QUOTES); ?></p>
 
-      <span style="margin-left:8px;font-size:12px;color:#94a3b8">
-        ❤ <?= (int)$p['likes_count']; ?>
-      </span>
-    </article>
-  <?php endforeach; ?>
+<?php $slug = slugify($p['title']); // ?>
+<div style="margin-top:10px">
+  <a class="btn" href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>">Lire</a>
+</div>
+    
 
-  <?php if ($totalPages > 1): ?>
-    <div class="pager">
-      <?php if ($page > 1): ?>
-        <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page-1]) ?>">&laquo; Précédent</a>
-      <?php endif; ?>
-
-      <span style="color:#94a3b8">Page <?= $page; ?> / <?= $totalPages; ?></span>
-
-      <?php if ($page < $totalPages): ?>
-        <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page+1]) ?>">Suivant &raquo;</a>
-      <?php endif; ?>
-    </div>
-  <?php endif; ?>
+<?php if (!empty($tagsByProject[(int)$p['id']] ?? [])): ?>
+  <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px">
+    <?php foreach ($tagsByProject[(int)$p['id']] as $tg): ?>
+      <a href="<?= tag_url($tg['slug']) ?>"
+         style="font-size:12px; padding:4px 8px; border:1px solid #334155; border-radius:999px; color:#cbd5e1; text-decoration:none; background:#0b1220">
+         #<?= htmlspecialchars($tg['name'], ENT_QUOTES) ?>
+      </a>
+    <?php endforeach; ?>
+  </div>
 <?php endif; ?>
+
+
+<span style="margin-left:8px;font-size:12px;color:#94a3b8">
+  ❤ <?php echo (int)$p['likes_count']; ?>
+</span>
+      </article>
+
+
+
+
+
+    <?php endforeach; ?>
+
+    <?php if ($totalPages > 1): ?>
+     <div class="pager">
+    <?php if ($page > 1): ?>
+      <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page-1]) ?>">&laquo; Précédent</a>
+    <?php endif; ?>
+
+    <span style="color:#94a3b8">Page <?= $page; ?> / <?= $totalPages; ?></span>
+
+    <?php if ($page < $totalPages): ?>
+      <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page+1]) ?>">Suivant &raquo;</a>
+    <?php endif; ?>
+  </div>
+    <?php endif; ?>
+  <?php endif; ?>
 </main>
 </body>
 </html>

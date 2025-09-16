@@ -19,9 +19,3 @@ function slugify(string $text): string {
     $text = preg_replace('~-+~', '-', $text);
     return strtolower($text ?: 'projet');
 }
-
-function tag_slug(string $name): string { return slugify($name); }
-function tag_url(string $slug): string { return APP_BASE . '/tag/' . rawurlencode($slug); }
-function project_url(int $id, string $title): string {
-    return APP_BASE . '/p/' . $id . '-' . rawurlencode(slugify($title));
-}

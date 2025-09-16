@@ -1,4 +1,5 @@
 <?php
+// index.php
 declare(strict_types=1);
 session_start();
 require __DIR__ . '/db.php';
@@ -9,14 +10,14 @@ require_login();
 
 $user_id = (int)$_SESSION['user_id'];
 $mine    = isset($_GET['mine']) && $_GET['mine'] === '1';
-$q       = trim((string)($_GET['q'] ?? ''));         // recherche libre (texte + tags)
-$tagSlug = trim((string)($_GET['tag'] ?? ''));       // filtre par tag optionnel
+$q       = trim((string)($_GET['q'] ?? ''));          // recherche libre (texte + tags)
+$tagSlug = trim((string)($_GET['tag'] ?? ''));        // filtre par tag optionnel
 
 $page = max(1, (int)($_GET['page'] ?? 1));
 $per  = 10;
 $off  = ($page - 1) * $per;
 
-/* -------- Contexte (pour conserver les filtres) -------- */
+/* -------- Contexte pour formulaires/links -------- */
 $baseQuery = [];
 if ($mine)           $baseQuery['mine'] = 1;
 if ($tagSlug !== '') $baseQuery['tag']  = $tagSlug;
@@ -37,7 +38,7 @@ $types  = '';
 $params = [];
 
 if ($mine) {
-  $where  .= " AND p.author_id = ?";
+  $where .= " AND p.author_id = ?";
   $types  .= 'i';
   $params[] = $user_id;
 }
@@ -50,15 +51,13 @@ if ($tagSlug !== '') {
 }
 
 if ($q !== '') {
-  // Recherche texte + tags (tolère #tag)
+  // Recherche texte + tags
   $joins  .= " LEFT JOIN project_tags qpt ON qpt.project_id = p.id
                LEFT JOIN tags qt ON qt.id = qpt.tag_id";
-
   $where  .= " AND (p.title LIKE ? OR p.summary LIKE ? OR p.body_markdown LIKE ?
                     OR qt.name LIKE ? OR qt.slug LIKE ?)";
   $like     = '%'.$q.'%';
-  $likeTag  = '%'.ltrim($q, '#').'%';
-
+  $likeTag  = '%'.ltrim($q, '#').'%'; // tolère #mot
   $types   .= 'sssss';
   array_push($params, $like, $like, $like, $likeTag, $likeTag);
 }
@@ -85,8 +84,8 @@ $res = $stmt->get_result();
 $projects = $res->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-/* -------- Tags par projet (affichage des chips) -------- */
-$projectIds    = array_column($projects, 'id');
+/* -------- Récup tags par projet (pour affichage des chips) -------- */
+$projectIds   = array_column($projects, 'id');
 $tagsByProject = [];
 if ($projectIds) {
   $in = implode(',', array_map('intval', $projectIds));
@@ -106,7 +105,7 @@ $countSql = "SELECT COUNT(DISTINCT p.id)
              $joins
              WHERE $where";
 $stmt = $mysqli->prepare($countSql) ?: exit('Prepare failed(count): '.$mysqli->error);
-$bindTypes  = substr($types, 0, -2);                        // retire les 'ii' de LIMIT/OFFSET
+$bindTypes  = substr($types, 0, -2);                               // on enlève les 'ii' de LIMIT/OFFSET
 $bindParams = array_slice($params, 0, count($params) - 2);
 if ($bindTypes !== '') $stmt->bind_param($bindTypes, ...$bindParams);
 $stmt->execute();
