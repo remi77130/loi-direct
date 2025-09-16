@@ -1,0 +1,94 @@
+<?php
+// save_project.php validation serveur + insertion + redirection
+
+declare(strict_types=1);
+session_start();
+require __DIR__ . '/db.php';
+require __DIR__ . '/auth.php';
+require_login();
+
+$errors = [];
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  header('Location: write.php');
+  exit;
+}
+
+// CSRF
+$csrf = $_POST['csrf'] ?? '';
+if (empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $csrf)) {
+  $errors[] = "Session expirée. Recharge la page.";
+}
+
+$title   = trim($_POST['title']   ?? '');
+$summary = trim($_POST['summary'] ?? '');
+$body    = trim($_POST['body']    ?? '');
+$tagsRaw = trim($_POST['tags']    ?? '');
+$userId  = (int)$_SESSION['user_id'];
+
+// Règles métier
+if ($title === '' || mb_strlen($title) > 180) {
+  $errors[] = "Titre obligatoire (≤ 180 caractères).";
+}
+if ($summary === '' || mb_strlen($summary) > 280) {
+  $errors[] = "Objet obligatoire (≤ 280 caractères).";
+}
+if ($body === '') {
+  $errors[] = "Le texte est obligatoire.";
+}
+if (mb_strlen($body) > 30000) {
+  $errors[] = "Le texte dépasse la limite (~30 000 caractères).";
+}
+
+// Tags: max 5, chacun ≤ 24 (alphanum + tiret/underscore/espaces)
+$tagsArr = [];
+if ($tagsRaw !== '') {
+  $candidates = array_slice(array_filter(array_map('trim', explode(',', $tagsRaw))), 0, 5);
+  foreach ($candidates as $t) {
+    if (mb_strlen($t) > 24 || !preg_match('/^[\p{L}\p{N}_\- ]+$/u', $t)) {
+      $errors[] = "Tag invalide: \"{$t}\" (≤24 car., lettres/chiffres/espace/_/-)";
+    } else {
+      $tagsArr[] = $t;
+    }
+  }
+}
+
+if ($errors) {
+  // On renvoie vers l’éditeur avec messages en session (flash pauvre)
+  $_SESSION['flash_errors'] = $errors;
+  $_SESSION['draft'] = [
+    'title'=>$title, 'summary'=>$summary, 'body'=>$body, 'tags'=>$tagsRaw
+  ];
+  header('Location: write.php');
+  exit;
+}
+
+// Insertion
+$stmt = $mysqli->prepare('INSERT INTO law_projects (author_id, title, summary, body_markdown, status, published_at) VALUES (?,?,?,?, "published", NOW())');
+$stmt->bind_param('isss', $userId, $title, $summary, $body);
+$ok = $stmt->execute();
+$newId = $stmt->insert_id ?? 0;
+$stmt->close();
+
+// (Optionnel) stocker les tags dans un champ JSON si tu as une colonne `tags`
+// Si tu as bien la colonne `tags JSON`, décommente le bloc ci-dessous.
+/*
+$tagsJson = json_encode($tagsArr, JSON_UNESCAPED_UNICODE);
+$u = $mysqli->prepare('UPDATE law_projects SET tags = ? WHERE id = ?');
+$u->bind_param('si', $tagsJson, $newId);
+$u->execute();
+$u->close();
+*/
+
+if (!$ok || !$newId) {
+  $_SESSION['flash_errors'] = ["Échec de publication (BDD)."];
+  $_SESSION['draft'] = [
+    'title'=>$title, 'summary'=>$summary, 'body'=>$body, 'tags'=>$tagsRaw
+  ];
+  header('Location: write.php');
+  exit;
+}
+
+// Succès → page du projet
+header('Location: project.php?id='.(int)$newId);
+exit;
