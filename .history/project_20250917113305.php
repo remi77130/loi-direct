@@ -148,7 +148,15 @@ unset($_SESSION['comment_draft']);
           <button id="shareBtn" class="btn">Partager (copier le lien)</button>
         </div>
 
-  
+        <?php if ((int)$project['author_id'] === (int)$_SESSION['user_id']): ?>
+  <form method="post" action="<?= APP_BASE ?>/project_delete.php"
+        onsubmit="return confirm('Supprimer ce projet ? Cette action est définitive.');"
+        style="margin-left:auto">
+    <input type="hidden" name="project_id" value="<?= (int)$id ?>">
+    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
+    <button class="btn" type="submit" style="background:#7f1d1d">Supprimer</button>
+  </form>
+<?php endif; ?>
 
 
         <?php
@@ -171,15 +179,6 @@ $tg->close();
   </div>
 <?php endif; ?>
 
-<?php if ((int)$project['author_id'] === (int)$_SESSION['user_id']): ?>
-  <form method="post" action="<?= APP_BASE ?>/project_delete.php"
-        onsubmit="return confirm('Supprimer ce projet ? Cette action est définitive.');"
-        style="margin-left:auto">
-    <input type="hidden" name="project_id" value="<?= (int)$id ?>">
-    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
-    <button class="btn" type="submit" style="background:#7f1d1d">Supprimer</button>
-  </form>
-<?php endif; ?>
 
 
       </article>

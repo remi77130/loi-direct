@@ -177,7 +177,7 @@ $tg->close();
         style="margin-left:auto">
     <input type="hidden" name="project_id" value="<?= (int)$id ?>">
     <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
-    <button class="btn" type="submit" style="background:#7f1d1d">Supprimer</button>
+    <button class="btn" type="submit" >Supprimer</button>
   </form>
 <?php endif; ?>
 

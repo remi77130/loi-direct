@@ -7,11 +7,10 @@ require __DIR__ . '/config.php';
 
 require_login();
 
-
 $user_id = (int)$_SESSION['user_id'];
 $mine    = isset($_GET['mine']) && $_GET['mine'] === '1';
 $q = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 100);        // recherche libre (texte + tags)
-$tagSlug =  mb_substr(trim((string)($_GET['tag'] ?? '')),0,10);       // filtre par tag optionnel
+$tagSlug =  mb_substr(trim((string)($_GET['tag'] ?? ''))0,10);       // filtre par tag optionnel
 
 $page = max(1, (int)($_GET['page'] ?? 1));
 $per  = 10;
@@ -153,7 +152,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
       <input type="hidden" name="<?= htmlspecialchars($k,ENT_QUOTES) ?>" value="<?= htmlspecialchars((string)$v,ENT_QUOTES) ?>">
     <?php endforeach; ?>
 
-    <input name="q" value="<?= htmlspecialchars($q, ENT_QUOTES) ?>" placeholder="Rechercher..." maxlength="10"
+    <input name="q" value="<?= htmlspecialchars($q, ENT_QUOTES) ?>" placeholder="Rechercher..."
            style="padding:8px 10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb">
     <button class="btn" type="submit" style="padding:8px 12px">Rechercher</button>
 
@@ -190,17 +189,8 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 <?php endif; ?>
 
 <?php if (!$projects): ?>
-  <div class="empty">
-    <?php if ($q !== '' || $tagSlug !== '' || $mine): ?>
-      Aucun résultat.
-    <?php else: ?>
-      Aucun projet pour l’instant.
-    <?php endif; ?>
-  </div>
+  <div class="empty">Aucun projet pour l’instant.</div>
 <?php else: ?>
-
-
-
   <?php foreach ($projects as $p): ?>
     <article class="card">
       <h3 style="margin:0 0 6px"><?= htmlspecialchars($p['title'],ENT_QUOTES); ?></h3> 
@@ -215,15 +205,11 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
         <a class="btn" href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>">Lire</a>
       </div>
 
-
-
-      
       <?php if (!empty($tagsByProject[(int)$p['id']] ?? [])): ?>
         <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px">
           <?php foreach ($tagsByProject[(int)$p['id']] as $tg): ?>
             <a href="<?= tag_url($tg['slug']) ?>"
-               style="font-size:12px; padding:4px 8px; border:1px solid #334155; 
-               border-radius:999px; color:#cbd5e1; text-decoration:none; background:#0b1220">
+               style="font-size:12px; padding:4px 8px; border:1px solid #334155; border-radius:999px; color:#cbd5e1; text-decoration:none; background:#0b1220">
                #<?= htmlspecialchars($tg['name'], ENT_QUOTES) ?>
             </a>
           <?php endforeach; ?>
@@ -233,20 +219,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
       <span style="margin-left:8px;font-size:12px;color:#94a3b8">
         ❤ <?= (int)$p['likes_count']; ?>
       </span>
-
-
-
-
-
-      
     </article>
-
-
-
-
-
-
-
   <?php endforeach; ?>
 
   <?php if ($totalPages > 1): ?>

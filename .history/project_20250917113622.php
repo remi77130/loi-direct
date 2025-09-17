@@ -132,7 +132,15 @@ unset($_SESSION['comment_draft']);
       </div>
     <?php else: ?>
       <article class="card" style="margin-top:12px">
-        <h1 style="margin:0 0 10px"><?php echo htmlspecialchars($project['title'],ENT_QUOTES); ?></h1>
+        <h1 style="margin:0 0 10px"><?php echo htmlspecialchars($project['title'],ENT_QUOTES); ?></h1> <?php if ((int)$project['author_id'] === (int)$_SESSION['user_id']): ?>
+  <form method="post" action="<?= APP_BASE ?>/project_delete.php"
+        onsubmit="return confirm('Supprimer ce projet ? Cette action est définitive.');"
+        style="margin-left:auto">
+    <input type="hidden" name="project_id" value="<?= (int)$id ?>">
+    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
+    <button class="btn" type="submit" style="background:#7f1d1d">Supprimer</button>
+  </form>
+<?php endif; ?>
         <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">
           Par <?php echo htmlspecialchars($project['author'],ENT_QUOTES); ?>
           • <?php echo htmlspecialchars($project['published_at'] ? date('d/m/Y H:i', strtotime($project['published_at'])) : '', ENT_QUOTES); ?>
@@ -171,15 +179,6 @@ $tg->close();
   </div>
 <?php endif; ?>
 
-<?php if ((int)$project['author_id'] === (int)$_SESSION['user_id']): ?>
-  <form method="post" action="<?= APP_BASE ?>/project_delete.php"
-        onsubmit="return confirm('Supprimer ce projet ? Cette action est définitive.');"
-        style="margin-left:auto">
-    <input type="hidden" name="project_id" value="<?= (int)$id ?>">
-    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
-    <button class="btn" type="submit" style="background:#7f1d1d">Supprimer</button>
-  </form>
-<?php endif; ?>
 
 
       </article>

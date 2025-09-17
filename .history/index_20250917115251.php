@@ -8,6 +8,9 @@ require __DIR__ . '/config.php';
 require_login();
 
 
+if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(16));
+$csrf = $_SESSION['csrf'];
+
 $user_id = (int)$_SESSION['user_id'];
 $mine    = isset($_GET['mine']) && $_GET['mine'] === '1';
 $q = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 100);        // recherche libre (texte + tags)
@@ -233,20 +236,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
       <span style="margin-left:8px;font-size:12px;color:#94a3b8">
         ❤ <?= (int)$p['likes_count']; ?>
       </span>
-
-
-
-
-
-      
     </article>
-
-
-
-
-
-
-
   <?php endforeach; ?>
 
   <?php if ($totalPages > 1): ?>

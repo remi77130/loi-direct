@@ -8,6 +8,9 @@ require __DIR__ . '/config.php';
 require_login();
 
 
+if (empty($_SESSION['csrf'])) $_SESSION['csrf'] = bin2hex(random_bytes(16));
+$csrf = $_SESSION['csrf'];
+
 $user_id = (int)$_SESSION['user_id'];
 $mine    = isset($_GET['mine']) && $_GET['mine'] === '1';
 $q = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 100);        // recherche libre (texte + tags)
@@ -216,8 +219,17 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
       </div>
 
 
+<?php if ($mine): ?>
+  <form method="post" action="<?= APP_BASE ?>/project_delete.php"
+        onsubmit="return confirm('Supprimer ce projet ?');"
+        style="display:inline-block; margin-left:8px">
+    <input type="hidden" name="project_id" value="<?= (int)$p['id'] ?>">
+    <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
+    <button class="btn" type="submit" style="background:#7f1d1d">Supprimer</button>
+  </form>
+<?php endif; ?>
 
-      
+
       <?php if (!empty($tagsByProject[(int)$p['id']] ?? [])): ?>
         <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px">
           <?php foreach ($tagsByProject[(int)$p['id']] as $tg): ?>
@@ -233,20 +245,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
       <span style="margin-left:8px;font-size:12px;color:#94a3b8">
         ❤ <?= (int)$p['likes_count']; ?>
       </span>
-
-
-
-
-
-      
     </article>
-
-
-
-
-
-
-
   <?php endforeach; ?>
 
   <?php if ($totalPages > 1): ?>

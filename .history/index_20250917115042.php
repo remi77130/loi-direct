@@ -7,7 +7,6 @@ require __DIR__ . '/config.php';
 
 require_login();
 
-
 $user_id = (int)$_SESSION['user_id'];
 $mine    = isset($_GET['mine']) && $_GET['mine'] === '1';
 $q = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 100);        // recherche libre (texte + tags)
@@ -215,9 +214,6 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
         <a class="btn" href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>">Lire</a>
       </div>
 
-
-
-      
       <?php if (!empty($tagsByProject[(int)$p['id']] ?? [])): ?>
         <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px">
           <?php foreach ($tagsByProject[(int)$p['id']] as $tg): ?>
@@ -233,20 +229,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
       <span style="margin-left:8px;font-size:12px;color:#94a3b8">
         ❤ <?= (int)$p['likes_count']; ?>
       </span>
-
-
-
-
-
-      
     </article>
-
-
-
-
-
-
-
   <?php endforeach; ?>
 
   <?php if ($totalPages > 1): ?>
