@@ -71,17 +71,6 @@ Texte libre…
 - `code`
 [Un lien](https://exemple.org)"></textarea>
 
-
-
-<div style="margin-top:12px">
-  <label style="display:block;margin-bottom:6px">Images (max 5, JPG/PNG/WebP, 5 Mo chacun)</label>
-  <input type="file" name="images[]" id="images" accept="image/*" multiple>
-  <div id="imgPreview" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px"></div>
-</div>
-
-
-
-
         <label for="tags">Tags (optionnels)</label>
         <input type="text" id="tags" name="tags" placeholder="ex: fiscalité, banques, consommateurs">
         <div class="taghint">Sépare par des virgules. Max 5 tags, 24 caractères chacun.</div>
@@ -181,35 +170,5 @@ function refreshPreview(){
 document.getElementById('btnPreview').addEventListener('click', refreshPreview);
 refreshPreview();
 </script>
-
-
-<script>
-const input = document.getElementById('images');
-const preview = document.getElementById('imgPreview');
-input?.addEventListener('change', () => {
-  preview.innerHTML = '';
-  const files = Array.from(input.files || []).slice(0, 5);
-  files.forEach(f => {
-    const okType = /^image\/(jpeg|png|webp)$/i.test(f.type);
-    const okSize = f.size <= (5 * 1024 * 1024);
-    if (!okType || !okSize) return;
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(f);
-    img.style.maxWidth = '120px';
-    img.style.height = 'auto';
-    img.style.border = '1px solid #334155';
-    img.style.borderRadius = '8px';
-    preview.appendChild(img);
-  });
-});
-</script>
-
-
-
-
-
-
-
-
 </body>
 </html>

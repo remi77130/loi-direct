@@ -224,23 +224,20 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
       <?php if (!empty($p['cover_thumb'])): ?>
   <a
     href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>"
-    style="
-    float: right;
+    style="float: right;
     display: block;
+ 
+    border: 2px solid red;
     border-radius: 10px;
     overflow: hidden;
     margin: 0px;
     position: relative;
-    z-index: 2;
-    box-shadow: 3px 2px 5px #0000004f;"
+    z-index: 2;"
   >
     <img
       src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'], ENT_QUOTES) ?>"
       alt="<?= htmlspecialchars($p['title'], ENT_QUOTES) ?>"
-      style="width: 50px;
-    height: 50px;
-    object-fit: cover;
-    display: block;"
+      style="width:100%;height:100%;object-fit:cover;display:block"
     >
   </a>
 <?php endif; ?>

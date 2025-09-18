@@ -211,7 +211,7 @@ unset($_SESSION['comment_draft']);
         <!-- NB: body_markdown est affiché tel quel en texte ; si tu veux du rendu Markdown/HTML,
              faire un parseur côté serveur et échapper selon le besoin. -->
         <div style="white-space:pre-wrap">
-          <?php echo htmlspecialchars($project['body_markdown'],ENT_QUOTES); ?>
+          <?php echo htmlspecialchrs($project['body_markdown'],ENT_QUOTES); ?>
         </div>
 
         <!-- Actions : like/unlike + partage -->

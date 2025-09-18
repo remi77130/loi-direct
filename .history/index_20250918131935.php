@@ -218,35 +218,11 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
       <?php $slug = slugify($p['title']); ?>
       <div style="margin-top:10px">
         <a class="btn" href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>">Lire</a>
-
       </div>
 
-      <?php if (!empty($p['cover_thumb'])): ?>
-  <a
-    href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>"
-    style="
-    float: right;
-    display: block;
-    border-radius: 10px;
-    overflow: hidden;
-    margin: 0px;
-    position: relative;
-    z-index: 2;
-    box-shadow: 3px 2px 5px #0000004f;"
-  >
-    <img
-      src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'], ENT_QUOTES) ?>"
-      alt="<?= htmlspecialchars($p['title'], ENT_QUOTES) ?>"
-      style="width: 50px;
-    height: 50px;
-    object-fit: cover;
-    display: block;"
-    >
-  </a>
-<?php endif; ?>
 
 
-
+      
       <?php if (!empty($tagsByProject[(int)$p['id']] ?? [])): ?>
         <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px">
           <?php foreach ($tagsByProject[(int)$p['id']] as $tg): ?>

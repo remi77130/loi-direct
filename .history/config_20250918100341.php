@@ -33,7 +33,3 @@ define('UPLOAD_URL', APP_BASE . '/uploads');
 define('UPLOAD_MAX_MB', 5);                        // 5 Mo par image
 define('UPLOAD_MAX_FILES', 5);                     // max 5 images
 define('UPLOAD_ALLOWED', ['image/jpeg','image/png','image/webp']);
-
-    // Thumbnails
-    define('THUMB_MAX_W', 480);
-    define('THUMB_MAX_H', 480);

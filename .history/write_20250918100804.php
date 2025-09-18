@@ -181,35 +181,5 @@ function refreshPreview(){
 document.getElementById('btnPreview').addEventListener('click', refreshPreview);
 refreshPreview();
 </script>
-
-
-<script>
-const input = document.getElementById('images');
-const preview = document.getElementById('imgPreview');
-input?.addEventListener('change', () => {
-  preview.innerHTML = '';
-  const files = Array.from(input.files || []).slice(0, 5);
-  files.forEach(f => {
-    const okType = /^image\/(jpeg|png|webp)$/i.test(f.type);
-    const okSize = f.size <= (5 * 1024 * 1024);
-    if (!okType || !okSize) return;
-    const img = document.createElement('img');
-    img.src = URL.createObjectURL(f);
-    img.style.maxWidth = '120px';
-    img.style.height = 'auto';
-    img.style.border = '1px solid #334155';
-    img.style.borderRadius = '8px';
-    preview.appendChild(img);
-  });
-});
-</script>
-
-
-
-
-
-
-
-
 </body>
 </html>

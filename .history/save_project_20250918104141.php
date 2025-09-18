@@ -107,7 +107,6 @@ if ($tagsArr) {
   }
 }
 
-if (!extension_loaded('gd')) return false;
 
 
 function make_thumbnail(string $srcPath, string $srcMime, string $destPath, int $maxW, int $maxH, ?int &$outW, ?int &$outH): bool {

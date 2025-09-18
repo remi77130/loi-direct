@@ -232,7 +232,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
     margin: 0px;
     position: relative;
     z-index: 2;
-    box-shadow: 3px 2px 5px #0000004f;"
+    box-shadow: 3px 2px 5px #0000004f;
   >
     <img
       src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'], ENT_QUOTES) ?>"

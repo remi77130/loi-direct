@@ -107,7 +107,6 @@ if ($tagsArr) {
   }
 }
 
-if (!extension_loaded('gd')) return false;
 
 
 function make_thumbnail(string $srcPath, string $srcMime, string $destPath, int $maxW, int $maxH, ?int &$outW, ?int &$outH): bool {
@@ -162,59 +161,47 @@ function make_thumbnail(string $srcPath, string $srcMime, string $destPath, int 
 
 // ---- Upload d’images ----
 if ($newId && !empty($_FILES['images']) && is_array($_FILES['images']['name'])) {
-    // dossier cible : /uploads/YYYY/MM
-    $subdir  = date('Y/m');
-    $destDir = UPLOAD_DIR . '/' . $subdir;
-    if (!is_dir($destDir)) { @mkdir($destDir, 0775, true); }
+  // s'assurer que le dossier existe
+  $subdir = date('Y/m');
+  $destDir = UPLOAD_DIR . '/' . $subdir;
+  if (!is_dir($destDir)) { @mkdir($destDir, 0775, true); }
 
-    $mapExt = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
-    $fi = new finfo(FILEINFO_MIME_TYPE);
+  $mapExt = ['image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp'];
+  $fi = new finfo(FILEINFO_MIME_TYPE);
 
-    // préparer une seule fois l’INSERT
+  $total = min(count($_FILES['images']['name']), (int)UPLOAD_MAX_FILES);
+  for ($i = 0; $i < $total; $i++) {
+    if (($_FILES['images']['error'][$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) continue;
+
+    $tmp  = $_FILES['images']['tmp_name'][$i];
+    $size = (int)($_FILES['images']['size'][$i] ?? 0);
+    if ($size <= 0 || $size > UPLOAD_MAX_MB * 1024 * 1024) continue;
+
+    $mime = (string)$fi->file($tmp);
+    if (!in_array($mime, UPLOAD_ALLOWED, true)) continue;
+
+    $imgInfo = @getimagesize($tmp);
+    if (!$imgInfo) continue;
+    [$w, $h] = [$imgInfo[0] ?? null, $imgInfo[1] ?? null];
+
+    $ext = $mapExt[$mime] ?? 'bin';
+    $name = bin2hex(random_bytes(8)) . '.' . $ext;
+    $dest = $destDir . '/' . $name;
+
+    if (!@move_uploaded_file($tmp, $dest)) continue;
+
+    $relPath = $subdir . '/' . $name;
+    $orig = substr((string)($_FILES['images']['name'][$i] ?? ''), 0, 180);
+
     $ins = $mysqli->prepare('INSERT INTO project_images
-      (project_id, path, original_name, mime, size, width, height, thumb_path, thumb_w, thumb_h)
-      VALUES (?,?,?,?,?,?,?,?,?,?)');
-
-    $total = min(count($_FILES['images']['name']), (int)UPLOAD_MAX_FILES);
-    for ($i = 0; $i < $total; $i++) {
-        if (($_FILES['images']['error'][$i] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) continue;
-
-        $tmp  = $_FILES['images']['tmp_name'][$i];
-        $size = (int)($_FILES['images']['size'][$i] ?? 0);
-        if ($size <= 0 || $size > UPLOAD_MAX_MB * 1024 * 1024) continue;
-
-        $mime = (string)$fi->file($tmp);
-        if (!in_array($mime, UPLOAD_ALLOWED, true)) continue;
-
-        $imgInfo = @getimagesize($tmp);
-        if (!$imgInfo) continue;
-        [$w, $h] = [$imgInfo[0] ?? 0, $imgInfo[1] ?? 0];
-
-        $ext  = $mapExt[$mime] ?? 'bin';
-        $name = bin2hex(random_bytes(8)) . '.' . $ext;
-        $dest = $destDir . '/' . $name;
-
-        if (!@move_uploaded_file($tmp, $dest)) continue;
-
-        // valeurs pour la BDD
-        $relPath = $subdir . '/' . $name;
-        $orig    = basename($_FILES['images']['name'][$i] ?? $name);
-
-     // miniature
-$thumbRel = null; $tw = null; $th = null;
-$thumbExt = function_exists('imagewebp') ? 'webp' : ($ext === 'jpg' ? 'jpg' : $ext);
-$thumbDest = $destDir . '/' . pathinfo($name, PATHINFO_FILENAME) . '-thumb.' . $thumbExt;
-
-if (make_thumbnail($dest, $mime, $thumbDest, 600, 600, $tw, $th)) {
-    $thumbRel = $subdir . '/' . basename($thumbDest);
-}
-        // insert
-        $ins->bind_param('isssiiisii', $newId, $relPath, $orig, $mime, $size, $w, $h, $thumbRel, $tw, $th);
-        $ins->execute();
-    }
-
+      (project_id, path, original_name, mime, size, width, height)
+      VALUES (?,?,?,?,?,?,?)');
+    $ins->bind_param('isssiii', $newId, $relPath, $orig, $mime, $size, $w, $h);
+    $ins->execute();
     $ins->close();
+  }
 }
+
 
 
 

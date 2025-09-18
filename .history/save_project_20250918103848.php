@@ -107,7 +107,6 @@ if ($tagsArr) {
   }
 }
 
-if (!extension_loaded('gd')) return false;
 
 
 function make_thumbnail(string $srcPath, string $srcMime, string $destPath, int $maxW, int $maxH, ?int &$outW, ?int &$outH): bool {
@@ -200,14 +199,13 @@ if ($newId && !empty($_FILES['images']) && is_array($_FILES['images']['name'])) 
         $relPath = $subdir . '/' . $name;
         $orig    = basename($_FILES['images']['name'][$i] ?? $name);
 
-     // miniature
-$thumbRel = null; $tw = null; $th = null;
-$thumbExt = function_exists('imagewebp') ? 'webp' : ($ext === 'jpg' ? 'jpg' : $ext);
-$thumbDest = $destDir . '/' . pathinfo($name, PATHINFO_FILENAME) . '-thumb.' . $thumbExt;
+        // miniature
+        $thumbRel = null; $tw = null; $th = null;
+        $thumbDest = $destDir . '/' . pathinfo($name, PATHINFO_FILENAME) . '-thumb.webp';
+        if (make_thumbnail($dest, $mime, $thumbDest, 600, 600, $tw, $th)) {
+            $thumbRel = $subdir . '/' . basename($thumbDest);
+        }
 
-if (make_thumbnail($dest, $mime, $thumbDest, 600, 600, $tw, $th)) {
-    $thumbRel = $subdir . '/' . basename($thumbDest);
-}
         // insert
         $ins->bind_param('isssiiisii', $newId, $relPath, $orig, $mime, $size, $w, $h, $thumbRel, $tw, $th);
         $ins->execute();
