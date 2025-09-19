@@ -1,6 +1,6 @@
 <?php
 /**
- * index.php — Feeed des projet publiés
+ * index.php — Feed des projets publiés
  * - Auth obligatoire (require_login)
  * - Liste paginée, triée par date de publication DESC
  * - Filtres : "Mes projets", recherche texte + #tag, filtre par tag (chip)
@@ -25,11 +25,11 @@ $user_id = (int)$_SESSION['user_id'];
 /** "Mes projets" => limite aux projets de l'auteur courant */
 $mine = isset($_GET['mine']) && $_GET['mine'] === '1';
 
-/** Recherche libre (texte +tags). On borne côté serveur pour éviter les abus. */
-$q = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 10);
+/** Recherche libre (texte + tags). On borne côté serveur pour éviter les abus. */
+$q = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 100);
 
-/** Filtre par tag via son slug (lien chip). On laiise une marge de 10*/
-$tagSlug = mb_substr(trim((string)($_GET['tag'] ?? '')), 0, 10);
+/** Filtre par tag via son slug (lien chip). On laisse une marge de 50 (tags ≤ 24 en création). */
+$tagSlug = mb_substr(trim((string)($_GET['tag'] ?? '')), 0, 50);
 
 /** Pagination (1-based). On borne la taille de page pour éviter les gros scans en prod. */
 $page = max(1, (int)($_GET['page'] ?? 1));
@@ -208,7 +208,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
       <input type="hidden" name="<?= htmlspecialchars($k,ENT_QUOTES) ?>" value="<?= htmlspecialchars((string)$v,ENT_QUOTES) ?>">
     <?php endforeach; ?>
 
-    <input name="q" value="<?= htmlspecialchars($q, ENT_QUOTES) ?>" placeholder="Rechercher..." maxlength="10"
+    <input name="q" value="<?= htmlspecialchars($q, ENT_QUOTES) ?>" placeholder="Rechercher..." maxlength="100"
            style="padding:8px 10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb">
     <button class="btn" type="submit" style="padding:8px 12px">Rechercher</button>
 

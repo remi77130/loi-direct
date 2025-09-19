@@ -83,7 +83,7 @@ Texte libre…
 
 
         <label for="tags">Tags (optionnels)</label>
-        <input type="text" id="tags" name="tags"  maxlength="10" placeholder="ex: fiscalité, banques, (10 caractères ! ) ">
+        <input type="text" id="tags" name="tags"  maxlength="10" placeholder="ex: fiscalité, banques, (10 caractères ! )) ">
       
         <div class="taghint">Sépare par des virgules. Max 5 tags, 10 caractères chacun.</div>
 
