@@ -450,16 +450,7 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 
 
 
-<script>  // MODAL USER
-const BASE = '<?= APP_BASE ?>';
-const modal   = document.getElementById('userModal');
-const umPseudo= document.getElementById('umPseudo');
-const umCount = document.getElementById('umCount');
-const umClose = document.getElementById('umClose');
-const umLink  = document.getElementById('umLink');
-
-
-document.addEventListener('click', async (e) => {
+<script>document.addEventListener('click', async (e) => {
   const a = e.target.closest('.user-link');
   if (!a) return;
   e.preventDefault();
@@ -481,10 +472,6 @@ document.addEventListener('click', async (e) => {
   }
 });
 
-
-umClose.addEventListener('click', ()=> modal.style.display='none');
-modal.addEventListener('click', (e)=> { if (e.target === modal) modal.style.display='none'; });
-document.addEventListener('keydown', (e)=> { if (e.key === 'Escape') modal.style.display='none'; });
 </script>
 
 

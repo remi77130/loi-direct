@@ -26,7 +26,7 @@ try {
   if (!$u->fetch()) {
     $u->close();
     http_response_code(404);
-    echo json_encode(['ok'=>false, 'error'=>'Utilisateur introuvable fils de pute !']);
+    echo json_encode(['ok'=>false, 'error'=>'Utilisateur introuvable']);
     exit;
   }
   $u->close();

@@ -459,7 +459,22 @@ const umClose = document.getElementById('umClose');
 const umLink  = document.getElementById('umLink');
 
 
-document.addEventListener('click', async (e) => {
+document.addEventListener('click', async (e) => {// gère toutes les .user-link (auteurs + header) ouvre laa  modal avec user_card.php
+  const a = e.target.closest('.user-link');
+  if (!a) return;
+  e.preventDefault();
+  const id = a.getAttribute('data-user-id');
+  try {
+    const r = await fetch(`${BASE}/user_card.php?id=${encodeURIComponent(id)}`);
+    const j = await r.json();
+    if (j && j.ok) {
+      umPseudo.textContent = j.pseudo;
+      umCount.textContent  = j.projects_count;
+      umLink.href          = `${BASE}/profile.php?id=${encodeURIComponent(id)}`; // << ici
+
+      modal.style.display  = 'flex';
+    }
+  } document.addEventListener('click', async (e) => {
   const a = e.target.closest('.user-link');
   if (!a) return;
   e.preventDefault();
@@ -477,10 +492,12 @@ document.addEventListener('click', async (e) => {
     modal.style.display  = 'flex';
   } catch (err) {
     console.error('user_card.php error:', err);
-    // Optionnel: alert('Impossible d’ouvrir la fiche utilisateur.');
+    // Optionnel : petit feedback UI
+    // alert('Impossible d’ouvrir la fiche utilisateur.');
   }
 });
 
+});
 
 umClose.addEventListener('click', ()=> modal.style.display='none');
 modal.addEventListener('click', (e)=> { if (e.target === modal) modal.style.display='none'; });

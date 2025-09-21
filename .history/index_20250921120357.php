@@ -26,7 +26,7 @@ $user_id = (int)$_SESSION['user_id'];
 $mine = isset($_GET['mine']) && $_GET['mine'] === '1';
 
 /** Recherche libre (texte +tags). On borne côté serveur pour éviter les abus. */
-$q = mb_substr(preg_replace('/\s+/u',' ', trim((string)($_GET['q'] ?? ''))), 0, 10);
+$q = mb_substr(trim((string)($_GET['q'] ?? '')), 0, 10);
 
 /** Filtre par tag via son slug (lien chip). On laiise une marge de 10*/
 $tagSlug = mb_substr(trim((string)($_GET['tag'] ?? '')), 0, 10);
@@ -459,28 +459,23 @@ const umClose = document.getElementById('umClose');
 const umLink  = document.getElementById('umLink');
 
 
-document.addEventListener('click', async (e) => {
+document.addEventListener('click', async (e) => {// gère toutes les .user-link (auteurs + header) ouvre laa  modal avec user_card.php
   const a = e.target.closest('.user-link');
   if (!a) return;
   e.preventDefault();
-
   const id = a.getAttribute('data-user-id');
   try {
-    const r = await fetch(`${BASE}/user_card.php?id=${encodeURIComponent(id)}`, {cache:'no-store'});
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    const r = await fetch(`${BASE}/user_card.php?id=${encodeURIComponent(id)}`);
     const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'Réponse invalide');
+    if (j && j.ok) {
+      umPseudo.textContent = j.pseudo;
+      umCount.textContent  = j.projects_count;
+      umLink.href          = `${BASE}/profile.php?id=${encodeURIComponent(id)}`; // << ici
 
-    umPseudo.textContent = j.pseudo;
-    umCount.textContent  = j.projects_count;
-    umLink.href          = `${BASE}/profile.php?id=${encodeURIComponent(id)}`;
-    modal.style.display  = 'flex';
-  } catch (err) {
-    console.error('user_card.php error:', err);
-    // Optionnel: alert('Impossible d’ouvrir la fiche utilisateur.');
-  }
+      modal.style.display  = 'flex';
+    }
+  } catch(_) {}
 });
-
 
 umClose.addEventListener('click', ()=> modal.style.display='none');
 modal.addEventListener('click', (e)=> { if (e.target === modal) modal.style.display='none'; });
