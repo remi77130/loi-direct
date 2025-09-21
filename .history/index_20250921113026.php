@@ -408,21 +408,19 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
      <div style="margin-top:12px">
       <a id="umLink" class="btn" href="#" style="display:inline-block">Voir le profil</a>
     </div>
-
+    
   </div>
 </div>
 
 
 
 
-<script>  // MODAL USER
+<script>
 const BASE = '<?= APP_BASE ?>';
 const modal   = document.getElementById('userModal');
 const umPseudo= document.getElementById('umPseudo');
 const umCount = document.getElementById('umCount');
 const umClose = document.getElementById('umClose');
-const umLink  = document.getElementById('umLink');
-
 
 document.addEventListener('click', async (e) => {// gère toutes les .user-link (auteurs + header) ouvre laa  modal avec user_card.php
   const a = e.target.closest('.user-link');
@@ -435,8 +433,6 @@ document.addEventListener('click', async (e) => {// gère toutes les .user-link 
     if (j && j.ok) {
       umPseudo.textContent = j.pseudo;
       umCount.textContent  = j.projects_count;
-      umLink.href          = `${BASE}/profile.php?id=${encodeURIComponent(id)}`; // << ici
-
       modal.style.display  = 'flex';
     }
   } catch(_) {}

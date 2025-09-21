@@ -11,7 +11,7 @@ function random_punchline(string $pseudo): string { // Phrase dacceuil
     "C’est signé {pseudo}. On est bien 👌",
     "{pseudo}, t’es dans la place. Let’s go 🚀",
     "Bienvenue {pseudo} ! À toi de jouer ⚖️",
-    "Inscription validée, — ma p’tite gueule ! 😎",
+    "Inscription validée, {pseudo} — ma p’tite gueule ! 😎",
     "On t’attendait {pseudo} ! Fais-nous rêver ✍️",
     "{pseudo}, le peuple compte sur toi 💪",
     "Own the feed, {pseudo} ! 🏛️",
@@ -57,3 +57,4 @@ define('UPLOAD_ALLOWED', ['image/jpeg','image/png','image/webp']);
     // Thumbnails
     define('THUMB_MAX_W', 480);
     define('THUMB_MAX_H', 480);
+unset($_SESSION['csrf']);

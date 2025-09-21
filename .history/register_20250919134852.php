@@ -3,8 +3,6 @@
 declare(strict_types=1);
 session_start();
 require __DIR__ . '/db.php';
-require __DIR__ . '/config.php';   // <- pour APP_BASE et la punchline
-
 
 // CSRF token léger
 if (empty($_SESSION['csrf'])) {

@@ -347,15 +347,14 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 
       <!-- Miniature cover cliquable → page projet -->
       <?php if (!empty($p['cover_thumb'])): ?>
-        <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>"
-           style="float:right;display:block;border-radius:10px;overflow:hidden;margin:0;position:relative;z-index:2;box-shadow:3px 2px 5px #0000004f;">
-          <img
-            src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'], ENT_QUOTES) ?>"
-            alt="<?= htmlspecialchars($p['title'], ENT_QUOTES) ?>"
-            width="50" height="50" loading="lazy"
-            style="width:50px;height:50px;object-fit:cover;display:block;">
-          </a>
-      <?php endif; ?>
+  <a class="cover" href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>">
+    <img
+      src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'], ENT_QUOTES) ?>"
+      alt="<?= htmlspecialchars($p['title'], ENT_QUOTES) ?>"
+      width="64" height="64" loading="lazy">
+  </a>
+<?php endif; ?>
+
 
       <!-- Chips de tags -->
       <?php if (!empty($tagsByProject[(int)$p['id']] ?? [])): ?>
@@ -395,7 +394,7 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 </main>
 
 
-<!-- MODAL USER -->
+
 
 <div id="userModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50">
   <div style="background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;min-width:280px;max-width:90%">
@@ -404,25 +403,14 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
       <button id="umClose" class="btn" type="button" style="background:#374151;padding:4px 8px">×</button>
     </div>
     <div  class="muted">Projets publiés : <span id="umCount">0</span></div>
-
-     <div style="margin-top:12px">
-      <a id="umLink" class="btn" href="#" style="display:inline-block">Voir le profil</a>
-    </div>
-
   </div>
 </div>
-
-
-
-
-<script>  // MODAL USER
+<script>
 const BASE = '<?= APP_BASE ?>';
 const modal   = document.getElementById('userModal');
 const umPseudo= document.getElementById('umPseudo');
 const umCount = document.getElementById('umCount');
 const umClose = document.getElementById('umClose');
-const umLink  = document.getElementById('umLink');
-
 
 document.addEventListener('click', async (e) => {// gère toutes les .user-link (auteurs + header) ouvre laa  modal avec user_card.php
   const a = e.target.closest('.user-link');
@@ -435,8 +423,6 @@ document.addEventListener('click', async (e) => {// gère toutes les .user-link 
     if (j && j.ok) {
       umPseudo.textContent = j.pseudo;
       umCount.textContent  = j.projects_count;
-      umLink.href          = `${BASE}/profile.php?id=${encodeURIComponent(id)}`; // << ici
-
       modal.style.display  = 'flex';
     }
   } catch(_) {}

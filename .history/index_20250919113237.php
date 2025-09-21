@@ -177,8 +177,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 <style>
   :root{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
   body{background:#0f172a;color:#e5e7eb;margin:0}
-  header{display:flex;justify-content:space-between;align-items:
-    center;padding:16px 20px;background:#111827;position:sticky;top:0;z-index: 5;}
+  header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:#111827;position:sticky;top:0}
   .brand{font-weight:800}
   .nav a{color:#cbd5e1;margin-right:16px;text-decoration:none}
   .nav a.active{color:#fff;font-weight:700}
@@ -189,10 +188,9 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
   .pager{display:flex;gap:8px;justify-content:center;margin:20px 0}
   .pager a{color:#93c5fd;text-decoration:none}
   .empty{color:#94a3b8;text-align:center;margin:40px 0}
+  .muted{color:#94a3b8}
 
-
-
-/* ---------- UI polish pack ---------- */
+  /* ---------- UI polish pack ---------- */
 :root{
   --bg:#0f172a; --card:#111827; --line:#334155;
   --text:#e5e7eb; --muted:#94a3b8; --brand:#2563eb; --chip:#0b1220;
@@ -215,13 +213,11 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 .btn:active{transform:translateY(1px)}
 .btn[disabled]{opacity:.6; cursor:not-allowed}
 
+/* Cards */
+.card{position:relative; overflow:hidden}
+.card + .card{margin-top:14px}
 
 /* Make article layout 2-columns when a cover exists */
-.card:has(.cover){display:grid; grid-template-columns:1fr 64px; gap:14px; align-items:start}
-.cover{grid-column:2; width:64px; height:64px; border-radius:12px; overflow:hidden;
-       box-shadow:0 6px 16px #0003; transform:translateZ(0); transition:transform .15s}
-.cover img{width:100%; height:100%; object-fit:cover; display:block}
-.cover:hover{transform:scale(1.04)}
 
 /* Chips */
 .card a[href*="tag="]{border-radius:999px;background:var(--chip);border:1px solid var(--line)}
@@ -241,9 +237,6 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 #userModal{backdrop-filter:blur(4px)}
 #userModal>div{animation:pop .12s ease-out}
 @keyframes pop{from{transform:scale(.96);opacity:0} to{transform:scale(1);opacity:1}}
-
-
-
 
 
 </style>
@@ -278,15 +271,7 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 
   <!-- Zone utilisateur -->
   <div>
-<span style="margin-right:12px;color:#cbd5e1">
-  Salut,
-  <a href="#"
-     class="user-link"
-     data-user-id="<?= (int)$_SESSION['user_id'] ?>"
-     style="color:#cbd5e1; text-decoration:underline;">
-     <?= htmlspecialchars($_SESSION['pseudo'], ENT_QUOTES) ?>
-  </a> 👋
-</span>
+    <span style="margin-right:12px;color:#cbd5e1">Bonjour, <?= htmlspecialchars($_SESSION['pseudo'],ENT_QUOTES) ?> 👋</span>
     <a class="btn" href="<?= APP_BASE ?>/write.php">Écrire un projet</a>
     <a class="btn" style="margin-left:8px;background:#374151" href="<?= APP_BASE ?>/logout.php">Se déconnecter</a>
   </div>
@@ -395,7 +380,7 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 </main>
 
 
-<!-- MODAL USER -->
+
 
 <div id="userModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50">
   <div style="background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;min-width:280px;max-width:90%">
@@ -404,27 +389,16 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
       <button id="umClose" class="btn" type="button" style="background:#374151;padding:4px 8px">×</button>
     </div>
     <div  class="muted">Projets publiés : <span id="umCount">0</span></div>
-
-     <div style="margin-top:12px">
-      <a id="umLink" class="btn" href="#" style="display:inline-block">Voir le profil</a>
-    </div>
-
   </div>
 </div>
-
-
-
-
-<script>  // MODAL USER
+<script>
 const BASE = '<?= APP_BASE ?>';
 const modal   = document.getElementById('userModal');
 const umPseudo= document.getElementById('umPseudo');
 const umCount = document.getElementById('umCount');
 const umClose = document.getElementById('umClose');
-const umLink  = document.getElementById('umLink');
 
-
-document.addEventListener('click', async (e) => {// gère toutes les .user-link (auteurs + header) ouvre laa  modal avec user_card.php
+document.addEventListener('click', async (e) => {
   const a = e.target.closest('.user-link');
   if (!a) return;
   e.preventDefault();
@@ -435,8 +409,6 @@ document.addEventListener('click', async (e) => {// gère toutes les .user-link 
     if (j && j.ok) {
       umPseudo.textContent = j.pseudo;
       umCount.textContent  = j.projects_count;
-      umLink.href          = `${BASE}/profile.php?id=${encodeURIComponent(id)}`; // << ici
-
       modal.style.display  = 'flex';
     }
   } catch(_) {}

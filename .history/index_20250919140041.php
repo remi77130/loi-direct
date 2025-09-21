@@ -177,8 +177,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 <style>
   :root{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
   body{background:#0f172a;color:#e5e7eb;margin:0}
-  header{display:flex;justify-content:space-between;align-items:
-    center;padding:16px 20px;background:#111827;position:sticky;top:0;z-index: 5;}
+  header{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;background:#111827;position:sticky;top:0}
   .brand{font-weight:800}
   .nav a{color:#cbd5e1;margin-right:16px;text-decoration:none}
   .nav a.active{color:#fff;font-weight:700}
@@ -395,7 +394,7 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 </main>
 
 
-<!-- MODAL USER -->
+
 
 <div id="userModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50">
   <div style="background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;min-width:280px;max-width:90%">
@@ -404,27 +403,16 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
       <button id="umClose" class="btn" type="button" style="background:#374151;padding:4px 8px">×</button>
     </div>
     <div  class="muted">Projets publiés : <span id="umCount">0</span></div>
-
-     <div style="margin-top:12px">
-      <a id="umLink" class="btn" href="#" style="display:inline-block">Voir le profil</a>
-    </div>
-
   </div>
 </div>
-
-
-
-
-<script>  // MODAL USER
+<script>
 const BASE = '<?= APP_BASE ?>';
 const modal   = document.getElementById('userModal');
 const umPseudo= document.getElementById('umPseudo');
 const umCount = document.getElementById('umCount');
 const umClose = document.getElementById('umClose');
-const umLink  = document.getElementById('umLink');
 
-
-document.addEventListener('click', async (e) => {// gère toutes les .user-link (auteurs + header) ouvre laa  modal avec user_card.php
+document.addEventListener('click', async (e) => {
   const a = e.target.closest('.user-link');
   if (!a) return;
   e.preventDefault();
@@ -435,8 +423,6 @@ document.addEventListener('click', async (e) => {// gère toutes les .user-link 
     if (j && j.ok) {
       umPseudo.textContent = j.pseudo;
       umCount.textContent  = j.projects_count;
-      umLink.href          = `${BASE}/profile.php?id=${encodeURIComponent(id)}`; // << ici
-
       modal.style.display  = 'flex';
     }
   } catch(_) {}

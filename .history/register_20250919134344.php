@@ -3,8 +3,6 @@
 declare(strict_types=1);
 session_start();
 require __DIR__ . '/db.php';
-require __DIR__ . '/config.php';   // <- pour APP_BASE et la punchline
-
 
 // CSRF token léger
 if (empty($_SESSION['csrf'])) {
@@ -49,10 +47,11 @@ $_SESSION['flash_success'] = random_punchline($pseudo);
 $base = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
 header('Location: ' . $base . '/index.php');
 exit;
-
-
 } 
-else {
+
+
+
+ else {
                 $errors[] = "Échec d’inscription (BDD).";
             }
             $ins->close();

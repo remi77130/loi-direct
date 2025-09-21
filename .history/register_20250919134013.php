@@ -3,8 +3,6 @@
 declare(strict_types=1);
 session_start();
 require __DIR__ . '/db.php';
-require __DIR__ . '/config.php';   // <- pour APP_BASE et la punchline
-
 
 // CSRF token léger
 if (empty($_SESSION['csrf'])) {
@@ -41,18 +39,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
           if ($ins->execute()) {
-session_regenerate_id(true);
-$_SESSION['user_id'] = $ins->insert_id;
-$_SESSION['pseudo']  = $pseudo;
-$_SESSION['flash_success'] = random_punchline($pseudo);
+    // Sécurité: nouvelle session pour éviter la fixation
+    session_regenerate_id(true);
 
-$base = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-header('Location: ' . $base . '/index.php');
-exit;
+    $_SESSION['user_id'] = $ins->insert_id;
+    $_SESSION['pseudo']  = $pseudo;
+
+    // (optionnel) petit message d’accueil pour index.php
+    $_SESSION['flash_success'] = "Bienvenue, {$pseudo} ! Ton compte est créé ma p'tite gueule ! ";
+
+    // Redirection propre vers le feed
+    $base = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+    header('Location: ' . $base . '/index.php');
 
 
+
+    
+    exit;
 } 
-else {
+
+
+
+ else {
                 $errors[] = "Échec d’inscription (BDD).";
             }
             $ins->close();
@@ -61,6 +69,14 @@ else {
 }
 
 
+session_regenerate_id(true);
+$_SESSION['user_id'] = $ins->insert_id;
+$_SESSION['pseudo']  = $pseudo;
+$_SESSION['flash_success'] = random_punchline($pseudo);
+
+$base = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
+header('Location: ' . $base . '/index.php');
+exit;
 
 ?>
 <!doctype html>

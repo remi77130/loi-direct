@@ -435,8 +435,6 @@ document.addEventListener('click', async (e) => {// gère toutes les .user-link 
     if (j && j.ok) {
       umPseudo.textContent = j.pseudo;
       umCount.textContent  = j.projects_count;
-      umLink.href          = `${BASE}/profile.php?id=${encodeURIComponent(id)}`; // << ici
-
       modal.style.display  = 'flex';
     }
   } catch(_) {}

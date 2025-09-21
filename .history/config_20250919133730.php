@@ -5,13 +5,13 @@ define('PROJECT_PAGE', 'project.php'); // unique
 
 
 
-function random_punchline(string $pseudo): string { // Phrase dacceuil 
+function random_punchline(string $pseudo): string {
   $lines = [
     "Bienvenue {pseudo} ! Ton compte est chaud bouillant 🔥",
     "C’est signé {pseudo}. On est bien 👌",
     "{pseudo}, t’es dans la place. Let’s go 🚀",
     "Bienvenue {pseudo} ! À toi de jouer ⚖️",
-    "Inscription validée, — ma p’tite gueule ! 😎",
+    "Inscription validée, {pseudo} — ma p’tite gueule ! 😎",
     "On t’attendait {pseudo} ! Fais-nous rêver ✍️",
     "{pseudo}, le peuple compte sur toi 💪",
     "Own the feed, {pseudo} ! 🏛️",

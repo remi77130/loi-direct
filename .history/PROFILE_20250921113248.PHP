@@ -1,0 +1,92 @@
+<?php
+declare(strict_types=1);
+session_start();
+require __DIR__.'/config.php';
+require __DIR__.'/db.php';
+require __DIR__.'/auth.php';
+require_login();
+
+$uid = max(1, (int)($_GET['id'] ?? 0));
+$page = max(1, (int)($_GET['page'] ?? 1));
+$per  = 10;
+$off  = ($page-1)*$per;
+
+// Récup user + nombre de projets
+$u = null; $count = 0;
+$stmt = $mysqli->prepare('SELECT id, pseudo FROM users WHERE id=? LIMIT 1');
+$stmt->bind_param('i', $uid);
+$stmt->execute();
+$u = $stmt->get_result()->fetch_assoc();
+$stmt->close();
+
+if (!$u) { http_response_code(404); echo 'Utilisateur introuvable'; exit; }
+
+$stmt = $mysqli->prepare("SELECT COUNT(*) FROM law_projects WHERE author_id=? AND status='published'");
+$stmt->bind_param('i', $uid);
+$stmt->execute(); $stmt->bind_result($count); $stmt->fetch(); $stmt->close();
+
+// Liste des projets (titre + date + miniatures)
+$sql = "SELECT p.id, p.title, p.summary, p.published_at,
+        (SELECT thumb_path FROM project_images i
+          WHERE i.project_id=p.id AND i.thumb_path IS NOT NULL
+          ORDER BY i.id ASC LIMIT 1) AS cover_thumb
+        FROM law_projects p
+        WHERE p.author_id=? AND p.status='published'
+        ORDER BY p.published_at DESC
+        LIMIT ? OFFSET ?";
+$stmt = $mysqli->prepare($sql);
+$stmt->bind_param('iii', $uid, $per, $off);
+$stmt->execute();
+$res = $stmt->get_result();
+$projects = $res->fetch_all(MYSQLI_ASSOC);
+$stmt->close();
+
+$totalPages = max(1, (int)ceil($count/$per));
+?>
+<!doctype html><html lang="fr"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Profil — <?= htmlspecialchars($u['pseudo'],ENT_QUOTES) ?></title>
+<style>
+  body{background:#0f172a;color:#e5e7eb;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+  .wrap{max-width:900px;margin:24px auto;padding:0 16px}
+  .card{background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:14px}
+  .btn{background:#2563eb;color:#fff;border:none;border-radius:10px;padding:8px 12px;text-decoration:none}
+  .meta{font-size:12px;color:#94a3b8}
+</style>
+</head><body>
+  <div class="wrap">
+    <div class="card">
+      <h1 style="margin:0 0 6px">@<?= htmlspecialchars($u['pseudo'],ENT_QUOTES) ?></h1>
+      <div class="meta"><?= (int)$count ?> projet(s) publié(s)</div>
+      <div style="margin-top:10px"><a class="btn" href="<?= APP_BASE ?>/index.php">&larr; Retour au feed</a></div>
+    </div>
+
+    <?php foreach($projects as $p): $slug = slugify($p['title']); ?>
+      <article class="card" style="display:grid;grid-template-columns:1fr 64px;gap:12px;align-items:start">
+        <div>
+          <h3 style="margin:0 0 6px"><?= htmlspecialchars($p['title'],ENT_QUOTES) ?></h3>
+          <div class="meta">Publié le <?= htmlspecialchars(date('d/m/Y H:i', strtotime($p['published_at']??'')),ENT_QUOTES) ?></div>
+          <p><?= htmlspecialchars($p['summary'],ENT_QUOTES) ?></p>
+          <a class="btn" href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug,ENT_QUOTES) ?>">Lire</a>
+        </div>
+        <?php if(!empty($p['cover_thumb'])): ?>
+          <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug,ENT_QUOTES) ?>" style="border-radius:12px;overflow:hidden;box-shadow:0 6px 16px #0003">
+            <img src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'],ENT_QUOTES) ?>" alt="" style="width:64px;height:64px;object-fit:cover;display:block">
+          </a>
+        <?php endif; ?>
+      </article>
+    <?php endforeach; ?>
+
+    <?php if($totalPages>1): ?>
+      <div class="card" style="display:flex;gap:10px;justify-content:center">
+        <?php if($page>1): ?>
+          <a class="btn" href="<?= APP_BASE ?>/profile.php?id=<?= (int)$uid ?>&page=<?= $page-1 ?>">&laquo; Préc.</a>
+        <?php endif; ?>
+        <span class="meta" style="align-self:center">Page <?= $page ?> / <?= $totalPages ?></span>
+        <?php if($page<$totalPages): ?>
+          <a class="btn" href="<?= APP_BASE ?>/profile.php?id=<?= (int)$uid ?>&page=<?= $page+1 ?>">Suiv. &raquo;</a>
+        <?php endif; ?>
+      </div>
+    <?php endif; ?>
+  </div>
+</body></html>
