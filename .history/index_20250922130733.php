@@ -139,8 +139,8 @@ $tagsByProject = [];
 
 if (!empty($projectIds)) {
   // éviter de binder une très grande liste d'un coup
-  foreach (array_chunk($projectIds, 200) as $chunk) {  // array_chunk(..., 200) prévient un bind trop gros d’un coup.
-    $placeholders = implode(',', array_fill(0, count($chunk), '?')) ;// Placeholders dynamiques (?, ?, …) + bind_param ⇒ pas d’injection.
+  foreach (array_chunk($projectIds, 200) as $chunk) {
+    $placeholders = implode(',', array_fill(0, count($chunk), '?'));
     $types        = str_repeat('i', count($chunk));
 
     $sqlTags = "SELECT pt.project_id, t.name, t.slug

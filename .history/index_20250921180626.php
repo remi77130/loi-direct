@@ -132,35 +132,21 @@ $stmt->close();
 
 /* -------------------------------------------------------------------------
  * Récupérer les tags pour chaque projet (affichage chips en liste)
- * - Version préparée + garde IN() + chunking
+ * - On fait un 2e round simple par IN (…) sur les ids de la page courante
  * ---------------------------------------------------------------------- */
-$projectIds    = array_values(array_unique(array_map('intval', array_column($projects, 'id'))));
+$projectIds    = array_column($projects, 'id');
 $tagsByProject = [];
-
-if (!empty($projectIds)) {
-  // éviter de binder une très grande liste d'un coup
-  foreach (array_chunk($projectIds, 200) as $chunk) {  // array_chunk(..., 200) prévient un bind trop gros d’un coup.
-    $placeholders = implode(',', array_fill(0, count($chunk), '?')) ;// Placeholders dynamiques (?, ?, …) + bind_param ⇒ pas d’injection.
-    $types        = str_repeat('i', count($chunk));
-
-    $sqlTags = "SELECT pt.project_id, t.name, t.slug
-                FROM project_tags pt
-                JOIN tags t ON t.id = pt.tag_id
-                WHERE pt.project_id IN ($placeholders)
-                ORDER BY t.name";
-
-    $stmt = $mysqli->prepare($sqlTags) ?: exit('Prepare failed(tags): '.$mysqli->error);
-    $stmt->bind_param($types, ...$chunk);
-    $stmt->execute();
-    $res = $stmt->get_result();
-
-    while ($row = $res->fetch_assoc()) {
-      $tagsByProject[(int)$row['project_id']][] = $row;
-    }
-    $stmt->close();
+if ($projectIds) {
+  $in = implode(',', array_map('intval', $projectIds));
+  $qr = $mysqli->query("SELECT pt.project_id, t.name, t.slug
+                        FROM project_tags pt
+                        JOIN tags t ON t.id = pt.tag_id
+                        WHERE pt.project_id IN ($in)
+                        ORDER BY t.name");
+  while ($row = $qr->fetch_assoc()) {
+    $tagsByProject[(int)$row['project_id']][] = $row;
   }
 }
-
 
 /* -------------------------------------------------------------------------
  * Count total pour pagination — version optimisée

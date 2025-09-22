@@ -50,7 +50,7 @@ $stmt->close();
 
 if (!$u) { // Garde-fou : utilisateur inconnu
   http_response_code(404);
-  echo 'Utilisateur introuvable !';
+  echo 'Utilisateur introuvable !fdp';
   exit;
 }
 

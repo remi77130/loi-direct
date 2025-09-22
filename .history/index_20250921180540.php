@@ -132,35 +132,21 @@ $stmt->close();
 
 /* -------------------------------------------------------------------------
  * Récupérer les tags pour chaque projet (affichage chips en liste)
- * - Version préparée + garde IN() + chunking
+ * - On fait un 2e round simple par IN (…) sur les ids de la page courante
  * ---------------------------------------------------------------------- */
-$projectIds    = array_values(array_unique(array_map('intval', array_column($projects, 'id'))));
+$projectIds    = array_column($projects, 'id');
 $tagsByProject = [];
-
-if (!empty($projectIds)) {
-  // éviter de binder une très grande liste d'un coup
-  foreach (array_chunk($projectIds, 200) as $chunk) {  // array_chunk(..., 200) prévient un bind trop gros d’un coup.
-    $placeholders = implode(',', array_fill(0, count($chunk), '?')) ;// Placeholders dynamiques (?, ?, …) + bind_param ⇒ pas d’injection.
-    $types        = str_repeat('i', count($chunk));
-
-    $sqlTags = "SELECT pt.project_id, t.name, t.slug
-                FROM project_tags pt
-                JOIN tags t ON t.id = pt.tag_id
-                WHERE pt.project_id IN ($placeholders)
-                ORDER BY t.name";
-
-    $stmt = $mysqli->prepare($sqlTags) ?: exit('Prepare failed(tags): '.$mysqli->error);
-    $stmt->bind_param($types, ...$chunk);
-    $stmt->execute();
-    $res = $stmt->get_result();
-
-    while ($row = $res->fetch_assoc()) {
-      $tagsByProject[(int)$row['project_id']][] = $row;
-    }
-    $stmt->close();
+if ($projectIds) {
+  $in = implode(',', array_map('intval', $projectIds));
+  $qr = $mysqli->query("SELECT pt.project_id, t.name, t.slug
+                        FROM project_tags pt
+                        JOIN tags t ON t.id = pt.tag_id
+                        WHERE pt.project_id IN ($in)
+                        ORDER BY t.name");
+  while ($row = $qr->fetch_assoc()) {
+    $tagsByProject[(int)$row['project_id']][] = $row;
   }
 }
-
 
 /* -------------------------------------------------------------------------
  * Count total pour pagination — version optimisée
@@ -486,14 +472,7 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 
 
 
-<script>
-const BASE     = '<?= APP_BASE ?>';
-const modal    = document.getElementById('userModal');
-const umPseudo = document.getElementById('umPseudo');
-const umCount  = document.getElementById('umCount');
-const umClose  = document.getElementById('umClose');
-const umLink   = document.getElementById('umLink');
-
+<script>  // MODAL USER
 const umMsgToggle = document.getElementById('umMsgToggle');
 const umMsgForm   = document.getElementById('umMsgForm');
 const umRecipient = document.getElementById('umRecipient');
@@ -503,7 +482,6 @@ umMsgToggle.addEventListener('click', ()=> {
   umMsgForm.style.display = umMsgForm.style.display==='none' ? 'block' : 'none';
 });
 
-// open modal on user click
 document.addEventListener('click', async (e) => {
   const a = e.target.closest('.user-link');
   if (!a) return;
@@ -519,22 +497,11 @@ document.addEventListener('click', async (e) => {
     umPseudo.textContent = j.pseudo;
     umCount.textContent  = j.projects_count;
     umLink.href          = `${BASE}/profile.php?id=${encodeURIComponent(id)}`;
-    umRecipient.value    = id;
+    umRecipient.value    = id;                 // << pour le formulaire
     umMsgStatus.textContent = '';
-    umMsgForm.style.display = 'none';
-
-    // empêcher l’auto-message
-    if (parseInt(id,10) === <?= (int)$_SESSION['user_id'] ?>) {
-      umMsgToggle.style.display = 'none';
-      umMsgForm.style.display   = 'none';
-    } else {
-      umMsgToggle.style.display = '';
-    }
-
+    umMsgForm.style.display = 'none';         // repli par défaut
     modal.style.display  = 'flex';
-  } catch (err) {
-    console.error('user_card.php error:', err);
-  }
+  } catch (err) { console.error('user_card.php error:', err); }
 });
 
 // submit message
@@ -542,8 +509,6 @@ umMsgForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
   umMsgStatus.textContent = '';
   const fd = new FormData(umMsgForm);
-  const btn = umMsgForm.querySelector('button[type="submit"]');
-  btn.disabled = true;
   try{
     const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
     const j = await r.json();
@@ -551,7 +516,7 @@ umMsgForm.addEventListener('submit', async (e)=>{
       umMsgStatus.style.color = '#34d399';
       umMsgStatus.textContent = 'Message envoyé ✅';
       umMsgForm.reset();
-      refreshBadge();
+      refreshBadge(); // met à jour le badge du destinataire côté lui via polling (toi tu ne verras rien ici)
     }else{
       umMsgStatus.style.color = '#f87171';
       umMsgStatus.textContent = 'Envoi impossible ('+(j.error||'erreur')+')';
@@ -559,17 +524,10 @@ umMsgForm.addEventListener('submit', async (e)=>{
   }catch(_){
     umMsgStatus.style.color = '#f87171';
     umMsgStatus.textContent = 'Erreur réseau.';
-  }finally{
-    btn.disabled = false;
   }
 });
 
-// fermer la modale
-umClose.addEventListener('click', ()=> modal.style.display='none');
-modal.addEventListener('click', (e)=> { if (e.target === modal) modal.style.display='none'; });
-document.addEventListener('keydown', (e)=> { if (e.key === 'Escape') modal.style.display='none'; });
 </script>
-
 
 
 <script>

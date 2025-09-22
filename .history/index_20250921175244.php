@@ -17,11 +17,6 @@ require __DIR__ . '/config.php'; // Constantes (APP_BASE, helpers slugify(), tag
 
 require_login();
 
-if (empty($_SESSION['csrf'])) {
-  $_SESSION['csrf'] = bin2hex(random_bytes(16));
-}
-
-
 /* -------------------------------------------------------------------------
  * Paramètres UI / Filtres
  * ---------------------------------------------------------------------- */
@@ -132,35 +127,21 @@ $stmt->close();
 
 /* -------------------------------------------------------------------------
  * Récupérer les tags pour chaque projet (affichage chips en liste)
- * - Version préparée + garde IN() + chunking
+ * - On fait un 2e round simple par IN (…) sur les ids de la page courante
  * ---------------------------------------------------------------------- */
-$projectIds    = array_values(array_unique(array_map('intval', array_column($projects, 'id'))));
+$projectIds    = array_column($projects, 'id');
 $tagsByProject = [];
-
-if (!empty($projectIds)) {
-  // éviter de binder une très grande liste d'un coup
-  foreach (array_chunk($projectIds, 200) as $chunk) {  // array_chunk(..., 200) prévient un bind trop gros d’un coup.
-    $placeholders = implode(',', array_fill(0, count($chunk), '?')) ;// Placeholders dynamiques (?, ?, …) + bind_param ⇒ pas d’injection.
-    $types        = str_repeat('i', count($chunk));
-
-    $sqlTags = "SELECT pt.project_id, t.name, t.slug
-                FROM project_tags pt
-                JOIN tags t ON t.id = pt.tag_id
-                WHERE pt.project_id IN ($placeholders)
-                ORDER BY t.name";
-
-    $stmt = $mysqli->prepare($sqlTags) ?: exit('Prepare failed(tags): '.$mysqli->error);
-    $stmt->bind_param($types, ...$chunk);
-    $stmt->execute();
-    $res = $stmt->get_result();
-
-    while ($row = $res->fetch_assoc()) {
-      $tagsByProject[(int)$row['project_id']][] = $row;
-    }
-    $stmt->close();
+if ($projectIds) {
+  $in = implode(',', array_map('intval', $projectIds));
+  $qr = $mysqli->query("SELECT pt.project_id, t.name, t.slug
+                        FROM project_tags pt
+                        JOIN tags t ON t.id = pt.tag_id
+                        WHERE pt.project_id IN ($in)
+                        ORDER BY t.name");
+  while ($row = $qr->fetch_assoc()) {
+    $tagsByProject[(int)$row['project_id']][] = $row;
   }
 }
-
 
 /* -------------------------------------------------------------------------
  * Count total pour pagination — version optimisée
@@ -465,51 +446,46 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
       <strong id="umPseudo" style="font-size:16px">Pseudo</strong>
       <button id="umClose" class="btn" type="button" style="background:#374151;padding:4px 8px">×</button>
     </div>
-    <div class="muted">Projets publiés : <span id="umCount">0</span></div>
+    <div  class="muted">Projets publiés : <span id="umCount">0</span></div>
 
-    <div style="margin-top:12px">
+     <div style="margin-top:12px">
       <a id="umLink" class="btn" href="#" style="display:inline-block">Voir le profil</a>
     </div>
 
-    <button id="umMsgToggle" class="btn" type="button" style="margin-top:12px;background:#2563eb">Envoyer un message</button>
-
-    <form id="umMsgForm" style="display:none;margin-top:10px">
-      <textarea name="body" rows="4" maxlength="2000" required placeholder="Ton message…" style="width:100%;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb"></textarea>
-      <input type="hidden" name="recipient_id" id="umRecipient">
-      <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
-      <button class="btn" type="submit" style="margin-top:8px">Envoyer</button>
-      <div id="umMsgStatus" style="font-size:12px;color:#94a3b8;margin-top:6px"></div>
-    </form>
   </div>
+
+<button id="umMsgToggle" class="btn" type="button" style="margin-top:8px;background:#2563eb">Envoyer un message</button>
+
+<form id="umMsgForm" style="display:none;margin-top:10px">
+  <textarea name="body" rows="4" maxlength="2000" placeholder="Ton message…" style="width:100%;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb"></textarea>
+  <input type="hidden" name="recipient_id" id="umRecipient">
+  <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
+  <button class="btn" type="submit" style="margin-top:8px">Envoyer</button>
+  <div id="umMsgStatus" style="font-size:12px;color:#94a3b8;margin-top:6px"></div>
+</form>
+
+
+
 </div>
 
 
 
 
-<script>
-const BASE     = '<?= APP_BASE ?>';
-const modal    = document.getElementById('userModal');
-const umPseudo = document.getElementById('umPseudo');
-const umCount  = document.getElementById('umCount');
-const umClose  = document.getElementById('umClose');
-const umLink   = document.getElementById('umLink');
+<script>  // MODAL USER
+const BASE = '<?= APP_BASE ?>';
+const modal   = document.getElementById('userModal');
+const umPseudo= document.getElementById('umPseudo');
+const umCount = document.getElementById('umCount');
+const umClose = document.getElementById('umClose');
+const umLink  = document.getElementById('umLink');
 
-const umMsgToggle = document.getElementById('umMsgToggle');
-const umMsgForm   = document.getElementById('umMsgForm');
-const umRecipient = document.getElementById('umRecipient');
-const umMsgStatus = document.getElementById('umMsgStatus');
 
-umMsgToggle.addEventListener('click', ()=> {
-  umMsgForm.style.display = umMsgForm.style.display==='none' ? 'block' : 'none';
-});
-
-// open modal on user click
 document.addEventListener('click', async (e) => {
   const a = e.target.closest('.user-link');
   if (!a) return;
   e.preventDefault();
-  const id = a.getAttribute('data-user-id');
 
+  const id = a.getAttribute('data-user-id');
   try {
     const r = await fetch(`${BASE}/user_card.php?id=${encodeURIComponent(id)}`, {cache:'no-store'});
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
@@ -519,57 +495,18 @@ document.addEventListener('click', async (e) => {
     umPseudo.textContent = j.pseudo;
     umCount.textContent  = j.projects_count;
     umLink.href          = `${BASE}/profile.php?id=${encodeURIComponent(id)}`;
-    umRecipient.value    = id;
-    umMsgStatus.textContent = '';
-    umMsgForm.style.display = 'none';
-
-    // empêcher l’auto-message
-    if (parseInt(id,10) === <?= (int)$_SESSION['user_id'] ?>) {
-      umMsgToggle.style.display = 'none';
-      umMsgForm.style.display   = 'none';
-    } else {
-      umMsgToggle.style.display = '';
-    }
-
     modal.style.display  = 'flex';
   } catch (err) {
     console.error('user_card.php error:', err);
+    // Optionnel: alert('Impossible d’ouvrir la fiche utilisateur.');
   }
 });
 
-// submit message
-umMsgForm.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  umMsgStatus.textContent = '';
-  const fd = new FormData(umMsgForm);
-  const btn = umMsgForm.querySelector('button[type="submit"]');
-  btn.disabled = true;
-  try{
-    const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
-    const j = await r.json();
-    if(j.ok){
-      umMsgStatus.style.color = '#34d399';
-      umMsgStatus.textContent = 'Message envoyé ✅';
-      umMsgForm.reset();
-      refreshBadge();
-    }else{
-      umMsgStatus.style.color = '#f87171';
-      umMsgStatus.textContent = 'Envoi impossible ('+(j.error||'erreur')+')';
-    }
-  }catch(_){
-    umMsgStatus.style.color = '#f87171';
-    umMsgStatus.textContent = 'Erreur réseau.';
-  }finally{
-    btn.disabled = false;
-  }
-});
 
-// fermer la modale
 umClose.addEventListener('click', ()=> modal.style.display='none');
 modal.addEventListener('click', (e)=> { if (e.target === modal) modal.style.display='none'; });
 document.addEventListener('keydown', (e)=> { if (e.key === 'Escape') modal.style.display='none'; });
 </script>
-
 
 
 <script>
