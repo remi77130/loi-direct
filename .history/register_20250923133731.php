@@ -67,7 +67,7 @@ else {
             $ins->close();
         }
     }
-
+}
 
 
 
@@ -118,10 +118,6 @@ else {
              pattern="[A-Za-z0-9_]{3,20}" required placeholder="ex: Remi_81">
       <div class="hint">3–20 caractères. Lettres, chiffres et underscore uniquement.</div>
       <div id="status" class="status"></div>
-
-      <label for="password">Mot de passe</label>
-<input type="password" id="password" name="password" minlength="8" required placeholder="••••••••">
-<div class="hint">Min 8 caractères, au moins une lettre et un chiffre.</div>
 
       <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($_SESSION['csrf'], ENT_QUOTES); ?>">
       <button id="submitBtn" class="btn" type="submit" disabled>S’inscrire</button>

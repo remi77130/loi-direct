@@ -262,28 +262,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$blocked) {
 
   <p style="margin-top:12px;font-size:12px;color:#94a3b8">Pas encore inscrit ? <a href="register.php">Créer un compte</a></p>
 </div>
-
-
-
-
-
-
-<script>function get_client_ip(): string { // n’accepte HTTP_X_FORWARDED_FOR que si ton reverse proxy est 
-// configuré pour l’écrire et que seul ce proxy atteint directement ton PHP (sinon c’est forgeable).
-  // Si tu es derrière un proxy (NGINX, Cloudflare...), vérifie que c'est trusted
-  if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
-    // X-Forwarded-For peut contenir une liste "client, proxy1, proxy2"
-    $parts = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
-    $ip = trim($parts[0]);
-    if (filter_var($ip, FILTER_VALIDATE_IP)) return $ip;
-  }
-  if (!empty($_SERVER['REMOTE_ADDR']) && filter_var($_SERVER['REMOTE_ADDR'], FILTER_VALIDATE_IP)) {
-    return $_SERVER['REMOTE_ADDR'];
-  }
-  return '0.0.0.0';
-}
-</script>
-
-
 </body>
 </html>

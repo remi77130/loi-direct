@@ -311,7 +311,7 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
   <nav class="nav">
     <a href="<?= APP_BASE ?>/index.php" class="<?= !$mine ? 'active' : '' ?>">Récents</a>
     <a href="<?= APP_BASE ?>/index.php?mine=1" class="<?= $mine ? 'active' : '' ?>">Mes projets</a>
-    <a href="chat_rooms.php" target="_blank" rel="noopener noreferrer" style="color:red">Créer un salon</a>
+    <a href="chat_rooms.php" target="_blank" rel="noopener noreferrer">Créer un salon</a>
   </nav>
 
   <!-- Formulaire de recherche.

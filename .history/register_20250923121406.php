@@ -22,7 +22,6 @@ if (!hash_equals($_SESSION['csrf'] ?? '', $csrf)) {
 
 else {
         $pseudo = trim($_POST['pseudo'] ?? '');
-        $password = (string)($_POST['password'] ?? '');
 
         // Règles: 3-20, alphanum + underscore
         if (!preg_match('/^[A-Za-z0-9_]{3,20}$/', $pseudo)) {
@@ -39,25 +38,24 @@ else {
             $stmt->close();
         }
 
+        if (!$errors) {
+            // Insert
+            $ins = $mysqli->prepare('INSERT INTO users (pseudo) VALUES (?)');
+            $ins->bind_param('s', $pseudo);
 
-// password basic rules
-        if (mb_strlen($password) < 8) {
-            $errors[] = "Le mot de passe doit faire au minimum 8 caractères.";
-        } elseif (!preg_match('/[A-Za-z]/', $password) || !preg_match('/\d/', $password)) {
-            $errors[] = "Le mot de passe doit contenir au moins une lettre et un chiffre.";
-        }
-        
-        $hash = password_hash($password, PASSWORD_DEFAULT);
-            $ins = $mysqli->prepare('INSERT INTO users (pseudo, password_hash) VALUES (?, ?)');
-            $ins->bind_param('ss', $pseudo, $hash);
-            if ($ins->execute()) {
-                session_regenerate_id(true);
-                $_SESSION['user_id'] = $mysqli->insert_id;
-                $_SESSION['pseudo']  = $pseudo;
-                $_SESSION['flash_success'] = random_punchline($pseudo);
-                $ins->close();
-                header('Location: ' . rtrim(APP_BASE, '/') . '/index.php', true, 303);
-                exit;
+
+          if ($ins->execute()) {
+session_regenerate_id(true);
+$_SESSION['user_id'] = $mysqli->insert_id;
+$_SESSION['pseudo']  = $pseudo;
+$_SESSION['flash_success'] = random_punchline($pseudo);
+
+
+
+
+$redirect = rtrim(APP_BASE, '/').'/index.php';
+    header('Location: '.$redirect, true, 303);
+exit;
 
 
 } 
@@ -67,7 +65,7 @@ else {
             $ins->close();
         }
     }
-
+}
 
 
 
@@ -118,10 +116,6 @@ else {
              pattern="[A-Za-z0-9_]{3,20}" required placeholder="ex: Remi_81">
       <div class="hint">3–20 caractères. Lettres, chiffres et underscore uniquement.</div>
       <div id="status" class="status"></div>
-
-      <label for="password">Mot de passe</label>
-<input type="password" id="password" name="password" minlength="8" required placeholder="••••••••">
-<div class="hint">Min 8 caractères, au moins une lettre et un chiffre.</div>
 
       <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($_SESSION['csrf'], ENT_QUOTES); ?>">
       <button id="submitBtn" class="btn" type="submit" disabled>S’inscrire</button>

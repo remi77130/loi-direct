@@ -268,8 +268,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$blocked) {
 
 
 
-<script>function get_client_ip(): string { // n’accepte HTTP_X_FORWARDED_FOR que si ton reverse proxy est 
-// configuré pour l’écrire et que seul ce proxy atteint directement ton PHP (sinon c’est forgeable).
+<script>function get_client_ip(): string {
   // Si tu es derrière un proxy (NGINX, Cloudflare...), vérifie que c'est trusted
   if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
     // X-Forwarded-For peut contenir une liste "client, proxy1, proxy2"
