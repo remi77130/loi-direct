@@ -6,14 +6,6 @@ session_start();
 require __DIR__ . '/db.php';
 require __DIR__ . '/config.php'; // pour APP_BASE
 
-
-
-/* En local tu verras ::1. En prod, active la lecture X-Forwarded-For uniquement si ton reverse proxy est trusted.
-
-Tu peux ajuster les constantes IP_WINDOW_SECONDS / IP_MAX_FAILS / IP_BAN_SECONDS.
-
-Pour aller plus loin : Redis pour les compteurs, captcha après X échecs, fail2ban côté OS, limit_req côté Nginx. */
-
 /* -------------------- Config brute-force -------------------- */
 // Fenêtre de comptage & seuil (par IP)
 const IP_WINDOW_SECONDS = 15 * 60;  // 15 min
