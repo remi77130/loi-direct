@@ -16,11 +16,6 @@ require __DIR__ . '/db.php';     // $mysqli (connexion MySQLi)
 require __DIR__ . '/auth.php';   // require_login(), $_SESSION['user_id'], $_SESSION['pseudo']
 require_login();
 
-
-
-
-
-
 /* ----------------------------------------------------------------------
  * CSRF token (réutilisé par like & commentaires)
  * -------------------------------------------------------------------- */
@@ -202,7 +197,7 @@ unset($_SESSION['comment_draft']);
       <article class="card" style="margin-top:12px">
         <h1 style="margin:0 0 10px"><?php echo htmlspecialchars($project['title'],ENT_QUOTES); ?></h1>
 
-        <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">
+        <<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">
   Par <a href="#" class="user-link" data-user-id="<?= (int)$project['author_id'] ?>">
        <?= htmlspecialchars($project['author'],ENT_QUOTES); ?>
      </a>

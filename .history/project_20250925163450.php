@@ -16,11 +16,6 @@ require __DIR__ . '/db.php';     // $mysqli (connexion MySQLi)
 require __DIR__ . '/auth.php';   // require_login(), $_SESSION['user_id'], $_SESSION['pseudo']
 require_login();
 
-
-
-
-
-
 /* ----------------------------------------------------------------------
  * CSRF token (réutilisé par like & commentaires)
  * -------------------------------------------------------------------- */

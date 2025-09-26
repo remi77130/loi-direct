@@ -21,6 +21,65 @@ require_login();
 
 
 
+
+
+
+
+if (!isset($_FILES['cover']) || $_FILES['cover']['error'] !== UPLOAD_ERR_OK) {
+  http_response_code(400); exit('Fichier manquant');
+}
+
+if ($_FILES['cover']['size'] > 5*1024*1024) { // 5 MB
+  http_response_code(413); exit('Fichier trop volumineux');
+}
+
+[$w,$h,$type] = @getimagesize($_FILES['cover']['tmp_name']);
+if (!$w || !$h) { http_response_code(415); exit('Image invalide'); }
+
+$ext = match($type){
+  IMAGETYPE_JPEG => 'jpg',
+  IMAGETYPE_PNG  => 'png',
+  IMAGETYPE_WEBP => 'webp',
+  default        => null
+};
+if (!$ext) { http_response_code(415); exit('Format non supporté'); }
+
+// Ré-encode pour neutraliser le contenu dangereux
+$src = match($type){
+  IMAGETYPE_JPEG => imagecreatefromjpeg($_FILES['cover']['tmp_name']),
+  IMAGETYPE_PNG  => imagecreatefrompng($_FILES['cover']['tmp_name']),
+  IMAGETYPE_WEBP => imagecreatefromwebp($_FILES['cover']['tmp_name']),
+};
+if (!$src) { http_response_code(415); exit('Image illisible'); }
+
+// (option) redimensionne la miniature
+$max = 256;
+$ratio = min($max/$w, $max/$h, 1);
+$tw = (int)($w*$ratio); $th = (int)($h*$ratio);
+$dst = imagecreatetruecolor($tw,$th);
+imagecopyresampled($dst,$src,0,0,0,0,$tw,$th,$w,$h);
+
+// Nom aléatoire + extension
+$basename = bin2hex(random_bytes(8)).'.'.$ext;
+$uploadDir = __DIR__.'/uploads';
+$path = $uploadDir.'/'.$basename;
+
+// Sauvegarde encodée
+$ok = match($ext){
+  'jpg'  => imagejpeg($dst, $path, 85),
+  'png'  => imagepng($dst, $path, 6),
+  'webp' => imagewebp($dst, $path, 80),
+};
+imagedestroy($src); imagedestroy($dst);
+
+if (!$ok) { http_response_code(500); exit('Échec écriture'); }
+
+// En BDD: stocke **seulement** $basename (pas de chemin utilisateur)
+$ins = $mysqli->prepare('UPDATE project_images SET thumb_path=? WHERE id=?');
+$ins->bind_param('si', $basename, $imageId);
+$ins->execute(); $ins->close();
+
+echo 'ok';
 /* ----------------------------------------------------------------------
  * CSRF token (réutilisé par like & commentaires)
  * -------------------------------------------------------------------- */

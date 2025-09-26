@@ -25,6 +25,14 @@ require __DIR__.'/auth.php';   // Auth helpers : require_login()
 require_login();               // Bloque l’accès si non connecté
 
 
+function sanitize_upload_basename(?string $v): ?string {
+  if ($v === null) return null;
+  $v = str_replace(["\\","\0"], ['/', ''], trim($v));
+  $b = basename($v);
+  if (!preg_match('/\A[0-9A-Za-z][0-9A-Za-z._-]{0,127}\z/',$b)) return null;
+  if (!preg_match('/\.(jpe?g|png|webp)\z/i',$b)) return null;
+  return $b;
+}
 
 // -------------------------------
 // Paramètres d’entrée & pagination
@@ -147,6 +155,11 @@ $totalPages = max(1, (int)ceil($count / $per));
              Lire
           </a>
         </div>
+
+
+        <script>
+          
+        </script>
 
         <?php if(!empty($p['cover_thumb'])): ?>
           <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug,ENT_QUOTES) ?>"

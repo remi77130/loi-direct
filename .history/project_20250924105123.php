@@ -16,11 +16,6 @@ require __DIR__ . '/db.php';     // $mysqli (connexion MySQLi)
 require __DIR__ . '/auth.php';   // require_login(), $_SESSION['user_id'], $_SESSION['pseudo']
 require_login();
 
-
-
-
-
-
 /* ----------------------------------------------------------------------
  * CSRF token (réutilisé par like & commentaires)
  * -------------------------------------------------------------------- */
@@ -202,7 +197,7 @@ unset($_SESSION['comment_draft']);
       <article class="card" style="margin-top:12px">
         <h1 style="margin:0 0 10px"><?php echo htmlspecialchars($project['title'],ENT_QUOTES); ?></h1>
 
-        <div style="font-size:12px;color:#94a3b8;margin-bottom:8px">
+        <<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">
   Par <a href="#" class="user-link" data-user-id="<?= (int)$project['author_id'] ?>">
        <?= htmlspecialchars($project['author'],ENT_QUOTES); ?>
      </a>
@@ -279,7 +274,7 @@ unset($_SESSION['comment_draft']);
           <div style="margin:10px 0; display:flex; flex-wrap:wrap; gap:6px">
             <?php foreach ($tags as $tg): ?>
               <a href="<?= tag_url($tg['slug']) ?>"
-                 style="font-size:12px; padding:4px 8px; border:1px solid #334155; border-radius:999px;
+                 style="font-size:12px; padding:4px 8px; border:1px solid #b3ff00ff; border-radius:999px;
                         color:#cbd5e1; text-decoration:none; background:#0b1220">
                 #<?= htmlspecialchars($tg['name'], ENT_QUOTES) ?>
               </a>

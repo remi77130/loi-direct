@@ -148,6 +148,26 @@ $totalPages = max(1, (int)ceil($count / $per));
           </a>
         </div>
 
+
+        <script>
+          function sanitize_upload_basename(?string $v): ?string {
+  if ($v === null) return null;
+  $v = str_replace("\0",'', trim($v));
+  $v = basename($v);                        // enlève tout chemin
+  if (!preg_match('/\A[0-9A-Za-z][0-9A-Za-z._-]{0,127}\z/', $v)) return null;
+  if (!preg_match('/\.(jpe?g|png|webp)\z/i', $v)) return null;
+  return $v;
+}
+
+// ...
+$thumb = sanitize_upload_basename($p['cover_thumb'] ?? null);
+if ($thumb) {
+  $src = APP_BASE.'/uploads/'.rawurlencode($thumb);
+  echo '<img src="'.$src.'" alt="" loading="lazy" style="width:64px;height:64px;object-fit:cover">';
+}
+
+        </script>
+
         <?php if(!empty($p['cover_thumb'])): ?>
           <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug,ENT_QUOTES) ?>"
              style="border-radius:12px;overflow:hidden;box-shadow:0 6px 16px #0003">

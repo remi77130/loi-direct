@@ -24,6 +24,26 @@ require __DIR__.'/db.php';     // Connexion MySQLi ($mysqli)
 require __DIR__.'/auth.php';   // Auth helpers : require_login()
 require_login();               // Bloque l’accès si non connecté
 
+function sanitize_upload_relpath(?string $v): ?string {
+  if ($v === null) return null;
+  $v = str_replace("\0", '', trim($v));     // retire les NUL
+  $v = str_replace('\\', '/', $v);          // normalise
+  $v = ltrim($v, '/');                      // pas d'absolu
+  if ($v === '' || strpos($v, '..') !== false) return null;
+
+  // chaque segment = lettres/chiffres . _ - ; pas de segment caché (commençant par .)
+  $parts = explode('/', $v);
+  foreach ($parts as $p) {
+    if ($p === '' || $p[0] === '.') return null;
+    if (!preg_match('/\A[0-9A-Za-z._-]{1,128}\z/', $p)) return null;
+  }
+
+  // (optionnel) forcer l’extension
+  if (!preg_match('/\.(jpe?g|png|webp|gif)\z/i', end($parts))) return null;
+
+  return implode('/', $parts);
+}
+
 
 
 // -------------------------------
@@ -148,14 +168,21 @@ $totalPages = max(1, (int)ceil($count / $per));
           </a>
         </div>
 
-        <?php if(!empty($p['cover_thumb'])): ?>
-          <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug,ENT_QUOTES) ?>"
-             style="border-radius:12px;overflow:hidden;box-shadow:0 6px 16px #0003">
-            <img src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'],ENT_QUOTES) ?>"
-                 alt=""
-                 style="width:64px;height:64px;object-fit:cover;display:block">
-          </a>
-        <?php endif; ?>
+     <?php
+$rel = sanitize_upload_relpath($p['cover_thumb'] ?? null);
+if ($rel):
+  $src = APP_BASE . '/uploads/' . rawurlencode(str_replace('%2F','/', rawurlencode($rel)));
+  // note: rawurlencode par segment -> petite astuce pour conserver les '/'
+?>
+  <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug,ENT_QUOTES) ?>"
+     style="border-radius:12px;overflow:hidden;box-shadow:0 6px 16px #0003">
+    <img src="<?= $src ?>" alt=""
+         loading="lazy"
+         style="width:64px;height:64px;object-fit:cover;display:block">
+  </a>
+<?php endif; ?>
+
+
       </article>
     <?php endforeach; ?>
 

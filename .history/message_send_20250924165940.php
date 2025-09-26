@@ -52,7 +52,7 @@ if ($recipient_id === $sender_id) {
   exit;
 }
 
-/* Rate limit simple: 3 msg / 30s
+/* Rate limit simple: 5 msg / 30s
    Vérifie que prepare() retourne bien un statement.
 */
 $cnt = 0;
@@ -76,7 +76,7 @@ $lim->bind_result($cnt);
 $lim->fetch();
 $lim->close();
 
-if ($cnt >= 3) {
+if ($cnt >= 5) {
   http_response_code(429);
   echo json_encode(['ok'=>false,'error'=>'rate']);
   exit;

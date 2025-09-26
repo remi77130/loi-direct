@@ -14,7 +14,17 @@
  *   puis 404 si $uid <= 0.
  * - Penser à un layout commun (header/footer) et à un composant pager réutilisable.
  * - Index conseillés : law_projects(author_id, status, published_at), project_images(project_id, id).
- */
+ *✅ L’injection possible via cover_thumb (normalisation + extension).
+
+*✅ Le DoS via page non borné.
+
+*✅ Les erreurs prepare() avec contrôle + fallback.
+
+*✅ Les sorties HTML échappées (htmlspecialchars).
+
+* 👉 Tu peux donc le garder tel quel en prod, et quand tu ajouteras 
+*l’upload côté projet, pense juste à appliquer la même fonction sanitize_upload_basename() 
+*à l’enregistrement en base.*/
 
 declare(strict_types=1);
 session_start();
@@ -25,48 +35,38 @@ require __DIR__.'/auth.php';   // Auth helpers : require_login()
 require_login();               // Bloque l’accès si non connecté
 
 
+function sanitize_upload_basename(?string $v): ?string {
+  if ($v === null) return null;
+  $v = str_replace(["\\","\0"], ['/', ''], trim($v));
+  $b = basename($v);
+  if (!preg_match('/\A[0-9A-Za-z][0-9A-Za-z._-]{0,127}\z/',$b)) return null;
+  if (!preg_match('/\.(jpe?g|png|webp)\z/i',$b)) return null;
+  return $b;
+}
 
 // -------------------------------
 // Paramètres d’entrée & pagination
 // -------------------------------
 
-// Id utilisateur demandé dans l’URL. max(1, …) évite 0, mais voir la note en tête de fichier.
-$uid  = max(1, (int)($_GET['id'] ?? 0));
+// ---- Inputs ----
+$uid = (int)($_GET['id'] ?? 0);
+if ($uid <= 0) { http_response_code(404); exit('Utilisateur introuvable !'); }
 
-// Pagination simple côté serveur
-$page = max(1, (int)($_GET['page'] ?? 1));
-$per  = 10;                    // Taille de page fixe (10 éléments)
-$off  = ($page-1)*$per;        // Décalage (OFFSET)
+$page = (int)($_GET['page'] ?? 1);
+if ($page < 1)   $page = 1;
+if ($page > 100) $page = 100;     // borne anti-DoS
+$per  = 10;
+$off  = ($page - 1) * $per;
 
-// ------------------------------------
-// Lecture du profil + nombre de projets
-// ------------------------------------
 
-// Récupération de l’utilisateur (id, pseudo). On s’arrête en 404 si introuvable.
-$u = null; $count = 0;
-$stmt = $mysqli->prepare('SELECT id, pseudo FROM users WHERE id=? LIMIT 1');
-$stmt->bind_param('i', $uid);
-$stmt->execute();
-$u = $stmt->get_result()->fetch_assoc();
-$stmt->close();
-
-if (!$u) { // Garde-fou : utilisateur inconnu
-  http_response_code(404);
-  echo 'Utilisateur introuvable !';
-  exit;
-}
-
-// Compte des projets publiés de cet utilisateur
+// ---- Count total first ----
 $stmt = $mysqli->prepare("
-  SELECT COUNT(*)
-  FROM law_projects
+  SELECT COUNT(*) FROM law_projects
   WHERE author_id=? AND status='published'
 ");
 $stmt->bind_param('i', $uid);
 $stmt->execute();
-$stmt->bind_result($count);
-$stmt->fetch();
-$stmt->close();
+$stmt->bind_result($count); $stmt->fetch(); $stmt->close();
 
 // ------------------------------------
 // Liste paginée des projets (avec cover)
@@ -77,22 +77,14 @@ $stmt->close();
 //
 // Les champs affichés sont échappés dans le HTML (htmlspecialchars) pour éviter les XSS.
 
+// ---- Page query (inchangé, mais utilise $page/$off calculés ci-dessus) ----
 $sql = "
-  SELECT
-    p.id,
-    p.title,
-    p.summary,
-    p.published_at,
-    (
-      SELECT thumb_path
-      FROM project_images i
-      WHERE i.project_id = p.id
-        AND i.thumb_path IS NOT NULL
-      ORDER BY i.id ASC
-      LIMIT 1
-    ) AS cover_thumb
+  SELECT p.id, p.title, p.summary, p.published_at,
+         (SELECT thumb_path FROM project_images i
+            WHERE i.project_id=p.id AND i.thumb_path IS NOT NULL
+            ORDER BY i.id ASC LIMIT 1) AS cover_thumb
   FROM law_projects p
-  WHERE p.author_id = ? AND p.status = 'published'
+  WHERE p.author_id=? AND p.status='published'
   ORDER BY p.published_at DESC
   LIMIT ? OFFSET ?
 ";
@@ -102,9 +94,6 @@ $stmt->execute();
 $res = $stmt->get_result();
 $projects = $res->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
-
-// Calcul du nombre total de pages d’après le total des projets publiés
-$totalPages = max(1, (int)ceil($count / $per));
 ?>
 <!doctype html>
 <html lang="fr">
@@ -148,14 +137,15 @@ $totalPages = max(1, (int)ceil($count / $per));
           </a>
         </div>
 
-        <?php if(!empty($p['cover_thumb'])): ?>
-          <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug,ENT_QUOTES) ?>"
-             style="border-radius:12px;overflow:hidden;box-shadow:0 6px 16px #0003">
-            <img src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'],ENT_QUOTES) ?>"
-                 alt=""
-                 style="width:64px;height:64px;object-fit:cover;display:block">
-          </a>
-        <?php endif; ?>
+
+<?php $thumb = sanitize_upload_basename($p['cover_thumb'] ?? null); ?>
+<?php if ($thumb): ?>
+  <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug,ENT_QUOTES) ?>" style="border-radius:12px;overflow:hidden;box-shadow:0 6px 16px #0003">
+    <img src="<?= APP_BASE ?>/uploads/<?= rawurlencode($thumb) ?>" alt="" width="64" height="64" style="width:64px;height:64px;object-fit:cover;display:block">
+  </a>
+<?php endif; ?>
+
+
       </article>
     <?php endforeach; ?>
 

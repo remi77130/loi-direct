@@ -207,17 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$blocked) {
 } // end POST handling
 
 // Hygiène légère : purge anciennes tentatives
-
-// --- GC probabiliste: ~1% des requêtes déclenchent le nettoyage ---
-const LOGIN_GC_NUM = 1;   // numérateur
-const LOGIN_GC_DEN = 100; // dénominateur (1/100 = 1%)
-
-if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
-    $sql = "DELETE FROM login_attempts WHERE created_at < (NOW() - INTERVAL 30 DAY)";
-    if (!$mysqli->query($sql)) {
-        error_log('login GC failed: '.$mysqli->error);
-    }
-}
+$mysqli->query("DELETE FROM login_attempts WHERE created_at < (NOW() - INTERVAL 30 DAY)");
 
 ?>
 <!doctype html>

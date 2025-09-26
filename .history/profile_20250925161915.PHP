@@ -26,6 +26,18 @@ require_login();               // Bloque l’accès si non connecté
 
 
 
+// --- Security: sanitize filenames coming from DB (e.g., cover_thumb) ---
+function sanitize_upload_basename(?string $v): ?string {
+  if ($v === null) return null;
+  $v = str_replace(["\\", "\0"], ['/', ''], trim($v)); // normalize + strip NUL
+  $base = basename($v);                                // drop any path parts
+  // allow only safe chars; length cap to avoid abuse
+  if (!preg_match('/\A[0-9A-Za-z][0-9A-Za-z._-]{0,127}\z/', $base)) return null;
+  // optional: enforce an extension
+  // if (!preg_match('/\.(jpg|jpeg|png|webp)\z/i', $base)) return null;
+  return $base;
+}
+
 // -------------------------------
 // Paramètres d’entrée & pagination
 // -------------------------------

@@ -148,6 +148,11 @@ $totalPages = max(1, (int)ceil($count / $per));
           </a>
         </div>
 
+
+        <script>
+          
+        </script>
+
         <?php if(!empty($p['cover_thumb'])): ?>
           <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug,ENT_QUOTES) ?>"
              style="border-radius:12px;overflow:hidden;box-shadow:0 6px 16px #0003">

@@ -24,8 +24,6 @@ require __DIR__.'/db.php';     // Connexion MySQLi ($mysqli)
 require __DIR__.'/auth.php';   // Auth helpers : require_login()
 require_login();               // Bloque l’accès si non connecté
 
-
-
 // -------------------------------
 // Paramètres d’entrée & pagination
 // -------------------------------

@@ -6,16 +6,7 @@ session_start();
 require __DIR__ . '/db.php';
 require __DIR__ . '/config.php'; // APP_BASE, helpers…
 
-
-/* INFO FICHIER 
-
-Lecture de $pseudo et validations serveur complètes.
-Champ confirmation ajouté.
-Hash du mot de passe toujours stocké (password_hash).
-Gestion d’erreurs prepare/execute avec error_log + message générique.
-Redirection sûre via APP_BASE.
-
-CSRF token */
+// CSRF token
 if (empty($_SESSION['csrf'])) {
   $_SESSION['csrf'] = bin2hex(random_bytes(16));
 }

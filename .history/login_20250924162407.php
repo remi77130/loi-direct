@@ -207,7 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$blocked) {
 } // end POST handling
 
 // Hygiène légère : purge anciennes tentatives
-
+//$mysqli->query("DELETE FROM login_attempts WHERE created_at < (NOW() - INTERVAL 30 DAY)");
 // --- GC probabiliste: ~1% des requêtes déclenchent le nettoyage ---
 const LOGIN_GC_NUM = 1;   // numérateur
 const LOGIN_GC_DEN = 100; // dénominateur (1/100 = 1%)

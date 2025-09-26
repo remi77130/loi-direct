@@ -52,7 +52,7 @@ if ($recipient_id === $sender_id) {
   exit;
 }
 
-/* Rate limit simple: 3 msg / 30s
+/* Rate limit simple: 5 msg / 30s
    Vérifie que prepare() retourne bien un statement.
 */
 $cnt = 0;
