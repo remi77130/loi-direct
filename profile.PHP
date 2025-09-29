@@ -44,7 +44,8 @@ $off  = ($page-1)*$per;        // Décalage (OFFSET)
 
 // Récupération de l’utilisateur (id, pseudo). On s’arrête en 404 si introuvable.
 $u = null; $count = 0;
-$stmt = $mysqli->prepare('SELECT id, pseudo FROM users WHERE id=? LIMIT 1');
+$stmt = $mysqli->prepare('SELECT id, pseudo, sex, height_cm FROM users WHERE id=? LIMIT 1');
+
 $stmt->bind_param('i', $uid);
 $stmt->execute();
 $u = $stmt->get_result()->fetch_assoc();
@@ -125,11 +126,28 @@ $totalPages = max(1, (int)ceil($count / $per));
     <!-- En-tête du profil (pseudo + compteur + retour) -->
     <div class="card">
       <h1 style="margin:0 0 6px"><?= htmlspecialchars($u['pseudo'],ENT_QUOTES) ?></h1>
+
+      <div class="meta">
+  <?php
+    $infos = [];
+    if (!empty($u['sex']))       $infos[] = ($u['sex']==='homme'?'Homme':'Femme');
+    if (!empty($u['height_cm'])) $infos[] = (int)$u['height_cm'].' cm';
+    echo $infos ? htmlspecialchars(implode(' • ', $infos), ENT_QUOTES) : '—';
+  ?>
+</div>
+
       <div class="meta"><?= (int)$count ?> projet(s) publié(s)</div>
       <div style="margin-top:10px">
         <a class="btn" href="<?= APP_BASE ?>/index.php">&larr; Retour au feed</a>
       </div>
     </div>
+
+
+<?php if ((int)$u['id'] === (int)$_SESSION['user_id']): ?>
+  <a class="btn" href="<?= APP_BASE ?>/profile_edit.php">Éditer mon profil</a>
+<?php endif; ?>
+
+
 
     <!-- Boucle projets : titre, date, résumé, bouton Lire, et vignette si présente -->
     <?php foreach($projects as $p): $slug = slugify($p['title']); ?>

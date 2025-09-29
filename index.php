@@ -90,12 +90,15 @@ if ($q !== '') {
                LEFT JOIN tags qt ON qt.id = qpt.tag_id";
 
   $where   .= " AND (p.title LIKE ? OR p.summary LIKE ? OR p.body_markdown LIKE ?
-                     OR qt.name LIKE ? OR qt.slug LIKE ?)";
+                     OR qt.name LIKE ? OR qt.slug LIKE ?
+                      OR u.pseudo LIKE ?)";
+
+                     
   $like     = '%'.$q.'%';
   $likeTag  = '%'.ltrim($q, '#').'%';
 
-  $types   .= 'sssss';
-  array_push($params, $like, $like, $like, $likeTag, $likeTag);
+  $types   .= 'ssssss';
+  array_push($params, $like, $like, $like, $likeTag, $likeTag, $like);
 }
 
 /* -------------------------------------------------------------------------
@@ -197,21 +200,29 @@ if ($q !== '') {
   $like    = '%'.$q.'%';
   $likeTag = '%'.ltrim($q, '#').'%';
 
-  $whereCount  .= " AND (
-                      p.title LIKE ?
-                      OR p.summary LIKE ?
-                      OR p.body_markdown LIKE ?
-                      OR EXISTS (
-                          SELECT 1
-                          FROM project_tags qpt
-                          JOIN tags qt ON qt.id = qpt.tag_id
-                          WHERE qpt.project_id = p.id
-                            AND (qt.name LIKE ? OR qt.slug LIKE ?)
-                      )
-                    )";
-  $typesCount  .= 'sssss';
-  array_push($paramsCount, $like, $like, $like, $likeTag, $likeTag);
+  $whereCount .= " AND (
+      p.title LIKE ?
+      OR p.summary LIKE ?
+      OR p.body_markdown LIKE ?
+      OR EXISTS (
+          SELECT 1
+          FROM project_tags qpt
+          JOIN tags qt ON qt.id = qpt.tag_id
+          WHERE qpt.project_id = p.id
+            AND (qt.name LIKE ? OR qt.slug LIKE ?)
+      )
+      OR EXISTS (
+          SELECT 1
+          FROM users u
+          WHERE u.id = p.author_id
+            AND u.pseudo LIKE ?
+      )
+  )";
+
+  $typesCount .= 'ssssss';
+  array_push($paramsCount, $like, $like, $like, $likeTag, $likeTag, $like); // +$like pour le pseudo
 }
+
 
 $countSql = "SELECT COUNT(*) FROM law_projects p WHERE $whereCount";
 $stmt = $mysqli->prepare($countSql) ?: exit('nul: '.$mysqli->error);
@@ -466,7 +477,19 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
       <strong id="umPseudo" style="font-size:16px">Pseudo</strong>
       <button id="umClose" class="btn" type="button" style="background:#374151;padding:4px 8px">×</button>
     </div>
+
+
+
+      <!-- INFOS PROFIL -->
+    <div id="umInfos" class="muted" style="margin-top:6px; font-size:13px">
+      <!-- rempli en JS -->
+    </div>
+
     <div class="muted">Projets publiés : <span id="umCount">0</span></div>
+
+    <div class="muted">Situation : <span id="umStatus">—</span></div>
+<div class="muted">Sexe : <span id="umSex">—</span> • Taille : <span id="umHeight">—</span></div>
+
 
     <div style="margin-top:12px">
       <a id="umLink" class="btn" href="#" style="display:inline-block">Voir le profil</a>
@@ -474,18 +497,43 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 
     <button id="umMsgToggle" class="btn" type="button" style="margin-top:12px;background:#2563eb">Envoyer un message</button>
 
-    <form id="umMsgForm" style="display:none;margin-top:10px">
-      <textarea name="body" rows="4" maxlength="2000" required placeholder="Ton message…" style="width:100%;padding:10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb"></textarea>
+    <form id="umMsgForm" enctype="multipart/form-data" style="display:none;margin-top:10px">
+      <textarea name="body" rows="4" maxlength="2000" required placeholder="Ton message…" 
+      style="width:100%;padding:10px;border-radius:10px;border:1px 
+      solid #334155;background:#0b1220;color:#e5e7eb"></textarea>
+
+     
+
+<label style="display:block;margin-top:10px">Image (optionnel)
+  <input id="umImage" name="image" type="file"
+         accept="image/*" capture="environment"
+         style="display:block;margin-top:6px">
+</label>
+
+<!-- preview -->
+<div id="umPreviewWrap" style="display:none;margin-top:8px">
+  <img id="umPreview" alt="Aperçu"
+       style="max-width:160px;max-height:160px;border-radius:8px;display:block">
+  <button type="button" id="umClearImg"
+          class="btn" style="background:#374151;margin-top:6px">Retirer l’image</button>
+</div>
+
       <input type="hidden" name="recipient_id" id="umRecipient">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
       <button class="btn" type="submit" style="margin-top:8px">Envoyer</button>
       <div id="umMsgStatus" style="font-size:12px;color:#94a3b8;margin-top:6px"></div>
+
     </form>
   </div>
 </div>
 
 
+<script>
+  const umSex   = document.getElementById('umSex');
+const umHeight= document.getElementById('umHeight');
+const umStatus= document.getElementById('umStatus');
 
+</script>
 
 <script>
 const BASE     = '<?= APP_BASE ?>';
@@ -500,11 +548,67 @@ const umMsgForm   = document.getElementById('umMsgForm');
 const umRecipient = document.getElementById('umRecipient');
 const umMsgStatus = document.getElementById('umMsgStatus');
 
+
+const umImage      = document.getElementById('umImage');
+const umPreview    = document.getElementById('umPreview');
+const umPreviewWrap= document.getElementById('umPreviewWrap');
+const umClearImg   = document.getElementById('umClearImg');
+
+
+
+
+
+
+
+
+let umPreviewURL = null;
+
+function hidePreview(){
+  if (umPreviewURL) URL.revokeObjectURL(umPreviewURL);
+  umPreviewURL = null;
+  umPreview.src = '';
+  umPreviewWrap.style.display = 'none';
+}
+
+umClearImg.addEventListener('click', () => {
+  umImage.value = '';           // retire le fichier
+  hidePreview();
+});
+
+umImage.addEventListener('change', () => {
+  hidePreview();
+  const f = umImage.files && umImage.files[0];
+  if (!f) return
+
+
+
+
+  // garde-fous (mêmes règles que serveur)
+  const okType = ['image/jpeg','image/png','image/webp'].includes(f.type);
+  if (!okType){ alert('Formats autorisés : JPG, PNG, WebP.'); umImage.value=''; return; }
+  if (f.size > 5*1024*1024){ alert('Image trop lourde (max 5 Mo).'); umImage.value=''; return; }
+
+  umPreviewURL = URL.createObjectURL(f);
+  umPreview.src = umPreviewURL;
+  umPreviewWrap.style.display = 'block';
+});
+
+
+
+// Reset preview à l’ouverture/fermeture de la modale
+document.addEventListener('click', (e)=>{
+  if (e.target.id === 'umClose') hidePreview();
+});
+modal.addEventListener('click', (e)=>{ if (e.target === modal) hidePreview(); });
+
+
 umMsgToggle.addEventListener('click', ()=> {
   umMsgForm.style.display = umMsgForm.style.display==='none' ? 'block' : 'none';
 });
 
 // open modal on user click
+const umInfos = document.getElementById('umInfos');
+
 document.addEventListener('click', async (e) => {
   const a = e.target.closest('.user-link');
   if (!a) return;
@@ -517,14 +621,21 @@ document.addEventListener('click', async (e) => {
     const j = await r.json();
     if (!j.ok) throw new Error(j.error || 'Réponse invalide');
 
-    umPseudo.textContent = j.pseudo;
-    umCount.textContent  = j.projects_count;
-    umLink.href          = `${BASE}/profile.php?id=${encodeURIComponent(id)}`;
-    umRecipient.value    = id;
-    umMsgStatus.textContent = '';
-    umMsgForm.style.display = 'none';
+  umPseudo.textContent = j.pseudo;
+umCount.textContent  = j.projects_count;
+umStatus.textContent = j.relationship_status ?? '—';
+umSex.textContent    = j.sex ?? '—';
+umHeight.textContent = (j.height_cm ? (j.height_cm + ' cm') : '—');
+umLink.href       = `${BASE}/profile.php?id=${encodeURIComponent(id)}`;
+umRecipient.value = id; // pour l’envoi de message
 
-    // empêcher l’auto-message
+
+    // Construit la ligne d’infos: “Homme • 175 cm”, sinon “—”
+    const parts = [];
+    if (j.sex) parts.push(j.sex);
+    if (typeof j.height_cm === 'number') parts.push(`${j.height_cm} cm`);
+    umInfos.textContent = parts.length ? parts.join(' • ') : '—';
+
     if (parseInt(id,10) === <?= (int)$_SESSION['user_id'] ?>) {
       umMsgToggle.style.display = 'none';
       umMsgForm.style.display   = 'none';
@@ -537,6 +648,7 @@ document.addEventListener('click', async (e) => {
     console.error('user_card.php error:', err);
   }
 });
+
 
 // submit message
 umMsgForm.addEventListener('submit', async (e)=>{
