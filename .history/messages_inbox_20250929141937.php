@@ -84,49 +84,56 @@ usort($threads, fn($a,$b)=> $b['last_at'] <=> $a['last_at']);
 <meta charset="utf-8">
 <title>Mes messages</title>
 <!-- CSS -->
+
 <style>
   body{background:#0f172a;color:#e5e7eb;font-family:system-ui}
-.wrap{max-width:800px;margin:20px auto}
+  .wrap{max-width:800px;margin:20px auto}
+  .msg-card{border:1px solid #334155;border-radius:10px;padding:12px;margin:10px 0;background:#111827;cursor:pointer}
+  .msg-head{font-size:12px;color:#94a3b8;display:flex;gap:6px;align-items:center}
+  .msg-preview{color:#e5e7eb;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.msg-card{cursor:default}              /* plus safe: only the header toggles */
+.msg-head{cursor:pointer}
 
-.msg-card{border:1px solid #334155;border-radius:10px;padding:12px;margin:10px 0;background:#111827;cursor:default}
-.msg-head{font-size:12px;color:#94a3b8;display:flex;gap:6px;align-items:center;cursor:pointer}
-.chev{margin-left:auto;opacity:.7;transition:transform .15s}
-.msg-card[data-open="1"] .chev{transform:rotate(90deg)}
 
-.msg-preview{color:#e5e7eb;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-/* Corps repliable avec scroll interne */
-.msg-body{max-height:0;overflow:hidden;transition:max-height .2s ease}
-.msg-card[data-open="1"] .msg-body{
-  max-height:65vh;      /* hauteur max visible */
-  overflow:auto;        /* scroll interne */
-  padding-right:4px;    /* éviter le recouvrement du texte par la barre */
-}
+  .msg-body{max-height:0; overflow:hidden; transition:max-height .2s ease}
+  .msg-card[data-open="1"] .msg-body{
+    max-height:65vh;      /* limite la hauteur ouverte */
+    overflow:auto;        /* scroll interne */
+    padding-right:4px;
+  }
 
-.msg-img img{max-width:220px;max-height:220px;border-radius:8px;display:block}
+  .msg-img img{max-width:220px;max-height:220px;border-radius:8px;display:block}
+  .chev{margin-left:auto;opacity:.7;transition:transform .15s}
+  
+  .reply{margin-top:12px;border-top:1px dashed #334155;padding-top:10px}
+  .reply textarea{width:100%;padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#e5e7eb;resize:vertical}
+  .reply .row{display:flex;gap:8px;align-items:center;margin-top:8px}
+  .reply input[type="file"]{color:#94a3b8}
+  .btn{background:#2563eb;color:#fff;border:none;border-radius:10px;padding:8px 12px;cursor:pointer}
+  .muted{font-size:12px;color:#94a3b8;margin-top:6px}
 
-/* Formulaire de réponse */
-.reply{margin-top:12px;border-top:1px dashed #334155;padding-top:10px}
-.reply textarea{width:100%;padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#e5e7eb;resize:vertical}
-.reply .row{display:flex;gap:8px;align-items:center;margin-top:8px}
-.reply input[type="file"]{color:#94a3b8}
-.btn{background:#2563eb;color:#fff;border:none;border-radius:10px;padding:8px 12px;cursor:pointer}
-.muted{font-size:12px;color:#94a3b8;margin-top:6px}
+  /* …tes styles existants… */
 
-/* Bulles */
-.msg-out{margin-top:10px;border:1px solid #1f3a8a;background:#0b1220;border-radius:12px;padding:10px}
-.msg-out-head{font-size:12px;color:#93c5fd;margin-bottom:6px}
-.msg-out-text{white-space:pre-wrap}
+  /* Bulle du message envoyé localement */
+  .msg-out{margin-top:10px;border:1px solid #1f3a8a;background:#0b1220;border-radius:12px;padding:10px}
+  .msg-out-head{font-size:12px;color:#93c5fd;margin-bottom:6px}
+  .msg-out-text{white-space:pre-wrap}
+  .msg-out img{max-width:220px;max-height:220px;border-radius:8px;display:block;margin-top:8px}
 
-.msg-in{
-  border:1px solid #334155;
-  background:#0b1220;
-  border-radius:12px;
-  padding:10px;
-  margin-top:10px;
-}
+
+  .msg-in{
+    border:1px solid #334155;
+    background:#0b1220;
+    border-radius:12px;
+    padding:10px;
+    margin-top:10px;}
+  
+</style>
 
 </style>
+
+
 
 <body>
   <div class="wrap">

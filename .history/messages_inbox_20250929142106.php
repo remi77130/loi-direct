@@ -84,7 +84,7 @@ usort($threads, fn($a,$b)=> $b['last_at'] <=> $a['last_at']);
 <meta charset="utf-8">
 <title>Mes messages</title>
 <!-- CSS -->
-<style>
+<script>
   body{background:#0f172a;color:#e5e7eb;font-family:system-ui}
 .wrap{max-width:800px;margin:20px auto}
 
@@ -126,7 +126,9 @@ usort($threads, fn($a,$b)=> $b['last_at'] <=> $a['last_at']);
   margin-top:10px;
 }
 
-</style>
+</script>
+
+
 
 <body>
   <div class="wrap">
