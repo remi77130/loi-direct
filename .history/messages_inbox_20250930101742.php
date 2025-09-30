@@ -156,19 +156,7 @@ usort($threads, fn($a,$b)=> $b['last_at'] <=> $a['last_at']);
     $preview  = $preview !== '' ? htmlspecialchars(mb_strimwidth($preview,0,120,'…','UTF-8'),ENT_QUOTES) : '';
   ?>
   <div class="msg-card" data-open="0">
-
-  <!--  <div class="msg-head">Avec <strong>
-      /*?= $other ?></strong> — <//?= $lastDate ?>
-      <span class="chev">▶</span></div>-->
-
-      <div class="msg-head">
-  Avec <strong><?= $other ?></strong> — <?= $lastDate ?>
-  <span class="spacer"></span>
-  <button type="button" class="thread-del" data-other="<?= $other_id ?>">Supprimer</button>
-  <span class="chev">▶</span>
-</div>
-
-
+    <div class="msg-head">Avec <strong><?= $other ?></strong> — <?= $lastDate ?><span class="chev">▶</span></div>
     <?php if ($preview !== ''): ?><div class="msg-preview"><?= $preview ?></div><?php endif; ?>
 
     <div class="msg-body">
@@ -213,80 +201,9 @@ usort($threads, fn($a,$b)=> $b['last_at'] <=> $a['last_at']);
     <p><a href="<?= APP_BASE ?>/index.php" style="color:#93c5fd">← Retour</a></p>
   </div>
 
-
-<div id="delModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:60">
-  <div style="background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;max-width:420px;width:90%">
-    <h3 style="margin:0 0 8px">Supprimer la conversation ?</h3>
-    <p style="color:#94a3b8">Tous les messages avec <strong id="delUser"></strong> seront supprimés. Action irréversible.</p>
-    <div id="delErr" style="display:none;color:#f87171;font-size:13px;margin-bottom:8px"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button id="delCancel" class="btn" type="button" style="background:#374151">Annuler</button>
-      <button id="delConfirm" class="btn" type="button" style="background:#ef4444">Oui, supprimer</button>
-    </div>
-  </div>
-</div>
-
-
-
 <!-- JS -->
 <script>
 const BASE = '<?= APP_BASE ?>';
-const CSRF = '<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>';
-
-
-
-
-
-
-
-
-
-/* open modal */
-let delCtx = { id:0, card:null, name:'' };
-document.addEventListener('click', (e)=>{
-  const btn = e.target.closest('.thread-del');
-  if (!btn) return;
-  e.stopPropagation();               // don't toggle the card
-  const card = btn.closest('.msg-card');
-  delCtx.id = parseInt(btn.dataset.other, 10);
-  delCtx.card = card;
-  delCtx.name = card.querySelector('.msg-head strong')?.textContent || '';
-  document.getElementById('delUser').textContent = delCtx.name;
-  document.getElementById('delErr').style.display = 'none';
-  document.getElementById('delModal').style.display = 'flex';
-});
-
-/* close helpers */
-const delModal = document.getElementById('delModal');
-document.getElementById('delCancel').onclick = ()=> delModal.style.display='none';
-delModal.addEventListener('click', (e)=>{ if (e.target===delModal) delModal.style.display='none'; });
-document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') delModal.style.display='none'; });
-
-/* confirm delete */
-document.getElementById('delConfirm').addEventListener('click', async ()=>{
-  const err = document.getElementById('delErr');
-  err.style.display = 'none';
-  try{
-    const fd = new FormData();
-    fd.append('other_id', String(delCtx.id));
-    fd.append('csrf', CSRF);
-    const r = await fetch(`${BASE}/messages_delete_thread.php`, { method:'POST', body: fd });
-    const j = await r.json();
-    if (j.ok){
-      if (delCtx.card) delCtx.card.remove();
-      delModal.style.display = 'none';
-    } else {
-      err.textContent = 'Suppression impossible ('+(j.error||'erreur')+')';
-      err.style.display = 'block';
-    }
-  }catch(_){
-    err.textContent = 'Erreur réseau.';
-    err.style.display = 'block';
-  }
-});
-
-
-
 
 /* Ouvrir/fermer en cliquant sur l’entête uniquement
    et auto-scroll en bas quand on ouvre */
@@ -358,10 +275,7 @@ document.addEventListener('submit', async (e)=>{
       const now = new Date();
       const dateStr = now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})+
                       ' '+now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-const pat = /— .*?<span class="chev">/;
-head.innerHTML = pat.test(head.innerHTML)
-  ? head.innerHTML.replace(pat, `— ${dateStr} <span class="chev">`)
-  : head.innerHTML.replace('<span class="chev">', `— ${dateStr} <span class="chev">`);
+      head.innerHTML = head.innerHTML.replace(/— .*?<span class="chev">/, `— ${dateStr} <span class="chev">`);
       const list = card.parentElement;
       const first = list.querySelector('.msg-card');
       if (first && card !== first) list.insertBefore(card, first);

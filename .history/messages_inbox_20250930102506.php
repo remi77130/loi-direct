@@ -231,7 +231,6 @@ usort($threads, fn($a,$b)=> $b['last_at'] <=> $a['last_at']);
 <!-- JS -->
 <script>
 const BASE = '<?= APP_BASE ?>';
-const CSRF = '<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>';
 
 
 
@@ -358,10 +357,7 @@ document.addEventListener('submit', async (e)=>{
       const now = new Date();
       const dateStr = now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})+
                       ' '+now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-const pat = /— .*?<span class="chev">/;
-head.innerHTML = pat.test(head.innerHTML)
-  ? head.innerHTML.replace(pat, `— ${dateStr} <span class="chev">`)
-  : head.innerHTML.replace('<span class="chev">', `— ${dateStr} <span class="chev">`);
+      head.innerHTML = head.innerHTML.replace(/— .*?<span class="chev">/, `— ${dateStr} <span class="chev">`);
       const list = card.parentElement;
       const first = list.querySelector('.msg-card');
       if (first && card !== first) list.insertBefore(card, first);
