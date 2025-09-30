@@ -13,40 +13,76 @@ header('X-Content-Type-Options: nosniff');
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   http_response_code(405);
   header('Allow: POST');
-  echo json_encode(['ok'=>false,'error'=>'method']); exit;
+  echo json_encode(['ok'=>false,'error'=>'method']);
+  exit;
 }
 
 /* CSRF */
 $csrf = $_POST['csrf'] ?? '';
 if (empty($_SESSION['csrf']) || $csrf === '' || !hash_equals($_SESSION['csrf'], $csrf)) {
   http_response_code(400);
-  echo json_encode(['ok'=>false,'error'=>'csrf']); exit;
+  echo json_encode(['ok'=>false,'error'=>'csrf']);
+  exit;
 }
 
 $me       = (int)($_SESSION['user_id'] ?? 0);
 $other_id = (int)($_POST['other_id'] ?? 0);
 if ($me <= 0 || $other_id <= 0 || $other_id === $me) {
   http_response_code(422);
-  echo json_encode(['ok'=>false,'error'=>'bad_params']); exit;
+  echo json_encode(['ok'=>false,'error'=>'bad_params']);
+  exit;
 }
 
+
+
+// Récupère les messages de ce thread que *moi* je vois encore
+$sqlGet = "SELECT id, sender_id, recipient_id, body, image_path, created_at
+           FROM messages
+           WHERE (sender_id=? AND recipient_id=? AND (deleted_by_sender   IS NULL OR deleted_by_sender=0))
+              OR (sender_id=? AND recipient_id=? AND (deleted_by_recipient IS NULL OR deleted_by_recipient=0))";
+$g = $mysqli->prepare($sqlGet) ?: throw new RuntimeException('prep get');
+$g->bind_param('iiii', $me, $other_id, $other_id, $me);
+$g->execute();
+$rs = $g->get_result();
+$ins = $mysqli->prepare("INSERT INTO message_trash
+(owner_id,message_id,sender_id,recipient_id,body,image_path,deleted_at,created_at)
+VALUES (?,?,?,?,?,?,NOW(),?)") ?: throw new RuntimeException('prep ins');
+
+while ($m = $rs->fetch_assoc()) {
+  $ins->bind_param('iiiisss',
+  $me,
+  $m['id'],
+  $m['sender_id'],
+  $m['recipient_id'],
+  $m['body'],
+  $m['image_path'],
+  $m['created_at']
+);
+
+  if (!$ins->execute()) throw new RuntimeException('exec ins');
+}
+$ins->close();
+$g->close();
+
+
+
+
 /*
-  Soft delete + copie en corbeille atomique :
-
-  1) Copier vers message_trash uniquement ce que JE vois encore
-     (ignorer ce qui est déjà masqué côté moi), sans doublons.
-     => nécessite idéalement: UNIQUE(owner_id, message_id)
-
-  2) Marquer supprimé de MON côté (deleted_by_sender / deleted_by_recipient).
+  Soft delete :
+  - Messages que j’ai ENVOYÉS à other_id -> deleted_by_sender = 1
+  - Messages que j’ai REÇUS de other_id -> deleted_by_recipient = 1
+  (Les données restent en base pour l’autre utilisateur.)
 */
 
 $mysqli->begin_transaction();
 
+try {$mysqli->begin_transaction();
+
 try {
-  // 0) Reco: en SQL (une fois) -> UNIQUE(owner_id, message_id)
+  // 0) (recommandé en SQL): UNIQUE(owner_id, message_id)
   // ALTER TABLE message_trash ADD UNIQUE KEY uq_owner_msg (owner_id, message_id);
 
-  // 1) Copie côté moi, sans doublon
+  // 1) Copier en corbeille sans doublon (côté *me*)
   $sqlCopy = "
     INSERT IGNORE INTO message_trash
       (owner_id, message_id, sender_id, recipient_id, body, image_path, deleted_at, created_at)

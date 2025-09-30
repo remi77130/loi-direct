@@ -19,32 +19,102 @@ session_start();
 require __DIR__.'/db.php';
 require __DIR__.'/auth.php';
 require __DIR__.'/config.php';
-/* CSRF pour les formulaires de réponse inline */
-if (empty($_SESSION['csrf'])) {
-  $_SESSION['csrf'] = bin2hex(random_bytes(16));
-}
-$csrf = $_SESSION['csrf'];
+require_login();
 
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+  http_response_code(405);
+  header('Allow: POST');
+  echo json_encode(['ok'=>false,'error'=>'method']);
+  exit;
+}
+
+/* CSRF pour les formulaires de réponse inline */
+/* CSRF pour les formulaires de réponse inline */
+/* CSRF */
+$csrf = $_POST['csrf'] ?? '';
+if (empty($_SESSION['csrf']) || $csrf === '' || !hash_equals($_SESSION['csrf'], $csrf)) {
+  http_response_code(400);
+  echo json_encode(['ok'=>false,'error'=>'csrf']);
+  exit;
+}
+$me       = (int)($_SESSION['user_id'] ?? 0);
+$other_id = (int)($_POST['other_id'] ?? 0);
+if ($me <= 0 || $other_id <= 0 || $other_id === $me) {
+  http_response_code(422);
+  echo json_encode(['ok'=>false,'error'=>'bad_params']);
+  exit;
+}
+
+$csrf = $_SESSION['csrf'];
 $uid  = (int)$_SESSION['user_id'];
 $sent = isset($_GET['sent']); // ?sent=1 => boîte d’envoi, sinon reçus
 
-/* Marquer comme lus (en ignorant ce que j’ai "soft-deleted") */
-if (!$sent) {
-  if ($upd = $mysqli->prepare(
-    'UPDATE messages
-        SET read_at = NOW()
-      WHERE recipient_id = ?
-        AND read_at IS NULL
-        AND (deleted_by_recipient IS NULL OR deleted_by_recipient = 0)'
-  )) {
-    $upd->bind_param('i', $uid);
-    $upd->execute();
-    $upd->close();
-  }
+/*
+  Soft delete :
+  - Tous les messages que J’AI envoyés à other_id -> deleted_by_sender = 1
+  - Tous les messages que J’AI reçus de other_id -> deleted_by_recipient = 1
+
+  ⚠️ Nécessite deux colonnes dans `messages` :
+    - deleted_by_sender TINYINT(1) DEFAULT 0 NULL
+    - deleted_by_recipient TINYINT(1) DEFAULT 0 NULL
+*/
+
+$mysqli->begin_transaction();
+
+try {
+  // Je supprime "mon côté" pour les messages que j’ai envoyés
+  $sql1 = "UPDATE messages
+              SET deleted_by_sender = 1
+            WHERE sender_id = ? AND recipient_id = ?";
+  $st1 = $mysqli->prepare($sql1);
+  if (!$st1) throw new RuntimeException('prep1');
+  $st1->bind_param('ii', $me, $other_id);
+  if (!$st1->execute()) throw new RuntimeException('exec1');
+  $st1->close();
+
+  // Je supprime "mon côté" pour les messages que j’ai reçus
+  $sql2 = "UPDATE messages
+              SET deleted_by_recipient = 1
+            WHERE recipient_id = ? AND sender_id = ?";
+  $st2 = $mysqli->prepare($sql2);
+  if (!$st2) throw new RuntimeException('prep2');
+  $st2->bind_param('ii', $me, $other_id);
+  if (!$st2->execute()) throw new RuntimeException('exec2');
+  $st2->close();
+
+  $mysqli->commit();
+  echo json_encode(['ok'=>true]);
+} catch (Throwable $e) {
+  $mysqli->rollback();
+  error_log('messages_delete_thread: '.$e->getMessage());
+  http_response_code(500);
+  echo json_encode(['ok'=>false,'error'=>'server']);
 }
 
-/* Charger tous les messages (des 2 sens), en calculant l’interlocuteur,
-   et en ignorant ceux que moi j’ai soft-supprimés */
+
+// avant : Marquer les reçus comme lus à l’ouverture (optionnel) 
+//if (!$sent) {
+ // if ($upd = $mysqli->prepare('UPDATE messages SET read_at=NOW() WHERE recipient_id=? AND read_at IS NULL')) {
+   // $upd->bind_param('i', $uid);
+    //$upd->execute();
+    //$upd->close(); }} 
+/*
+$upd = $mysqli->prepare(
+  'UPDATE messages
+     SET read_at = NOW()
+   WHERE recipient_id = ?
+     AND read_at IS NULL
+     AND (deleted_by_recipient IS NULL OR deleted_by_recipient = 0)'
+);
+
+
+/* Requête principale:
+
+// On charge TOUS les messages où je suis émetteur ou destinataire,
+// en calculant l'interlocuteur (other_id) côté SQL.cette version qui 
+// ignore les messages que l’utilisateur a supprimés 
+// (soft delete avec deleted_by_sender et deleted_by_recipient) :
 $sql = '
   SELECT
     m.id, m.sender_id, m.recipient_id,
@@ -64,22 +134,28 @@ $sql = '
       m.recipient_id = ?
       AND (m.deleted_by_recipient IS NULL OR m.deleted_by_recipient = 0)
     )
-  ORDER BY other_id, m.created_at ASC';
+  ORDER BY other_id, m.created_at ASC
+';
+
 $stmt = $mysqli->prepare($sql) ?: exit('Prepare failed: '.$mysqli->error);
 $stmt->bind_param('iiii', $uid, $uid, $uid, $uid);
 $stmt->execute();
 $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
+*/
 
-/* Groupement par interlocuteur */
+// === GROUPEMENT (colle ceci juste après $rows = …; $stmt->close();) ===
 $threads = []; // other_id => ['other'=>pseudo, 'msgs'=>[...], 'last_at'=>timestamp]
 foreach ($rows as $r) {
   $oid = (int)$r['other_id'];
-  if (!isset($threads[$oid])) $threads[$oid] = ['other'=>$r['other'], 'msgs'=>[], 'last_at'=>0];
+  if (!isset($threads[$oid])) {
+    $threads[$oid] = ['other'=>$r['other'], 'msgs'=>[], 'last_at'=>0];
+  }
   $threads[$oid]['msgs'][] = $r;
   $ts = strtotime($r['created_at']);
   if ($ts > $threads[$oid]['last_at']) $threads[$oid]['last_at'] = $ts;
 }
+// Trier les threads par dernier message (récents en haut)
 usort($threads, fn($a,$b)=> $b['last_at'] <=> $a['last_at']);
 
 ?>
