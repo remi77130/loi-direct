@@ -21,16 +21,26 @@ require __DIR__.'/auth.php';
 require __DIR__.'/config.php';
 
 
-function media_url(?string $p): ?string {
-  if (!$p) return null;
-  $p = ltrim($p, '/');
-  if (preg_match('~^https?://~i', $p)) return $p;      // déjà absolu
-  if (str_starts_with($p, 'uploads/')) $p = substr($p, 8); // legacy
-  return rtrim(APP_BASE,'/').'/uploads/'.$p;           // /uploads/… toujours
+// --- Compose direct depuis ?compose=ID ---
+$compose_id = filter_input(INPUT_GET, 'compose', FILTER_VALIDATE_INT, ['options'=>['min_range'=>1]]);
+if ($compose_id && $compose_id !== (int)$_SESSION['user_id']) {
+    // Vérifier que l’utilisateur existe
+    $st = $mysqli->prepare('SELECT id,pseudo FROM users WHERE id=? LIMIT 1');
+    $st->bind_param('i', $compose_id);
+    $st->execute();
+    $res = $st->get_result();
+    $to  = $res ? $res->fetch_assoc() : null;
+    $st->close();
+
+    if ($to) {
+        // Flag pour ouvrir le formulaire de réponse ciblé
+        $composeTarget = [
+            'id'     => (int)$to['id'],
+            'pseudo' => (string)$to['pseudo'],
+            'csrf'   => csrf_token(),
+        ];
+    }
 }
-
-
-
 
 
 
@@ -152,6 +162,27 @@ usort($threads, fn($a,$b)=> $b['last_at'] <=> $a['last_at']);
 </style>
 
 <body>
+
+
+
+
+
+<?php if (!empty($composeTarget)): ?>
+  <div style="border:1px solid #334155;border-radius:10px;padding:12px;margin:8px 0;background:#0b1220">
+    <div style="margin-bottom:8px">Nouveau message à <strong>@<?= htmlspecialchars($composeTarget['pseudo'],ENT_QUOTES) ?></strong></div>
+    <form method="post" action="<?= APP_BASE ?>/chat_message_send.php" enctype="multipart/form-data">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars($composeTarget['csrf'],ENT_QUOTES) ?>">
+      <input type="hidden" name="recipient_id" value="<?= (int)$composeTarget['id'] ?>">
+      <textarea name="body" rows="3" placeholder="Votre message..." required
+        style="width:100%;padding:8px;border-radius:8px;background:#0a0f1a;color:#e5e7eb;border:1px solid #334155"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <input type="file" name="image" accept="image/*">
+        <button class="btn" type="submit">Envoyer</button>
+      </div>
+    </form>
+  </div>
+<?php endif; ?>
+
   <div class="wrap">
     <h1><?= $sent ? 'Messages envoyés' : 'Messages reçus' ?></h1>
     <p><a href="?">Reçus</a> · <a href="?sent=1">Envoyés</a></p>
@@ -202,15 +233,13 @@ usort($threads, fn($a,$b)=> $b['last_at'] <=> $a['last_at']);
           <?php if ($txt !== ''): ?>
             <div class="msg-out-text"><?= htmlspecialchars($txt, ENT_QUOTES) ?></div>
           <?php endif; ?>
-         <?php $img = media_url($m['image_path'] ?? null); ?>
-<?php if ($img): ?>
-  <div style="margin-top:8px">
-    <a href="<?= htmlspecialchars($img,ENT_QUOTES) ?>" target="_blank" rel="noopener">
-      <img src="<?= htmlspecialchars($img,ENT_QUOTES) ?>" style="max-width:100px;max-height:100px;border-radius:8px;display:block">
-    </a>
-  </div>
-<?php endif; ?>
-
+          <?php if ($img): ?>
+            <div style="margin-top:8px">
+              <a href="<?= htmlspecialchars($img,ENT_QUOTES) ?>" target="_blank" rel="noopener">
+                <img src="<?= htmlspecialchars($img,ENT_QUOTES) ?>" style="max-width:100px;max-height:100px;border-radius:8px;display:block">
+              </a>
+            </div>
+          <?php endif; ?>
         </div>
       <?php endforeach; ?>
 

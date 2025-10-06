@@ -3,6 +3,8 @@ declare(strict_types=1);
 session_start();
 require __DIR__.'/db.php';
 require __DIR__.'/auth.php';
+require __DIR__.'/config.php'; // <— pour UPLOAD_DIR
+
 require_login();
 
 header('Content-Type: application/json; charset=utf-8');
@@ -34,12 +36,13 @@ if ($recipient_id > 0 && $recipient_id !== $user_id) {
   }
 
   // destinataire existe ?
-  $st = $mysqli->prepare('SELECT id FROM users WHERE id=? LIMIT 1');
-  $st->bind_param('i', $recipient_id);
-  $st->execute();
-  $res = $st->get_result();
-  if (!$res || !$res->fetch_row()) { http_response_code(404); echo json_encode(['ok'=>false,'error'=>'user']); exit; }
-  $st->close();
+// vérif destinataire
+$st = $mysqli->prepare('SELECT id FROM users WHERE id=? LIMIT 1');
+$st->bind_param('i', $recipient_id);
+$st->execute();
+$st->store_result();
+if ($st->num_rows === 0) { http_response_code(404); echo json_encode(['ok'=>false,'error'=>'user']); exit; }
+$st->free_result(); $st->close();
 
   // rate-limit simple
   $rl = $mysqli->prepare("SELECT COUNT(*) FROM messages WHERE sender_id=? AND created_at>=NOW()-INTERVAL 5 SECOND");

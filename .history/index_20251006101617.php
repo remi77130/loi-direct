@@ -432,10 +432,12 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
       <div style="border:1px solid #334155;border-radius:10px;padding:10px;margin:8px 0;background:#111827;display:flex;justify-content:space-between;align-items:center">
         <div>@<?= htmlspecialchars($u['pseudo'],ENT_QUOTES) ?></div>
         <!-- Actions rapides : envoyer un message, voir le profil -->
-        <div style="display:flex;gap:8px">
-<a class="btn js-open-user" href="#" data-user-id="<?= (int)$u['id'] ?>">Message</a>
-          <a class="btn" style="background:#374151" href="<?= APP_BASE ?>/profile.php?id=<?= (int)$u['id'] ?>">Voir profil</a>
-        </div>
+
+      <div style="display:flex;gap:8px">
+  <button class="btn js-open-user" data-user-id="<?= (int)$u['id'] ?>">Message</button>
+  <a class="btn" style="background:#374151" href="<?= APP_BASE ?>/profile.php?id=<?= (int)$u['id'] ?>">Voir profil</a>
+</div>
+
       </div>
     <?php endforeach; endif; ?>
 
@@ -550,58 +552,31 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 
 <!-- MODAL USER -->                   <!-- MODAL USER -->
 
-<div id="userModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50">
-  <div style="background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;min-width:280px;max-width:90%">
+<div id="userModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;z-index:50">
+  <div id="umCard" style="background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;min-width:280px;max-width:90%">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <strong id="umPseudo" style="font-size:16px">Pseudo</strong>
-      <button id="umClose" class="btn" type="button" style="background:#374151;padding:4px 8px">×</button>
+      <div id="umPseudo" style="font-weight:600"></div>
+      <button id="umClose" type="button">×</button>
     </div>
 
-
-
-      <!-- INFOS PROFIL -->
-    <div id="umInfos" class="muted" style="margin-top:6px; font-size:13px">
-      <!-- rempli en JS -->
-    </div>
-
-    <div class="muted">Projets publiés : <span id="umCount">0</span></div>
-
-    <div class="muted">Situation : <span id="umStatus">—</span></div>
-<div class="muted">Sexe : <span id="umSex">—</span> • Taille : <span id="umHeight">—</span></div>
-
+    <div id="umInfos" class="muted"></div>
 
     <div style="margin-top:12px">
-      <a id="umLink" class="btn" href="#" style="display:inline-block">Voir le profil</a>
+      <a id="umProfileLink" class="btn" href="#">Voir le profil</a>
     </div>
 
-    <button id="umMsgToggle" class="btn" type="button" style="margin-top:12px;background:#2563eb">Envoyer un message</button>
+    <button id="umMsgToggle" class="btn" type="button" style="margin-top:12px">Envoyer un message</button>
 
-    <form id="umMsgForm" enctype="multipart/form-data" style="display:none;margin-top:10px">
-      <textarea name="body" rows="4" maxlength="2000" required placeholder="Ton message…" 
-      style="width:100%;padding:10px;border-radius:10px;border:1px 
-      solid #334155;background:#0b1220;color:#e5e7eb"></textarea>
-
-     
-
-<label style="display:block;margin-top:10px">Image (optionnel)
-  <input id="umImage" name="image" type="file"
-         accept="image/*" capture="environment"
-         style="display:block;margin-top:6px">
-</label>
-
-<!-- preview -->
-<div id="umPreviewWrap" style="display:none;margin-top:8px">
-  <img id="umPreview" alt="Aperçu"
-       style="max-width:160px;max-height:160px;border-radius:8px;display:block">
-  <button type="button" id="umClearImg"
-          class="btn" style="background:#374151;margin-top:6px">Retirer l’image</button>
-</div>
-
-      <input type="hidden" name="recipient_id" id="umRecipient">
-      <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
-      <button class="btn" type="submit" style="margin-top:8px">Envoyer</button>
-      <div id="umMsgStatus" style="font-size:12px;color:#94a3b8;margin-top:6px"></div>
-
+    <form id="umMsgForm" method="post" action="<?= APP_BASE ?>/chat_message_send.php"
+          enctype="multipart/form-data" style="display:none;margin-top:10px">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars(csrf_token(),ENT_QUOTES) ?>">
+      <input type="hidden" name="recipient_id" value="">
+      <textarea name="body" rows="3" placeholder="Votre message..." required
+        style="width:100%;padding:8px;border-radius:8px;background:#0a0f1a;color:#e5e7eb;border:1px solid #334155"></textarea>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <input type="file" name="image" accept="image/*">
+        <button class="btn" type="submit">Envoyer</button>
+      </div>
     </form>
   </div>
 </div>
@@ -689,7 +664,7 @@ umMsgToggle.addEventListener('click', ()=> {
 const umInfos = document.getElementById('umInfos');
 
 document.addEventListener('click', async (e) => {
-  const a = e.target.closest('.user-link, .js-open-user');
+  const a = e.target.closest('.user-link');
   if (!a) return;
   e.preventDefault();
   const id = a.getAttribute('data-user-id');
@@ -737,9 +712,7 @@ umMsgForm.addEventListener('submit', async (e)=>{
   const btn = umMsgForm.querySelector('button[type="submit"]');
   btn.disabled = true;
   try{
-    //const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
-    const r = await fetch(`${BASE}/chat_message_send.php`, { method:'POST', body: fd });
-
+    const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
     const j = await r.json();
     if(j.ok){
       umMsgStatus.style.color = '#34d399';

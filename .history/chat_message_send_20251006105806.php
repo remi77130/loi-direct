@@ -3,10 +3,26 @@ declare(strict_types=1);
 session_start();
 require __DIR__.'/db.php';
 require __DIR__.'/auth.php';
+require __DIR__.'/config.php'; // <— pour UPLOAD_DIR
+
 require_login();
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
+
+
+
+$subdir = 'msg';
+$dir = rtrim(UPLOAD_DIR, '/').'/'.$subdir;
+if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
+
+$ext  = $mime === 'image/jpeg' ? '.jpg' : ($mime === 'image/png' ? '.png' : '.webp');
+$name = bin2hex(random_bytes(16)).$ext;
+$dest = $dir.'/'.$name;
+
+if (!move_uploaded_file($tmp, $dest)) { http_response_code(500); echo json_encode(['ok'=>false,'error'=>'upload']); exit; }
+
+$image_path = $subdir.'/'.$name; // <-- toujours sans "uploads/"
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
   http_response_code(405); header('Allow: POST');
@@ -34,12 +50,13 @@ if ($recipient_id > 0 && $recipient_id !== $user_id) {
   }
 
   // destinataire existe ?
-  $st = $mysqli->prepare('SELECT id FROM users WHERE id=? LIMIT 1');
-  $st->bind_param('i', $recipient_id);
-  $st->execute();
-  $res = $st->get_result();
-  if (!$res || !$res->fetch_row()) { http_response_code(404); echo json_encode(['ok'=>false,'error'=>'user']); exit; }
-  $st->close();
+// vérif destinataire
+$st = $mysqli->prepare('SELECT id FROM users WHERE id=? LIMIT 1');
+$st->bind_param('i', $recipient_id);
+$st->execute();
+$st->store_result();
+if ($st->num_rows === 0) { http_response_code(404); echo json_encode(['ok'=>false,'error'=>'user']); exit; }
+$st->free_result(); $st->close();
 
   // rate-limit simple
   $rl = $mysqli->prepare("SELECT COUNT(*) FROM messages WHERE sender_id=? AND created_at>=NOW()-INTERVAL 5 SECOND");
@@ -57,6 +74,8 @@ if ($recipient_id > 0 && $recipient_id !== $user_id) {
     if (($_FILES['image']['size'] ?? 0) > 5*1024*1024) { http_response_code(413); echo json_encode(['ok'=>false,'error'=>'size']); exit; }
     $ext = $mime === 'image/jpeg' ? '.jpg' : ($mime === 'image/png' ? '.png' : '.webp');
     $name = bin2hex(random_bytes(16)).$ext;
+
+
 
     // Assure-toi d’avoir UPLOAD_DIR défini (ou remplace par un chemin sûr)
     $dir = defined('UPLOAD_DIR') ? UPLOAD_DIR : __DIR__.'/uploads';
@@ -91,11 +110,12 @@ if ($room_id > 0) {
 
   if ((int)$priv === 1) {
     // si salle privée : vérifier membership
-    $mem = $mysqli->prepare("SELECT 1 FROM chat_room_members WHERE room_id=? AND user_id=? AND is_banned=0 LIMIT 1");
-    $mem->bind_param('ii', $room_id, $user_id);
-    $mem->execute();
-    if (!$mem->get_result()->fetch_row()) { http_response_code(403); echo json_encode(['ok'=>false,'error'=>'forbidden']); exit; }
-    $mem->close();
+$mem = $mysqli->prepare("SELECT 1 FROM chat_room_members WHERE room_id=? AND user_id=? AND is_banned=0 LIMIT 1");
+$mem->bind_param('ii', $room_id, $user_id);
+$mem->execute();
+$mem->store_result();
+if ($mem->num_rows === 0) { http_response_code(403); echo json_encode(['ok'=>false,'error'=>'forbidden']); exit; }
+$mem->free_result(); $mem->close();
   }
 
   $rl = $mysqli->prepare("SELECT COUNT(*) FROM chat_messages WHERE sender_id=? AND created_at>=NOW()-INTERVAL 5 SECOND");
@@ -116,3 +136,11 @@ if ($room_id > 0) {
 // ni recipient_id ni room_id
 http_response_code(422);
 echo json_encode(['ok'=>false,'error'=>'missing']);
+$mime = '';
+if (class_exists('finfo')) {
+  $finfo = new finfo(FILEINFO_MIME_TYPE);
+  $mime = $finfo->file($tmp) ?: '';
+} else {
+  $gi = @getimagesize($tmp);
+  $mime = $gi['mime'] ?? '';
+}

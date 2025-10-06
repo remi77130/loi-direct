@@ -432,10 +432,12 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
       <div style="border:1px solid #334155;border-radius:10px;padding:10px;margin:8px 0;background:#111827;display:flex;justify-content:space-between;align-items:center">
         <div>@<?= htmlspecialchars($u['pseudo'],ENT_QUOTES) ?></div>
         <!-- Actions rapides : envoyer un message, voir le profil -->
-        <div style="display:flex;gap:8px">
-<a class="btn js-open-user" href="#" data-user-id="<?= (int)$u['id'] ?>">Message</a>
-          <a class="btn" style="background:#374151" href="<?= APP_BASE ?>/profile.php?id=<?= (int)$u['id'] ?>">Voir profil</a>
-        </div>
+
+      <div style="display:flex;gap:8px">
+  <button class="btn js-open-user" data-user-id="<?= (int)$u['id'] ?>">Message</button>
+  <a class="btn" style="background:#374151" href="<?= APP_BASE ?>/profile.php?id=<?= (int)$u['id'] ?>">Voir profil</a>
+</div>
+
       </div>
     <?php endforeach; endif; ?>
 
@@ -689,7 +691,7 @@ umMsgToggle.addEventListener('click', ()=> {
 const umInfos = document.getElementById('umInfos');
 
 document.addEventListener('click', async (e) => {
-  const a = e.target.closest('.user-link, .js-open-user');
+  const a = e.target.closest('.user-link');
   if (!a) return;
   e.preventDefault();
   const id = a.getAttribute('data-user-id');
@@ -737,9 +739,7 @@ umMsgForm.addEventListener('submit', async (e)=>{
   const btn = umMsgForm.querySelector('button[type="submit"]');
   btn.disabled = true;
   try{
-    //const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
-    const r = await fetch(`${BASE}/chat_message_send.php`, { method:'POST', body: fd });
-
+    const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
     const j = await r.json();
     if(j.ok){
       umMsgStatus.style.color = '#34d399';

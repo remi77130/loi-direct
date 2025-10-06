@@ -607,12 +607,6 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 </div>
 
 
-<script>
-  const umSex   = document.getElementById('umSex');
-const umHeight= document.getElementById('umHeight');
-const umStatus= document.getElementById('umStatus');
-
-</script>
 
 <script>
 const BASE     = '<?= APP_BASE ?>';

@@ -19,21 +19,6 @@ session_start();
 require __DIR__.'/db.php';
 require __DIR__.'/auth.php';
 require __DIR__.'/config.php';
-
-
-function media_url(?string $p): ?string {
-  if (!$p) return null;
-  $p = ltrim($p, '/');
-  if (preg_match('~^https?://~i', $p)) return $p;      // déjà absolu
-  if (str_starts_with($p, 'uploads/')) $p = substr($p, 8); // legacy
-  return rtrim(APP_BASE,'/').'/uploads/'.$p;           // /uploads/… toujours
-}
-
-
-
-
-
-
 /* CSRF pour les formulaires de réponse inline */
 if (empty($_SESSION['csrf'])) {
   $_SESSION['csrf'] = bin2hex(random_bytes(16));
@@ -202,15 +187,13 @@ usort($threads, fn($a,$b)=> $b['last_at'] <=> $a['last_at']);
           <?php if ($txt !== ''): ?>
             <div class="msg-out-text"><?= htmlspecialchars($txt, ENT_QUOTES) ?></div>
           <?php endif; ?>
-         <?php $img = media_url($m['image_path'] ?? null); ?>
-<?php if ($img): ?>
-  <div style="margin-top:8px">
-    <a href="<?= htmlspecialchars($img,ENT_QUOTES) ?>" target="_blank" rel="noopener">
-      <img src="<?= htmlspecialchars($img,ENT_QUOTES) ?>" style="max-width:100px;max-height:100px;border-radius:8px;display:block">
-    </a>
-  </div>
-<?php endif; ?>
-
+          <?php if ($img): ?>
+            <div style="margin-top:8px">
+              <a href="<?= htmlspecialchars($img,ENT_QUOTES) ?>" target="_blank" rel="noopener">
+                <img src="<?= htmlspecialchars($img,ENT_QUOTES) ?>" style="max-width:100px;max-height:100px;border-radius:8px;display:block">
+              </a>
+            </div>
+          <?php endif; ?>
         </div>
       <?php endforeach; ?>
 

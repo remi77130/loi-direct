@@ -31,7 +31,7 @@ $user_id = (int)$_SESSION['user_id'];
 $mine = isset($_GET['mine']) && $_GET['mine'] === '1';
 
 /** Recherche libre (texte +tags). On borne côté serveur pour éviter les abus. */
-$q = mb_substr(preg_replace('/\s+/u',' ', trim((string)($_GET['q'] ?? ''))), 0, 30);
+$q = mb_substr(preg_replace('/\s+/u',' ', trim((string)($_GET['q'] ?? ''))), 0, 10);
 
 /** Filtre par tag via son slug (lien chip). On laiise une marge de 10*/
 $tagSlug = mb_substr(trim((string)($_GET['tag'] ?? '')), 0, 10);
@@ -76,9 +76,8 @@ if ($isUserQuery && $qraw !== '') {
  * Contexte pour préserver les filtres dans les liens (pager, effacer, etc.)
  * ---------------------------------------------------------------------- */
 $baseQuery = [];
-if ($mine)           $baseQuery['mine']  = 1;
-if ($tagSlug !== '') $baseQuery['tag']   = $tagSlug;
-if ($scope !== '')   $baseQuery['scope'] = $scope;
+if ($mine)           $baseQuery['mine'] = 1;
+if ($tagSlug !== '') $baseQuery['tag']  = $tagSlug;
 
 $qsForPager = $baseQuery;
 if ($q !== '')       $qsForPager['q'] = $q;
@@ -399,152 +398,108 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
   line-height:18px;min-width:18px;text-align:center"></span>
 </a>
 
-</header><main class="wrap">
+</header>
+
+<main class="wrap">
+
+<?php if ($tagSlug !== ''): ?>
   <?php
-  /* -----------------------------------------------------------
-   * 1) Bandeau si un filtre par tag est actif
-   *    - Construit un lien "Effacer" qui garde le contexte (mine/q)
-   * ----------------------------------------------------------- */
-  if ($tagSlug !== ''):
-    $noTagQuery = $baseQuery;               // copie du contexte
-    unset($noTagQuery['tag']);              // on retire le tag
-    if ($q !== '') $noTagQuery['q'] = $q;   // on conserve la recherche si présente
+    // Lien "Effacer" du filtre tag : on garde q si présent, on supprime 'tag'
+    $noTagQuery = $baseQuery; unset($noTagQuery['tag']); if ($q!=='') $noTagQuery['q']=$q;
   ?>
-    <div class="meta" style="margin-bottom:10px">
-      Filtré par tag : <strong>#<?= htmlspecialchars($tagSlug,ENT_QUOTES) ?></strong>
-      — <a href="<?= APP_BASE ?>/index.php<?= $noTagQuery ? ('?'.http_build_query($noTagQuery)) : '' ?>" style="color:#93c5fd">Effacer</a>
-    </div>
-  <?php endif; ?>
+  <div class="meta" style="margin-bottom:10px">
+    Filtré par tag : <strong>#<?= htmlspecialchars($tagSlug,ENT_QUOTES) ?></strong>
+    — <a href="<?= APP_BASE ?>/index.php<?= $noTagQuery ? ('?'.http_build_query($noTagQuery)) : '' ?>" style="color:#93c5fd">Effacer</a>
+  </div>
+<?php endif; ?>
 
+<?php if ($q !== ''): ?>
+  <div class="meta" style="margin-bottom:10px">Résultats pour « <?= htmlspecialchars($q,ENT_QUOTES); ?> »</div>
+<?php endif; ?>
 
-  <?php
-  /* -----------------------------------------------------------
-   * 2) Mode "Recherche d’utilisateurs"
-   *    - S’active si $isUserQuery === true (scope=users ou q commence par @)
-   *    - Affiche la liste des pseudos correspondants
-   * ----------------------------------------------------------- */
-  if ($isUserQuery): ?>
-    <h2 style="margin-top:16px">Utilisateurs</h2>
+<?php if (!empty($_SESSION['flash_success'])): ?>
+  <div class="card" style="border-color:#14532d;background:#052e16;color:#bbf7d0;margin-bottom:12px">
+    <?= htmlspecialchars($_SESSION['flash_success'], ENT_QUOTES); unset($_SESSION['flash_success']); ?>
+  </div>
+<?php endif; ?>
 
-    <?php if (!$userResults): ?>
-      <p>Aucun utilisateur trouvé.</p>
-    <?php else: foreach ($userResults as $u): ?>
-      <div style="border:1px solid #334155;border-radius:10px;padding:10px;margin:8px 0;background:#111827;display:flex;justify-content:space-between;align-items:center">
-        <div>@<?= htmlspecialchars($u['pseudo'],ENT_QUOTES) ?></div>
-        <!-- Actions rapides : envoyer un message, voir le profil -->
-        <div style="display:flex;gap:8px">
-<a class="btn js-open-user" href="#" data-user-id="<?= (int)$u['id'] ?>">Message</a>
-          <a class="btn" style="background:#374151" href="<?= APP_BASE ?>/profile.php?id=<?= (int)$u['id'] ?>">Voir profil</a>
-        </div>
-      </div>
-    <?php endforeach; endif; ?>
-
-  <?php else: ?>
-    <?php
-    /* -----------------------------------------------------------
-     * 3) Feed des projets (uniquement quand on NE cherche PAS des users)
-     * ----------------------------------------------------------- */
-
-    // Indication de recherche si q non vide
-    if ($q !== ''): ?>
-      <div class="meta" style="margin-bottom:10px">
-        Résultats pour « <?= htmlspecialchars($q,ENT_QUOTES); ?> »
-      </div>
-    <?php endif; ?>
-
-    <!-- Flash succès (ex: après création de projet) -->
-    <?php if (!empty($_SESSION['flash_success'])): ?>
-      <div class="card" style="border-color:#14532d;background:#052e16;color:#bbf7d0;margin-bottom:12px">
-        <?= htmlspecialchars($_SESSION['flash_success'], ENT_QUOTES); unset($_SESSION['flash_success']); ?>
-      </div>
-    <?php endif; ?>
-
-    <?php if (!$projects): ?>
-      <!-- Cas sans résultats -->
-      <div class="empty">
-        <?php if ($q !== '' || $tagSlug !== '' || $mine): ?>
-          Aucun résultat.
-        <?php else: ?>
-          Aucun projet pour l’instant.
-        <?php endif; ?>
-      </div>
-
+<?php if (!$projects): ?>
+  <!-- Cas sans résultats / sans projets -->
+  <div class="empty">
+    <?php if ($q !== '' || $tagSlug !== '' || $mine): ?>
+      Aucun résultat.
     <?php else: ?>
-      <!-- Liste des projets -->
-      <?php foreach ($projects as $p): ?>
-        <article class="card">
-          <!-- Titre -->
-          <h3 style="margin:0 0 6px"><?= htmlspecialchars($p['title'],ENT_QUOTES); ?></h3>
+      Aucun projet pour l’instant.
+    <?php endif; ?>
+  </div>
 
-          <!-- Meta auteur + date -->
-          <div class="meta">
-            Par
-            <a href="#" class="user-link" data-user-id="<?= (int)$p['author_id'] ?>">
-              <?= htmlspecialchars($p['author'], ENT_QUOTES) ?>
+<?php else: ?>
+  <!-- Liste des projets -->
+  <?php foreach ($projects as $p): ?>
+    <article class="card">
+      <h3 style="margin:0 0 6px"><?= htmlspecialchars($p['title'],ENT_QUOTES); ?></h3>
+      <div class="meta">
+  Par <a href="#" class="user-link" data-user-id="<?= (int)$p['author_id'] ?>">
+       <?= htmlspecialchars($p['author'], ENT_QUOTES) ?>
+     </a>
+  • Publié le <?= htmlspecialchars(date('d/m/Y H:i', strtotime($p['published_at']??'')),ENT_QUOTES); ?>
+</div>
+      <p><?= htmlspecialchars($p['summary'],ENT_QUOTES); ?></p>
+
+      <?php $slug = slugify($p['title']); ?>
+
+      <!-- CTA Lire -->
+      <div style="margin-top:10px">
+        <a class="btn" href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>">Lire</a>
+      </div>
+
+      <!-- Miniature cover cliquable → page projet -->
+      <?php if (!empty($p['cover_thumb'])): ?>
+        <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>"
+           style="float:right;display:block;border-radius:10px;overflow:hidden;margin:0;position:relative;z-index:2;box-shadow:3px 2px 5px #0000004f;">
+          <img
+            src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'], ENT_QUOTES) ?>"
+            alt="<?= htmlspecialchars($p['title'], ENT_QUOTES) ?>"
+            width="50" height="50" loading="lazy"
+            style="width:50px;height:50px;object-fit:cover;display:block;">
+          </a>
+      <?php endif; ?>
+
+      <!-- Chips de tags -->
+      <?php if (!empty($tagsByProject[(int)$p['id']] ?? [])): ?>
+        <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px">
+          <?php foreach ($tagsByProject[(int)$p['id']] as $tg): ?>
+            <a href="<?= tag_url($tg['slug']) ?>"
+               style="font-size:12px; padding:4px 8px; border:1px solid #334155;
+                      border-radius:999px; color:#cbd5e1; text-decoration:none; background:#0b1220">
+               #<?= htmlspecialchars($tg['name'], ENT_QUOTES) ?>
             </a>
-            • Publié le <?= htmlspecialchars(date('d/m/Y H:i', strtotime($p['published_at']??'')),ENT_QUOTES); ?>
-          </div>
-
-          <!-- Résumé -->
-          <p><?= htmlspecialchars($p['summary'],ENT_QUOTES); ?></p>
-
-          <?php $slug = slugify($p['title']); ?>
-
-          <!-- CTA Lire -->
-          <div style="margin-top:10px">
-            <a class="btn" href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>">Lire</a>
-          </div>
-
-          <!-- Miniature (si présente) cliquable vers la page projet -->
-          <?php if (!empty($p['cover_thumb'])): ?>
-            <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>"
-               style="float:right;display:block;border-radius:10px;overflow:hidden;margin:0;position:relative;z-index:2;box-shadow:3px 2px 5px #0000004f;">
-              <img
-                src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'], ENT_QUOTES) ?>"
-                alt="<?= htmlspecialchars($p['title'], ENT_QUOTES) ?>"
-                width="50" height="50" loading="lazy"
-                style="width:50px;height:50px;object-fit:cover;display:block;">
-            </a>
-          <?php endif; ?>
-
-          <!-- Chips de tags -->
-          <?php if (!empty($tagsByProject[(int)$p['id']] ?? [])): ?>
-            <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px">
-              <?php foreach ($tagsByProject[(int)$p['id']] as $tg): ?>
-                <a href="<?= tag_url($tg['slug']) ?>"
-                   style="font-size:12px; padding:4px 8px; border:1px solid #334155;
-                          border-radius:999px; color:#cbd5e1; text-decoration:none; background:#0b1220">
-                   #<?= htmlspecialchars($tg['name'], ENT_QUOTES) ?>
-                </a>
-              <?php endforeach; ?>
-            </div>
-          <?php endif; ?>
-
-          <!-- Compteur de likes -->
-          <span style="margin-left:8px;font-size:12px;color:#94a3b8">
-            ❤ <?= (int)$p['likes_count']; ?>
-          </span>
-        </article>
-      <?php endforeach; ?>
-
-      <!-- Pagination quand > 1 page de résultats -->
-      <?php if ($totalPages > 1): ?>
-        <div class="pager">
-          <?php if ($page > 1): ?>
-            <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page-1]) ?>">&laquo; Précédent</a>
-          <?php endif; ?>
-
-          <span style="color:#94a3b8">Page <?= $page; ?> / <?= $totalPages; ?></span>
-
-          <?php if ($page < $totalPages): ?>
-            <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page+1]) ?>">Suivant &raquo;</a>
-          <?php endif; ?>
+          <?php endforeach; ?>
         </div>
       <?php endif; ?>
 
-    <?php endif; // fin $projects ?>
+      <!-- Compteur de likes -->
+      <span style="margin-left:8px;font-size:12px;color:#94a3b8">
+        ❤ <?= (int)$p['likes_count']; ?>
+      </span>
+    </article>
+  <?php endforeach; ?>
 
-  <?php endif; // fin !$isUserQuery ?>
+  <!-- Pagination (préserve le contexte via $qsForPager) -->
+  <?php if ($totalPages > 1): ?>
+    <div class="pager">
+      <?php if ($page > 1): ?>
+        <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page-1]) ?>">&laquo; Précédent</a>
+      <?php endif; ?>
+
+      <span style="color:#94a3b8">Page <?= $page; ?> / <?= $totalPages; ?></span>
+
+      <?php if ($page < $totalPages): ?>
+        <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page+1]) ?>">Suivant &raquo;</a>
+      <?php endif; ?>
+    </div>
+  <?php endif; ?>
+<?php endif; ?>
 </main>
 
 
@@ -689,7 +644,7 @@ umMsgToggle.addEventListener('click', ()=> {
 const umInfos = document.getElementById('umInfos');
 
 document.addEventListener('click', async (e) => {
-  const a = e.target.closest('.user-link, .js-open-user');
+  const a = e.target.closest('.user-link');
   if (!a) return;
   e.preventDefault();
   const id = a.getAttribute('data-user-id');
@@ -737,9 +692,7 @@ umMsgForm.addEventListener('submit', async (e)=>{
   const btn = umMsgForm.querySelector('button[type="submit"]');
   btn.disabled = true;
   try{
-    //const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
-    const r = await fetch(`${BASE}/chat_message_send.php`, { method:'POST', body: fd });
-
+    const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
     const j = await r.json();
     if(j.ok){
       umMsgStatus.style.color = '#34d399';
