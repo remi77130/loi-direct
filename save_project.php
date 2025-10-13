@@ -1,12 +1,20 @@
-<?php
+<?php 
+error_reporting(E_ALL);
+ini_set('display_errors', '1');               // show errors in browser (dev only)
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/php_error.log'); // write here if PHP log path is bad
+
+
 // save_project.php validation serveur + insertion + redirection
 
 declare(strict_types=1);
 session_start();
+
 require __DIR__ . '/config.php';   // <-- IMPORTANT (slugify/tag_slug)
 require __DIR__ . '/db.php';
 require __DIR__ . '/auth.php';
 require_login();
+$HAS_GD = extension_loaded('gd'); // flag, pas de return qui stoppe le script
 
 $errors = [];
 
@@ -107,7 +115,9 @@ if ($tagsArr) {
   }
 }
 
-if (!extension_loaded('gd')) return false;
+//if (!extension_loaded('gd')) return false;
+$HAS_GD = extension_loaded('gd');  // <-- au lieu du return
+
 
 
 function make_thumbnail(string $srcPath, string $srcMime, string $destPath, int $maxW, int $maxH, ?int &$outW, ?int &$outH): bool {
@@ -202,28 +212,24 @@ if ($newId && !empty($_FILES['images']) && is_array($_FILES['images']['name'])) 
 
      // miniature
 $thumbRel = null; $tw = null; $th = null;
-$thumbExt = function_exists('imagewebp') ? 'webp' : ($ext === 'jpg' ? 'jpg' : $ext);
-$thumbDest = $destDir . '/' . pathinfo($name, PATHINFO_FILENAME) . '-thumb.' . $thumbExt;
 
-if (make_thumbnail($dest, $mime, $thumbDest, 600, 600, $tw, $th)) {
-    $thumbRel = $subdir . '/' . basename($thumbDest);
+if ($HAS_GD) {
+  $thumbExt  = function_exists('imagewebp') ? 'webp' : ($ext === 'jpg' ? 'jpg' : $ext);
+  $thumbDest = $destDir.'/'.pathinfo($name, PATHINFO_FILENAME).'-thumb.'.$thumbExt;
+
+  if (make_thumbnail($dest, $mime, $thumbDest, 600, 600, $tw, $th)) {
+    $thumbRel = $subdir.'/'.basename($thumbDest);
+  }
 }
-        // insert
-        $ins->bind_param('isssiiisii', $newId, $relPath, $orig, $mime, $size, $w, $h, $thumbRel, $tw, $th);
-        $ins->execute();
+
+// puis l'INSERT (thumb_* peut rester NULL)
+$ins->bind_param('isssiiisii', $newId, $relPath, $orig, $mime, $size, $w, $h, $thumbRel, $tw, $th);
+$ins->execute();
+
     }
 
     $ins->close();
 }
-
-
-
-
-
-
-
-
-
 
 
 
@@ -236,8 +242,17 @@ if (!$ok || !$newId) {
   exit;
 }
 
-// Succès → retour au feed avec message
-$_SESSION['flash_success'] = "Projet publié avec succès.";
-$base = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-header('Location: ' . $base . '/index.php');
-exit;
+
+
+
+// DIAG: si des headers ont déjà été envoyés (BOM, echo, espace, etc.)
+if (headers_sent($f, $l)) {
+    error_log("headers already sent in $f:$l");
+    // fallback JS si headers HS
+    echo '<!doctype html><meta charset="utf-8"><script>location.href="'.APP_BASE.'/index.php"</script>';
+    exit;
+}
+
+// redirection propre (URL absolue => évite dirname/PHP_SELF surprises)
+header('Location: '.APP_BASE.'/index.php', true, 302);
+exit;>
