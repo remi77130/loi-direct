@@ -284,7 +284,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
   .card{background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:14px}
   .meta{font-size:12px;color:#94a3b8;margin-top:4px}
   .pager{display:flex;gap:8px;justify-content:center;margin:20px 0}
-  .pager a{color:#93c4fd;text-decoration:none}
+  .pager a{color:#93c5fd;text-decoration:none}
   .empty{color:#94a3b8;text-align:center;margin:40px 0}
 
 
