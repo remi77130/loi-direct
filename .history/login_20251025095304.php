@@ -207,7 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$blocked) {
 } // end POST handling
 
 // Hygiène légère : purge anciennes tentatives
-//$mysqli->query("DELETE FROM login_attempts WHERE created_at < (NOW() - INTERVAL 30 DAY)");
+
 // --- GC probabiliste: ~1% des requêtes déclenchent le nettoyage ---
 const LOGIN_GC_NUM = 1;   // numérateur
 const LOGIN_GC_DEN = 100; // dénominateur (1/100 = 1%)
@@ -236,7 +236,7 @@ input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #334155;b
 .btn{width:100%;margin-top:16px;padding:12px;border:none;border-radius:10px;background:#2563eb;color:#fff;font-weight:600;cursor:pointer}
 .btn[disabled]{opacity:.6;cursor:not-allowed}
 .errors{background:#7f1d1d;color:#fecaca;padding:10px;border-radius:8px;margin-bottom:12px}
-a{color:#93c5fd;text-decoration:none}
+a{color:#yellow;text-decoration:none}
 </style>
 </head>
 <body>
