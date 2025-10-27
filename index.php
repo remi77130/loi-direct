@@ -143,10 +143,10 @@ $sql = "SELECT DISTINCT p.author_id AS author_id,
   p.id, p.title, p.summary, p.published_at,
   u.pseudo AS author,
   COALESCE(l.cnt,0) AS likes_count,
-  (SELECT thumb_path
+  (SELECT path
      FROM project_images i
-     WHERE i.project_id = p.id AND i.thumb_path IS NOT NULL
-     ORDER BY i.id ASC LIMIT 1) AS cover_thumb
+     WHERE i.project_id = p.id AND i.path IS NOT NULL
+     ORDER BY i.id ASC LIMIT 1) AS path
 FROM law_projects p
 $joins
 WHERE $where
@@ -576,7 +576,7 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 
     <button id="umMsgToggle" class="btn" type="button" style="margin-top:12px;background:#2563eb">Envoyer un message</button>
 
-    <form id="umMsgForm" enctype="multipart/form-data" style="display:none;margin-top:10px">
+    <form id="umMsgForm"  enctype="multipart/form-data" style="display:none;margin-top:10px">
       <textarea name="body" rows="4" maxlength="2000" required placeholder="Ton message…" 
       style="width:100%;padding:10px;border-radius:10px;border:1px 
       solid #334155;background:#0b1220;color:#e5e7eb"></textarea>
@@ -783,6 +783,25 @@ async function refreshBadge(){
 refreshBadge();
 setInterval(refreshBadge, 20000);
 </script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 </body>
 </html>

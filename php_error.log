@@ -1,0 +1,55 @@
+[27-Oct-2025 13:29:27 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'thumb_path' in 'field list' in C:\xampp\htdocs\loi\save_project.php:184
+Stack trace:
+#0 C:\xampp\htdocs\loi\save_project.php(184): mysqli->prepare('INSERT INTO pro...')
+#1 {main}
+  thrown in C:\xampp\htdocs\loi\save_project.php on line 184
+[27-Oct-2025 13:29:39 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'thumb_path' in 'field list' in C:\xampp\htdocs\loi\save_project.php:185
+Stack trace:
+#0 C:\xampp\htdocs\loi\save_project.php(185): mysqli->prepare('INSERT INTO pro...')
+#1 {main}
+  thrown in C:\xampp\htdocs\loi\save_project.php on line 185
+[27-Oct-2025 13:30:05 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Unknown column 'thumb_w' in 'field list' in C:\xampp\htdocs\loi\save_project.php:185
+Stack trace:
+#0 C:\xampp\htdocs\loi\save_project.php(185): mysqli->prepare('INSERT INTO pro...')
+#1 {main}
+  thrown in C:\xampp\htdocs\loi\save_project.php on line 185
+[27-Oct-2025 14:15:04 Europe/Berlin] PHP Fatal error:  Uncaught ArgumentCountError: The number of variables must match the number of parameters in the prepared statement in C:\xampp\htdocs\loi\save_project.php:227
+Stack trace:
+#0 C:\xampp\htdocs\loi\save_project.php(227): mysqli_stmt->bind_param('isssiiisii', 85, '2025/10/0bd0f08...', 'CMOIRENC_137211...', 'image/jpeg', 563599, 1920, 1280, NULL, NULL, NULL)
+#1 {main}
+  thrown in C:\xampp\htdocs\loi\save_project.php on line 227
+[27-Oct-2025 14:18:12 Europe/Berlin] PHP Fatal error:  Uncaught ArgumentCountError: The number of variables must match the number of parameters in the prepared statement in C:\xampp\htdocs\loi\save_project.php:227
+Stack trace:
+#0 C:\xampp\htdocs\loi\save_project.php(227): mysqli_stmt->bind_param('isssiiisii', 87, '2025/10/bf035ff...', 'plage.jpg', 'image/jpeg', 10050, 259, 194, NULL, NULL, NULL)
+#1 {main}
+  thrown in C:\xampp\htdocs\loi\save_project.php on line 227
+[27-Oct-2025 14:18:37 Europe/Berlin] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in C:\xampp\htdocs\loi\save_project.php:227
+Stack trace:
+#0 C:\xampp\htdocs\loi\save_project.php(227): mysqli_stmt->bind_param('isssiiisiii', 88, '2025/10/55bfc35...', 'plage.jpg', 'image/jpeg', 10050, 259, 194, NULL, NULL, NULL)
+#1 {main}
+  thrown in C:\xampp\htdocs\loi\save_project.php on line 227
+[27-Oct-2025 14:18:42 Europe/Berlin] PHP Fatal error:  Uncaught ArgumentCountError: The number of elements in the type definition string must match the number of bind variables in C:\xampp\htdocs\loi\save_project.php:227
+Stack trace:
+#0 C:\xampp\htdocs\loi\save_project.php(227): mysqli_stmt->bind_param('isssiiisiis', 89, '2025/10/0079137...', 'plage.jpg', 'image/jpeg', 10050, 259, 194, NULL, NULL, NULL)
+#1 {main}
+  thrown in C:\xampp\htdocs\loi\save_project.php on line 227
+[27-Oct-2025 14:18:46 Europe/Berlin] PHP Fatal error:  Uncaught ArgumentCountError: The number of variables must match the number of parameters in the prepared statement in C:\xampp\htdocs\loi\save_project.php:227
+Stack trace:
+#0 C:\xampp\htdocs\loi\save_project.php(227): mysqli_stmt->bind_param('isssiiisii', 90, '2025/10/6c19d47...', 'plage.jpg', 'image/jpeg', 10050, 259, 194, NULL, NULL, NULL)
+#1 {main}
+  thrown in C:\xampp\htdocs\loi\save_project.php on line 227
+[27-Oct-2025 14:34:29 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Column 'project_id' cannot be null in C:\xampp\htdocs\loi\save_project.php:238
+Stack trace:
+#0 C:\xampp\htdocs\loi\save_project.php(238): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\loi\save_project.php on line 238
+[27-Oct-2025 14:36:25 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Column 'project_id' cannot be null in C:\xampp\htdocs\loi\save_project.php:239
+Stack trace:
+#0 C:\xampp\htdocs\loi\save_project.php(239): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\loi\save_project.php on line 239
+[27-Oct-2025 14:37:03 Europe/Berlin] PHP Fatal error:  Uncaught mysqli_sql_exception: Column 'project_id' cannot be null in C:\xampp\htdocs\loi\save_project.php:239
+Stack trace:
+#0 C:\xampp\htdocs\loi\save_project.php(239): mysqli_stmt->execute()
+#1 {main}
+  thrown in C:\xampp\htdocs\loi\save_project.php on line 239

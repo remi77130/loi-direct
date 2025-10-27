@@ -85,10 +85,10 @@ $sql = "
     p.summary,
     p.published_at,
     (
-      SELECT thumb_path
+      SELECT path
       FROM project_images i
       WHERE i.project_id = p.id
-        AND i.thumb_path IS NOT NULL
+        AND i.path IS NOT NULL
       ORDER BY i.id ASC
       LIMIT 1
     ) AS cover_thumb

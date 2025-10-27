@@ -69,7 +69,7 @@ Texte libre…
 - Listes
 - **Gras**, *Italique*
 - `code`
-[Un lien](https://exemple.org)"></textarea>
+[Un lien](https://exemple.org)" maxlength="500"></textarea>
 
 
 

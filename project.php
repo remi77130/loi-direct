@@ -138,7 +138,7 @@ if ($id > 0) {
   $images = [];
   if ($project) {
     $st = $mysqli->prepare(
-      "SELECT path, thumb_path, original_name
+      "SELECT path, original_name
        FROM project_images
        WHERE project_id=?
        ORDER BY id"
@@ -246,7 +246,7 @@ unset($_SESSION['comment_draft']);
           <hr style="border:0;border-top:1px solid #334155;margin:16px 0">
           <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px">
             <?php foreach ($images as $im):
-              $thumb = $im['thumb_path'] ?: $im['path']; ?>
+              $thumb = $im['path'] ?: $im['path']; ?>
               <a href="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($im['path'],ENT_QUOTES) ?>"
                  target="_blank" rel="noopener">
                 <img
