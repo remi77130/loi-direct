@@ -174,7 +174,11 @@ unset($_SESSION['comment_draft']);
   :root{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
   body{background:#0f172a;color:#e5e7eb;margin:0}
   .wrap{max-width:900px;margin:24px auto;padding:0 16px}
-  .card{background:#111827;border:1px solid #334155;border-radius:14px;padding:20px}
+  .card{background:#111827;border:1px solid #334155;border-radius:14px;padding:20px;
+  
+      overflow-wrap: break-word;
+
+  }
   a{color:#93c5fd;text-decoration:none}
   .muted{color:#94a3b8}
   .toolbar{display:flex;gap:10px;margin-top:12px}

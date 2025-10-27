@@ -271,8 +271,10 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Loi Direct — Feed</title>
+<link rel="stylesheet" href="styles/index.css">
+
 <style>
-  :root{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+    :root{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
   body{background:#0f172a;color:#e5e7eb;margin:0}
   header{display:flex;justify-content:space-between;align-items:
     center;padding:16px 20px;background:#111827;position:sticky;top:0;z-index: 5;}
@@ -281,7 +283,28 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
   .nav a.active{color:#fff;font-weight:700}
   .btn{background:#2563eb;color:#fff;border:none;border-radius:10px;padding:5px 14px;text-decoration:none}
   .wrap{max-width:900px;margin:24px auto;padding:0 16px}
-  .card{background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:14px}
+
+  /* Cards */
+  .card{background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:14px;
+  overflow: hidden;            /* rien ne dépasse visuellement */
+
+}
+
+.card h3 {
+    
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+        }
+.card p {
+    /* fallback vieux navigateurs */
+   display: -webkit-box;
+  -webkit-line-clamp: 3;      /* change 2/4 selon besoin */
+  -webkit-box-orient: vertical;
+   overflow: hidden;
+   text-overflow: ellipsis;
+
+        }
   .meta{font-size:12px;color:#94a3b8;margin-top:4px}
   .pager{display:flex;gap:8px;justify-content:center;margin:20px 0}
   .pager a{color:#93c5fd;text-decoration:none}
@@ -342,7 +365,6 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
 
 
 
-
 </style>
 </head>
 <body>
@@ -354,7 +376,7 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
   <nav class="nav">
     <a href="<?= APP_BASE ?>/index.php" class="<?= !$mine ? 'active' : '' ?>">Récents</a>
     <a href="<?= APP_BASE ?>/index.php?mine=1" class="<?= $mine ? 'active' : '' ?>">Mes projets</a>
-    <a href="chat_rooms.php" target="_blank" rel="noopener noreferrer" style="color:red">Créer un salon</a>
+    <a href="<?= APP_BASE ?>/chat_rooms.php" target="_blank" rel="noopener noreferrer" style="color:red">Créer un salon</a>
   </nav>
 
   <!-- Formulaire de recherche.
