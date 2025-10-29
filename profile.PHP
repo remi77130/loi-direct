@@ -116,7 +116,12 @@ $totalPages = max(1, (int)ceil($count / $per));
   /* Styles locaux (peu de CSS pour rester autonome ; idéalement à factoriser) */
   body{background:#0f172a;color:#e5e7eb;margin:0;font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
   .wrap{max-width:900px;margin:24px auto;padding:0 16px}
-  .card{background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:14px}
+  /* Card */
+  .card
+  {background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:14px; overflow:hidden;}
+
+  .h3{}
+
   .btn{background:#2563eb;color:#fff;border:none;border-radius:10px;padding:8px 12px;text-decoration:none}
   .meta{font-size:12px;color:#94a3b8}
 </style>

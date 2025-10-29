@@ -266,111 +266,21 @@ $stmt->close();
 
 $totalPages = max(1, (int)ceil($totalRows / $per));
 ?>
+
+
 <!doctype html>
 <html lang="fr">
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Loi Direct — Feed</title>
-<link rel="stylesheet" href="styles/index.css">
-
-<style>
-    :root{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-  body{background:#0f172a;color:#e5e7eb;margin:0}
-  header{display:flex;justify-content:space-between;align-items:
-    center;padding:16px 20px;background:#111827;position:sticky;top:0;z-index: 5;}
-  .brand{font-weight:800}
-  .nav a{color:#cbd5e1;margin-right:16px;text-decoration:none}
-  .nav a.active{color:#fff;font-weight:700}
-  .btn{background:#2563eb;color:#fff;border:none;border-radius:10px;padding:5px 14px;text-decoration:none}
-  .wrap{max-width:900px;margin:24px auto;padding:0 16px}
-
-  /* Cards */
-  .card{background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;margin-bottom:14px;
-  overflow: hidden;            /* rien ne dépasse visuellement */
-
-}
-
-.card h3 {
-    
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-        }
-.card p {
-    /* fallback vieux navigateurs */
-   display: -webkit-box;
-  -webkit-line-clamp: 3;      /* change 2/4 selon besoin */
-  -webkit-box-orient: vertical;
-   overflow: hidden;
-   text-overflow: ellipsis;
-
-        }
-  .meta{font-size:12px;color:#94a3b8;margin-top:4px}
-  .pager{display:flex;gap:8px;justify-content:center;margin:20px 0}
-  .pager a{color:#93c5fd;text-decoration:none}
-  .empty{color:#94a3b8;text-align:center;margin:40px 0}
+<title>Tchat direct</title>
+<link rel="stylesheet" href="<?= APP_BASE ?>/styles/index.css">
 
 
-
-/* ---------- UI polish pack ---------- */
-:root{
-  --bg:#0f172a; --card:#111827; --line:#334155;
-  --text:#e5e7eb; --muted:#94a3b8; --brand:#2563eb; --chip:#0b1220;
-}
-
-*{box-sizing:border-box}
-a{color:#93c5fd;text-decoration:none}
-a:hover{opacity:.9}
-
-/* Header */
-header{backdrop-filter:saturate(1.2) blur(6px); border-bottom:1px solid #0b1220}
-.nav a{padding:6px 10px;border-radius:10px;transition:background .15s}
-.nav a.active,.nav a:hover{background:#0b12205c}
-
-/* Inputs & buttons */
-input[name="q"]{min-width:260px; transition:border .15s, box-shadow .15s}
-input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2563eb33}
-.btn{transition:transform .04s ease, box-shadow .15s}
-.btn:hover{box-shadow:0 6px 18px #1d4ed81c}
-.btn:active{transform:translateY(1px)}
-.btn[disabled]{opacity:.6; cursor:not-allowed}
-
-
-/* Make article layout 2-columns when a cover exists */
-.card:has(.cover){display:grid; grid-template-columns:1fr 64px; gap:14px; align-items:start}
-.cover{grid-column:2; width:64px; height:64px; border-radius:12px; overflow:hidden;
-       box-shadow:0 6px 16px #0003; transform:translateZ(0); transition:transform .15s}
-.cover img{width:100%; height:100%; object-fit:cover; display:block}
-.cover:hover{transform:scale(1.04)}
-
-/* Chips */
-.card a[href*="tag="]{border-radius:999px;background:var(--chip);border:1px solid var(--line)}
-.card a[href*="tag="]:hover{border-color:#475569}
-
-/* Meta & user link */
-.meta{color:var(--muted)}
-.user-link{font-weight:600}
-.user-link:hover{text-decoration:underline}
-
-/* Pager */
-.pager{gap:12px}
-.pager a{padding:6px 10px;border:1px solid var(--line);border-radius:10px}
-.pager a:hover{background:#0b1220}
-
-/* Modal polish */
-#userModal{backdrop-filter:blur(4px)}
-#userModal>div{animation:pop .12s ease-out}
-@keyframes pop{from{transform:scale(.96);opacity:0} to{transform:scale(1);opacity:1}}
-
-
-
-
-</style>
 </head>
 <body>
 
 <header>
-  <div class="brand">Loi Direct</div>
+<H1>Tchat direct</H1>
 
   <!-- Onglets : Récents / Mes projets -->
   <nav class="nav">
@@ -421,7 +331,16 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
   line-height:18px;min-width:18px;text-align:center"></span>
 </a>
 
-</header><main class="wrap">
+</header>
+
+
+
+
+
+
+
+
+<main class="wrap">
   <?php
   /* -----------------------------------------------------------
    * 1) Bandeau si un filtre par tag est actif
@@ -628,15 +547,10 @@ input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2
   </div>
 </div>
 
-
-<script>
-  const umSex   = document.getElementById('umSex');
+<script>const umSex   = document.getElementById('umSex');
 const umHeight= document.getElementById('umHeight');
 const umStatus= document.getElementById('umStatus');
 
-</script>
-
-<script>
 const BASE     = '<?= APP_BASE ?>';
 const modal    = document.getElementById('userModal');
 const umPseudo = document.getElementById('umPseudo');
@@ -654,12 +568,6 @@ const umImage      = document.getElementById('umImage');
 const umPreview    = document.getElementById('umPreview');
 const umPreviewWrap= document.getElementById('umPreviewWrap');
 const umClearImg   = document.getElementById('umClearImg');
-
-
-
-
-
-
 
 
 let umPreviewURL = null;
@@ -785,11 +693,7 @@ umMsgForm.addEventListener('submit', async (e)=>{
 umClose.addEventListener('click', ()=> modal.style.display='none');
 modal.addEventListener('click', (e)=> { if (e.target === modal) modal.style.display='none'; });
 document.addEventListener('keydown', (e)=> { if (e.key === 'Escape') modal.style.display='none'; });
-</script>
 
-
-
-<script>
 const BADGE = document.getElementById('msgBadge');
 async function refreshBadge(){
   try{
@@ -805,23 +709,6 @@ async function refreshBadge(){
 refreshBadge();
 setInterval(refreshBadge, 20000);
 </script>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

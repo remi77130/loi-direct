@@ -57,3 +57,5 @@ define('UPLOAD_ALLOWED', ['image/jpeg','image/png','image/webp']);
     // Thumbnails
     define('THUMB_MAX_W', 480);
     define('THUMB_MAX_H', 480);
+?>
+
