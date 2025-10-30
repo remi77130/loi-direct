@@ -38,6 +38,29 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
 }
 #chatBox{ position:relative; } /* pour positionner le bouton */
 
+
+
+/* tu peux le placer dans le <style> existant */
+.imageVeil{
+  position:relative; display:flex; align-items:center; justify-content:center;
+  width:100%; max-width:520px; height:260px; border:1px solid var(--line);
+  border-radius:10px; background:#0b1220; cursor:pointer; user-select:none;
+}
+.imageVeil span{ color:var(--mut); font-size:14px; background:#111827;
+  padding:8px 10px; border-radius:999px; border:1px solid var(--line);
+}
+.imageVeil--blur{ background-size:cover; background-position:center; }
+.imageVeil--blur::after{
+  content:""; position:absolute; inset:0; backdrop-filter: blur(16px);
+  background: rgba(0,0,0,.35); border-radius:10px;
+}
+#imgModal{ position:fixed; inset:0; background:rgb(0 0 0 / 65%);
+  display:flex; align-items:center; justify-content:center; z-index:70;
+}
+#imgModal[hidden]{ display:none; }
+.imgModal__box{ max-width:55vw; max-height:40vh; }
+#imgModalImg{ max-width:85vw; max-height:65vh; border-radius:12px; display:block; }
+
 </style>
 </head><body>
 <div class="wrap">
@@ -77,261 +100,185 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
   <button type="submit">Envoyer</button>
 </form>
 
-
+<!-- Modal image -->
+<div id="imgModal" hidden>
+  <div class="imgModal__box">
+    <img id="imgModalImg" alt="image">
   </div>
 </div>
 
+  </div>
+</div>
 <script>
+/* === Constantes DOM === */
+const BASE='<?= APP_BASE ?>';
+const RLIST=document.getElementById('rooms');
+const NST=document.getElementById('roomStatus');
+const chatModal=document.getElementById('chatModal');
+const chatClose=document.getElementById('chatClose');
+const chatMsgs=document.getElementById('chatMsgs');
+const chatForm=document.getElementById('chatForm');
+const roomIdInp=document.getElementById('room_id');
+const roomTitle=document.getElementById('roomTitle');
+const toBottom=document.getElementById('toBottom');
 
-/*Ce code est correct et logique : il sépare bien les deux rôles (création de salon / envoi de message), 
-respecte le protocole de ton API (chat_rooms_list.php, chat_room_create.php, 
-chat_message_send.php, chat_messages_fetch.php) et gère tous les cas :
-Création de salon : requête POST simple, rechargement automatique de la liste.
-Envoi de message : désactivation du bouton, gestion des retours 429 (rate_glob, rate_room, rate_fast) 
-depuis ton chat_message_send.php.
-Polling 2 s : pour récupérer les nouveaux messages.
-Auto-scroll intelligent : descend uniquement si l’utilisateur est déjà en bas.
-Bouton “▼” visible quand on s’éloigne du bas.
-Il ne contient ni doublon ni référence hors contexte (form, NST, etc. sont utilisés seulement où ils existent).
-Tu peux l’intégrer tel quel dans ton chat_rooms.php */
-// --- constantes ---
+let pollTimer=null, lastId=0, currentRoom=0;
 
-const BASE   = '<?= APP_BASE ?>';
-const RLIST  = document.getElementById('rooms');
-const NST    = document.getElementById('roomStatus');
-const chatModal = document.getElementById('chatModal');
-const chatClose = document.getElementById('chatClose');
-const chatMsgs  = document.getElementById('chatMsgs');
-const chatForm  = document.getElementById('chatForm');
-const roomIdInp = document.getElementById('room_id');
-const roomTitle = document.getElementById('roomTitle');
-const toBottom  = document.getElementById('toBottom');
+/* === Utils === */
+function escapeHtml(s){return s.replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+function isNearBottom(el,px=80){return el.scrollHeight-el.scrollTop-el.clientHeight<=px;}
+function scrollToBottom(el,smooth=true){const last=el.lastElementChild; if(last) last.scrollIntoView({behavior:smooth?'smooth':'auto',block:'end'});}
 
-let pollTimer = null, lastId = 0, currentRoom = 0;
+/* === Mémo images vues === */
+const VIEWED_KEY='chat_viewed_images_v1';
+const viewed=new Set(JSON.parse(localStorage.getItem(VIEWED_KEY)||'[]'));
+function isViewed(src){return viewed.has(src);}
+function markViewed(src){ if(!src) return; viewed.add(src); localStorage.setItem(VIEWED_KEY,JSON.stringify([...viewed])); }
 
-// --- création de salon ---
-document.getElementById('newRoom').addEventListener('submit', async (e) => {
-  e.preventDefault();
-  NST.textContent = '';
-  const fd = new FormData(e.target);
-  try {
-    const r = await fetch(`${BASE}/chat_room_create.php`, { method: 'POST', body: fd });
-    const j = await r.json();
-    if (j.ok) {
-      NST.style.color = '#34d399';
-      NST.textContent = 'Créé';
-      e.target.reset();
-      loadRooms();
-    } else {
-      NST.style.color = '#f87171';
-      NST.textContent = j.error || 'Erreur';
-    }
-  } catch {
-    NST.style.color = '#f87171';
-    NST.textContent = 'Réseau';
-  }
+/* === Modal image === */
+const imgModal=document.getElementById('imgModal');
+const imgModalImg=document.getElementById('imgModalImg');
+function openImgModal(src){ imgModalImg.src=src; imgModal.hidden=false; }
+function closeImgModal(){ imgModal.hidden=true; imgModalImg.removeAttribute('src'); }
+imgModal.addEventListener('click',e=>{ if(e.target===imgModal) closeImgModal(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape' && !imgModal.hidden) closeImgModal(); });
+
+/* === Création de salon === */
+document.getElementById('newRoom').addEventListener('submit',async e=>{
+  e.preventDefault(); NST.textContent='';
+  try{
+    const r=await fetch(`${BASE}/chat_room_create.php`,{method:'POST',body:new FormData(e.target)});
+    const j=await r.json();
+    if(j.ok){ NST.style.color='#34d399'; NST.textContent='Créé'; e.target.reset(); loadRooms(); }
+    else{ NST.style.color='#f87171'; NST.textContent=j.error||'Erreur'; }
+  }catch{ NST.style.color='#f87171'; NST.textContent='Réseau'; }
 });
 
-// --- liste des salons ---
-async function loadRooms() {
-  RLIST.innerHTML = '<div class="mut">Chargement…</div>';
-  try {
-    const r = await fetch(`${BASE}/chat_rooms_list.php`, { cache: 'no-store' });
-    const j = await r.json();
-    if (!j.ok) throw 0;
-    if (j.rooms.length === 0) {
-      RLIST.innerHTML = '<div class="mut">Aucun salon.</div>';
-      return;
-    }
-    RLIST.innerHTML = j.rooms.map(x => `
-      <div class="row room" data-id="${x.id}" data-name="${x.name}">
+/* === Liste des salons === */
+async function loadRooms(){
+  RLIST.innerHTML='<div class="mut">Chargement…</div>';
+  try{
+    const r=await fetch(`${BASE}/chat_rooms_list.php`,{cache:'no-store'});
+    const j=await r.json();
+    if(!j.ok) throw 0;
+    if(j.rooms.length===0){ RLIST.innerHTML='<div class="mut">Aucun salon.</div>'; return; }
+    RLIST.innerHTML=j.rooms.map(x=>`
+      <div class="row room" data-id="${x.id}" data-name="${escapeHtml(x.name)}">
         <div><strong>${escapeHtml(x.name)}</strong></div>
-        <div class="mut">${x.last_at ? new Date(x.last_at.replace(' ','T')).toLocaleString() : '—'}</div>
+        <div class="mut">${x.last_at?new Date(x.last_at.replace(' ','T')).toLocaleString():'—'}</div>
       </div>`).join('');
-  } catch {
-    RLIST.innerHTML = '<div class="mut">Erreur.</div>';
-  }
+  }catch{ RLIST.innerHTML='<div class="mut">Erreur.</div>'; }
 }
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
-}
-
-// --- ouvrir salon ---
-RLIST.addEventListener('click', e => {
-  const row = e.target.closest('.room');
-  if (!row) return;
-  openRoom(parseInt(row.dataset.id, 10), row.dataset.name);
+RLIST.addEventListener('click',e=>{
+  const row=e.target.closest('.room'); if(!row) return;
+  openRoom(parseInt(row.dataset.id,10),row.dataset.name);
 });
 
-function openRoom(id, name) {
-  currentRoom = id;
-  lastId = 0;
-  roomIdInp.value = id;
-  roomTitle.textContent = name;
-  chatMsgs.innerHTML = '';
-  toBottom.style.display = 'none';
-  chatModal.style.display = 'flex';
-  startPolling();
+/* === Ouvrir un salon === */
+function openRoom(id,name){
+  currentRoom=id; lastId=0; roomIdInp.value=id; roomTitle.textContent=name;
+  chatMsgs.innerHTML=''; toBottom.style.display='none';
+  chatModal.style.display='flex'; startPolling();
 }
+chatClose.onclick=()=>{ chatModal.style.display='none'; stopPolling(); };
+chatModal.addEventListener('click',e=>{ if(e.target===chatModal){ chatModal.style.display='none'; stopPolling(); }});
 
-// --- bouton "aller en bas" ---
-chatMsgs.addEventListener('scroll', () => {
-  toBottom.style.display = isNearBottom(chatMsgs) ? 'none' : 'block';
+/* === Scroll bas === */
+chatMsgs.addEventListener('scroll',()=>{
+  toBottom.style.display=isNearBottom(chatMsgs)?'none':'block';
 });
-toBottom.addEventListener('click', () => scrollToBottom(chatMsgs, true));
+toBottom.addEventListener('click',()=>scrollToBottom(chatMsgs,true));
 
-function isNearBottom(el, px = 80) {
-  return el.scrollHeight - el.scrollTop - el.clientHeight <= px;
-}
-function scrollToBottom(el, smooth = true) {
-  const last = el.lastElementChild;
-  if (last) last.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
-}
-
-// --- récupération des messages ---
-async function fetchMessages() {
-  if (!currentRoom) return;
-  try {
-    const r = await fetch(`${BASE}/chat_messages_fetch.php?room_id=${currentRoom}&after_id=${lastId}`, { cache: 'no-store' });
-    const j = await r.json();
-    if (!j.ok) return;
-    if (j.messages.length) {
-      const stick = isNearBottom(chatMsgs);
-      const frag = document.createDocumentFragment();
-      j.messages.forEach(m => {
-        frag.appendChild(renderMessage(m));
-        lastId = Math.max(lastId, m.id);
+/* === Rendu d’un message === */
+function renderMessage(m){
+  const el=document.createElement('div'); el.className='msg';
+  el.innerHTML=
+    `<div class="meta">${escapeHtml(m.sender)} — ${new Date(m.created_at.replace(' ','T')).toLocaleString()}</div>`+
+    (m.body?`<div style="white-space:pre-wrap">${escapeHtml(m.body)}</div>`:'');
+  if(m.file_url && /^image\//.test(m.file_mime||'')){
+    const src=m.file_url;
+    if(isViewed(src)){
+      const img=document.createElement('img');
+      Object.assign(img,{src,alt:'image',loading:'lazy'});
+      img.style.maxWidth='10%'; img.style.borderRadius='8px'; img.style.cursor='zoom-in';
+      img.addEventListener('click',()=>openImgModal(src));
+      el.appendChild(img);
+    }else{
+      const veil=document.createElement('div');
+      veil.className='imageVeil imageVeil--blur';
+      veil.style.backgroundImage=`url('${src}')`;
+      veil.innerHTML=`<span>Cliquer pour afficher l’image</span>`;
+      veil.addEventListener('click',()=>{
+        openImgModal(src); markViewed(src);
+        const img=document.createElement('img');
+        Object.assign(img,{src,alt:'image',loading:'lazy'});
+        img.style.maxWidth='10%'; img.style.borderRadius='8px'; img.style.cursor='zoom-in';
+        img.addEventListener('click',()=>openImgModal(src));
+        veil.replaceWith(img);
       });
-      chatMsgs.appendChild(frag);
-      if (stick) scrollToBottom(chatMsgs, true);
-      toBottom.style.display = isNearBottom(chatMsgs) ? 'none' : 'block';
+      el.appendChild(veil);
     }
-  } catch {}
-}
-
-function startPolling() {
-  stopPolling();
-  fetchMessages();
-  pollTimer = setInterval(fetchMessages, 2000);
-}
-function stopPolling() {
-  if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
-}
-chatClose.onclick = () => { chatModal.style.display = 'none'; stopPolling(); };
-chatModal.addEventListener('click', e => { if (e.target === chatModal) { chatModal.style.display = 'none'; stopPolling(); } });
-
-
-
-// --- compression image avant upload ---
-chatForm.querySelector('input[type="file"]').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
-
-  // seulement images jpeg/png/webp
-  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) return;
-
-  const img = new Image();
-  const url = URL.createObjectURL(file);
-  img.src = url;
-
-  await new Promise(res => img.onload = res);
-
-  const canvas = document.createElement('canvas');
-  const MAX = 450;
-  let { width, height } = img;
-
-  // redimension proportionnel
-  if (width > height && width > MAX) {
-    height *= MAX / width; width = MAX;
-  } else if (height > width && height > MAX) {
-    width *= MAX / height; height = MAX;
-  }
-
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0, width, height);
-
-  // compression (0.8 = 80%)
-  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.5));
-
-  // remplace le fichier original dans l'input
-  const compressedFile = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
-  const dt = new DataTransfer();
-  dt.items.add(compressedFile);
-  e.target.files = dt.files;
-
-  URL.revokeObjectURL(url);
-});
-
-
-
-
-// --- envoi de message avec anti-abus ---
-document.addEventListener('DOMContentLoaded', () => {
-  const form = document.getElementById('chatForm');
-  if (!form) return;
-  const btn = form.querySelector('button[type="submit"]');
-
-  form.addEventListener('submit', async e => {
-    e.preventDefault();
-    btn.disabled = true;
-    try {
-      const r = await fetch(`${BASE}/chat_message_send.php`, {
-        method: 'POST',
-        body: new FormData(form),
-        credentials: 'same-origin'
-      });
-
-      if (r.status === 429) {
-        let msg = 'Trop de messages : ralentis un peu.';
-        try {
-          const j = await r.json();
-          if (j?.error === 'rate_glob') msg = 'Limite : 3 messages / 30 s.';
-          if (j?.error === 'rate_room') msg = 'Ralentis dans ce salon (2 / 5 s).';
-          if (j?.error === 'rate_fast') msg = 'Trop rapide : attends ~1 s.';
-        } catch {}
-        alert(msg);
-        return;
-      }
-
-      const j = await r.json();
-      if (!j.ok) { alert(j.error || 'Erreur'); return; }
-
-      form.reset();
-      setTimeout(() => scrollToBottom(chatMsgs, true), 50);
-    } catch {
-      alert('Réseau indisponible');
-    } finally {
-      btn.disabled = false;
-    }
-  });
-});
-
-// --- affichage des messages ---
-function renderMessage(m) {
-  const el = document.createElement('div');
-  el.className = 'msg';
-  el.innerHTML =
-    `<b>${escapeHtml(m.sender)}</b> · <span class="mut">${m.created_at}</span><br>` +
-    `${m.body ? escapeHtml(m.body) : ''}`;
-
-  if (m.file_url && /^image\//.test(m.file_mime || '')) {
-    const img = document.createElement('img');
-    img.src = m.file_url;
-    img.alt = 'image';
-    img.loading = 'lazy';
-    img.style.maxWidth = '100%';
-    img.style.borderRadius = '8px';
-    el.appendChild(document.createElement('br'));
-    el.appendChild(img);
   }
   return el;
 }
 
-// --- initialisation ---
+/* === Fetch messages + polling === */
+async function fetchMessages(){
+  if(!currentRoom) return;
+  try{
+    const r=await fetch(`${BASE}/chat_messages_fetch.php?room_id=${currentRoom}&after_id=${lastId}`,{cache:'no-store'});
+    const j=await r.json(); if(!j.ok) return;
+    if(j.messages.length){
+      const stick=isNearBottom(chatMsgs);
+      const frag=document.createDocumentFragment();
+      j.messages.forEach(m=>{ frag.appendChild(renderMessage(m)); lastId=Math.max(lastId,m.id); });
+      chatMsgs.appendChild(frag);
+      if(stick) scrollToBottom(chatMsgs,true);
+      toBottom.style.display=isNearBottom(chatMsgs)?'none':'block';
+    }
+  }catch{}
+}
+function startPolling(){ stopPolling(); fetchMessages(); pollTimer=setInterval(fetchMessages,2000); }
+function stopPolling(){ if(pollTimer){ clearInterval(pollTimer); pollTimer=null; }}
+
+/* === Compression image avant upload === */
+chatForm.querySelector('input[type="file"]').addEventListener('change',async e=>{
+  const file=e.target.files[0]; if(!file || !/^image\/(jpeg|png|webp)$/.test(file.type)) return;
+  const img=new Image(); const url=URL.createObjectURL(file); img.src=url;
+  await new Promise(res=>img.onload=res);
+  const MAX=1280; let {width,height}=img;
+  if(width>height && width>MAX){ height*=MAX/width; width=MAX; }
+  else if(height>width && height>MAX){ width*=MAX/height; height=MAX; }
+  const canvas=document.createElement('canvas'); canvas.width=width; canvas.height=height;
+  const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,width,height);
+  const blob=await new Promise(res=>canvas.toBlob(res,'image/jpeg',0.8));
+  const compressed=new File([blob], file.name.replace(/\.\w+$/,'.jpg'), {type:'image/jpeg'});
+  const dt=new DataTransfer(); dt.items.add(compressed); e.target.files=dt.files;
+  URL.revokeObjectURL(url);
+});
+
+/* === Envoi message + anti-abus côté serveur === */
+chatForm.addEventListener('submit',async e=>{
+  e.preventDefault();
+  const btn=chatForm.querySelector('button[type="submit"]'); btn.disabled=true;
+  try{
+    const r=await fetch(`${BASE}/chat_message_send.php`,{method:'POST',body:new FormData(chatForm),credentials:'same-origin'});
+    if(r.status===429){
+      let msg='Trop de messages.'; 
+      try{ const j=await r.json();
+        if(j?.error==='rate_glob') msg='Limite: 3 messages / 30 s fils de pute !.';
+        if(j?.error==='rate_room') msg='Ralentis dans ce salon fils de pute ! (2 / 5 s).';
+        if(j?.error==='rate_fast') msg='Attends environ 1 s.';
+      }catch{} alert(msg); return;
+    }
+    const j=await r.json(); if(!j.ok){ alert(j.error||'Erreur'); return; }
+    chatForm.reset(); setTimeout(()=>scrollToBottom(chatMsgs,true),50);
+  }catch{ alert('Réseau indisponible'); }
+  finally{ btn.disabled=false; }
+});
+
+/* === Init === */
 loadRooms();
-
-
 </script>
+
 </body></html>
