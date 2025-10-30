@@ -1,7 +1,7 @@
 <?php
-
 declare(strict_types=1);
 session_start();
+require __DIR__.'/config.php';
 require __DIR__.'/db.php';
 require __DIR__.'/auth.php';
 require_login();
@@ -10,110 +10,125 @@ header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  http_response_code(405); header('Allow: POST');
+  http_response_code(405);
   echo json_encode(['ok'=>false,'error'=>'method']); exit;
 }
-
-$csrf = $_POST['csrf'] ?? '';
-if (!hash_equals($_SESSION['csrf'] ?? '', $csrf)) {
-  http_response_code(400); echo json_encode(['ok'=>false,'error'=>'csrf']); exit;
+if (!hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'] ?? '')) {
+  http_response_code(400);
+  echo json_encode(['ok'=>false,'error'=>'csrf']); exit;
 }
 
 $user_id = (int)($_SESSION['user_id'] ?? 0);
+$room_id = (int)($_POST['room_id'] ?? 0);
 $body = trim((string)($_POST['body'] ?? ''));
-$body = preg_replace('/[\p{Cc}\p{Cf}&&[^\n\t]]/u','', $body);
+$body = preg_replace('/[\p{Cc}\p{Cf}&&[^\n\t]]/u','',$body);
 $body = mb_substr($body, 0, 2000);
 
-// alias éventuels depuis le front
-if (isset($_POST['message']) && $body === '') $body = trim((string)$_POST['message']);
+if ($room_id <= 0) { echo json_encode(['ok'=>false,'error'=>'room']); exit; }
 
-// ---- Mode 1 : message privé (DM) ----
-$recipient_id = (int)($_POST['recipient_id'] ?? 0);
-if ($recipient_id > 0 && $recipient_id !== $user_id) {
-  if ($body === '' && empty($_FILES['image']['tmp_name'])) {
-    http_response_code(422); echo json_encode(['ok'=>false,'error'=>'missing']); exit;
-  }
+/* ---------- Anti-abus / rate limiting ---------- */
+$now = date('Y-m-d H:i:s');
 
-  // destinataire existe ?
-  $st = $mysqli->prepare('SELECT id FROM users WHERE id=? LIMIT 1');
-  $st->bind_param('i', $recipient_id);
-  $st->execute();
-  $res = $st->get_result();
-  if (!$res || !$res->fetch_row()) { http_response_code(404); echo json_encode(['ok'=>false,'error'=>'user']); exit; }
-  $st->close();
-
-  // rate-limit simple
-  $rl = $mysqli->prepare("SELECT COUNT(*) FROM messages WHERE sender_id=? AND created_at>=NOW()-INTERVAL 5 SECOND");
-  $rl->bind_param('i', $user_id); $rl->execute(); $rl->bind_result($c); $c=0; $rl->fetch(); $rl->close();
-  if ($c >= 5) { http_response_code(429); echo json_encode(['ok'=>false,'error'=>'rate']); exit; }
-
-  // upload image optionnel
-  $image_path = null;
-  if (!empty($_FILES['image']['tmp_name'])) {
-    $tmp = $_FILES['image']['tmp_name'];
-    $finfo = new finfo(FILEINFO_MIME_TYPE);
-    $mime = $finfo->file($tmp) ?: '';
-    $ok = in_array($mime, ['image/jpeg','image/png','image/webp'], true);
-    if (!$ok) { http_response_code(415); echo json_encode(['ok'=>false,'error'=>'mime']); exit; }
-    if (($_FILES['image']['size'] ?? 0) > 5*1024*1024) { http_response_code(413); echo json_encode(['ok'=>false,'error'=>'size']); exit; }
-    $ext = $mime === 'image/jpeg' ? '.jpg' : ($mime === 'image/png' ? '.png' : '.webp');
-    $name = bin2hex(random_bytes(16)).$ext;
-
-    // Assure-toi d’avoir UPLOAD_DIR défini (ou remplace par un chemin sûr)
-    $dir = defined('UPLOAD_DIR') ? UPLOAD_DIR : __DIR__.'/uploads';
-    if (!is_dir($dir)) { @mkdir($dir, 0755, true); }
-    $dest = $dir.'/'.$name;
-    if (!move_uploaded_file($tmp, $dest)) { http_response_code(500); echo json_encode(['ok'=>false,'error'=>'upload']); exit; }
-    $image_path = $name; // stocke seulement le nom; l’URL sera BASE/uploads/$name
-  }
-
-  $ins = $mysqli->prepare("INSERT INTO messages (sender_id,recipient_id,body,image_path) VALUES (?,?,?,?)");
-  $ins->bind_param('iiss', $user_id, $recipient_id, $body, $image_path);
-  if ($ins->execute()) {
-    echo json_encode(['ok'=>true,'id'=>$mysqli->insert_id], JSON_UNESCAPED_UNICODE);
-  } else {
-    http_response_code(500); echo json_encode(['ok'=>false,'error'=>'db']);
-  }
-  $ins->close();
+/* 1) Burst global: max 3 messages / 30s par utilisateur */
+$st = $mysqli->prepare("
+  SELECT COUNT(*) 
+  FROM chat_messages 
+  WHERE sender_id=? AND created_at >= (NOW() - INTERVAL 30 SECOND)
+");
+$st->bind_param('i', $user_id);
+$st->execute();
+$st->bind_result($cnt30);
+$st->fetch();
+$st->close();
+if ($cnt30 >= 3) {
+  http_response_code(429);
+  echo json_encode(['ok'=>false,'error'=>'rate_glob']);
   exit;
 }
 
-// ---- Mode 2 : message de salon ----
-$room_id = (int)($_POST['room_id'] ?? 0);
-if ($room_id > 0) {
-  if ($body === '') { http_response_code(422); echo json_encode(['ok'=>false,'error'=>'missing']); exit; }
-
-  $chk = $mysqli->prepare("SELECT is_private FROM chat_rooms WHERE id=? LIMIT 1");
-  $chk->bind_param('i', $room_id);
-  $chk->execute();
-  $chk->bind_result($priv);
-  if (!$chk->fetch()) { http_response_code(404); echo json_encode(['ok'=>false,'error'=>'room']); exit; }
-  $chk->close();
-
-  if ((int)$priv === 1) {
-    // si salle privée : vérifier membership
-    $mem = $mysqli->prepare("SELECT 1 FROM chat_room_members WHERE room_id=? AND user_id=? AND is_banned=0 LIMIT 1");
-    $mem->bind_param('ii', $room_id, $user_id);
-    $mem->execute();
-    if (!$mem->get_result()->fetch_row()) { http_response_code(403); echo json_encode(['ok'=>false,'error'=>'forbidden']); exit; }
-    $mem->close();
-  }
-
-  $rl = $mysqli->prepare("SELECT COUNT(*) FROM chat_messages WHERE sender_id=? AND created_at>=NOW()-INTERVAL 5 SECOND");
-  $rl->bind_param('i', $user_id); $rl->execute(); $rl->bind_result($c); $c=0; $rl->fetch(); $rl->close();
-  if ($c >= 5) { http_response_code(429); echo json_encode(['ok'=>false,'error'=>'rate']); exit; }
-
-  $ins = $mysqli->prepare("INSERT INTO chat_messages (room_id,sender_id,body) VALUES (?,?,?)");
-  $ins->bind_param('iis', $room_id, $user_id, $body);
-  if ($ins->execute()) {
-    echo json_encode(['ok'=>true,'id'=>$mysqli->insert_id], JSON_UNESCAPED_UNICODE);
-  } else {
-    http_response_code(500); echo json_encode(['ok'=>false,'error'=>'db']);
-  }
-  $ins->close();
+/* 2) Par salon: max 2 messages / 5s dans le même salon */
+$st = $mysqli->prepare("
+  SELECT COUNT(*) 
+  FROM chat_messages 
+  WHERE room_id=? AND sender_id=? AND created_at >= (NOW() - INTERVAL 5 SECOND)
+");
+$st->bind_param('ii', $room_id, $user_id);
+$st->execute();
+$st->bind_result($cnt5);
+$st->fetch();
+$st->close();
+if ($cnt5 >= 2) {
+  http_response_code(429);
+  echo json_encode(['ok'=>false,'error'=>'rate_room']);
   exit;
 }
 
-// ni recipient_id ni room_id
-http_response_code(422);
-echo json_encode(['ok'=>false,'error'=>'missing']);
+/* 3) Min-interval (anti double-clic/réseau): ≥ 800 ms */
+$last = (float)($_SESSION['last_msg_at'] ?? 0);
+$nowMs = microtime(true);
+if (($nowMs - $last) < 0.8) {
+  http_response_code(429);
+  echo json_encode(['ok'=>false,'error'=>'rate_fast']);
+  exit;
+}
+$_SESSION['last_msg_at'] = $nowMs;
+
+/* ---- Upload image optionnel ---- */
+$fileUrl = null; $fileMime = null; $w = null; $h = null;
+
+if (!empty($_FILES['image']['name'])) {
+  if ($_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+    echo json_encode(['ok'=>false,'error'=>'upload']); exit;
+  }
+
+  $maxBytes = (int)UPLOAD_MAX_MB * 1024 * 1024;
+  if (($_FILES['image']['size'] ?? 0) > $maxBytes) {
+    echo json_encode(['ok'=>false,'error'=>'too_big']); exit;
+  }
+
+  $finfo = new finfo(FILEINFO_MIME_TYPE);
+  $mime  = $finfo->file($_FILES['image']['tmp_name']) ?: '';
+  if (!in_array($mime, UPLOAD_ALLOWED, true)) {
+    echo json_encode(['ok'=>false,'error'=>'mime']); exit;
+  }
+
+  if (!is_dir(UPLOAD_DIR) && !mkdir(UPLOAD_DIR, 0775, true)) {
+    echo json_encode(['ok'=>false,'error'=>'dir']); exit;
+  }
+
+  $ext = $mime === 'image/jpeg' ? 'jpg' : ($mime === 'image/png' ? 'png' : 'webp');
+  $fname = 'chat_'.date('Ymd_His').'_'.bin2hex(random_bytes(6)).'.'.$ext;
+  $dest  = rtrim(UPLOAD_DIR,'/').'/'.$fname;
+
+  if (!move_uploaded_file($_FILES['image']['tmp_name'], $dest)) {
+    echo json_encode(['ok'=>false,'error'=>'move']); exit;
+  }
+
+  [$imgW,$imgH] = @getimagesize($dest) ?: [null,null];
+  $fileUrl  = rtrim(UPLOAD_URL,'/').'/'.$fname;
+  $fileMime = $mime; $w = $imgW; $h = $imgH;
+}
+
+if ($body === '' && !$fileUrl) {
+  echo json_encode(['ok'=>false,'error'=>'empty']); exit;
+}
+
+/* ---- Insertion (MySQLi) ---- */
+$mysqli->begin_transaction();
+
+$sql = "INSERT INTO chat_messages (room_id, sender_id, body, file_url, file_mime, file_w, file_h)
+        VALUES (?,?,?,?,?,?,?)";
+$st = $mysqli->prepare($sql);
+$st->bind_param('iisssii', $room_id, $user_id, $body, $fileUrl, $fileMime, $w, $h);
+$ok = $st->execute();
+$id = $ok ? $st->insert_id : 0;
+$st->close();
+
+if ($ok) {
+  $mysqli->commit();
+  echo json_encode(['ok'=>true,'id'=>$id]);
+} else {
+  $mysqli->rollback();
+  http_response_code(500);
+  echo json_encode(['ok'=>false,'error'=>'db']);
+}

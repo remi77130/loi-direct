@@ -247,10 +247,10 @@ a{color:#93c5fd;text-decoration:none}
     <div class="errors"><?php foreach ($errors as $e) echo '<div>'.htmlspecialchars($e,ENT_QUOTES).'</div>'; ?></div>
   <?php endif; ?>
 
-  <form method="post" autocomplete="off" novalidate>
+  <form method="post" novalidate>
     <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
     <label>Pseudo
-      <input type="text" name="pseudo" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}">
+      <input type="text" name="pseudo" autocomplete="pseudo" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}">
     </label>
     <label>Mot de passe
       <input type="password" name="password" required minlength="8" autocomplete="current-password">

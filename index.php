@@ -279,58 +279,36 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 </head>
 <body>
 
-<header>
-<H1>Tchat direct</H1>
+<header class="site-header">
+  <a class="brand" href="<?= APP_BASE ?>/">Tchat direct</a>
 
-  <!-- Onglets : Récents / Mes projets -->
-  <nav class="nav">
-    <a href="<?= APP_BASE ?>/index.php" class="<?= !$mine ? 'active' : '' ?>">Récents</a>
-    <a href="<?= APP_BASE ?>/index.php?mine=1" class="<?= $mine ? 'active' : '' ?>">Mes projets</a>
-    <a href="<?= APP_BASE ?>/chat_rooms.php" target="_blank" rel="noopener noreferrer" style="color:red">Créer un salon</a>
+  <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu">
+    ☰
+  </button>
+
+  <nav id="primary-nav" class="nav">
+    <!-- tes liens -->
+    <a href="<?= APP_BASE ?>/index.php" class="active">Récents</a>
+    <a href="<?= APP_BASE ?>/index.php?mine=1">Mes projets</a>
+    <a href="<?= APP_BASE ?>/chat_rooms.php" target="_blank" rel="noopener">Créer un salon</a>
+
+    <!-- ton formulaire de recherche -->
+    <form action="<?= APP_BASE ?>/index.php" method="get" class="nav-search">
+      <input name="q" placeholder="Rechercher… (@pseudo pour un utilisateur)">
+      <select name="scope">
+        <option value="">Tout</option>
+        <option value="title">Titre</option>
+      </select>
+      <button class="btn">Rechercher</button>
+    </form>
+
+    <!-- zone utilisateur si besoin -->
+    <div class="nav-user">
+      <a href="<?= APP_BASE ?>/write.php" class="btn">Écrire un projet</a>
+      <a href="<?= APP_BASE ?>/messages_inbox.php">Messages <span id="msgBadge" class="badge" style="display:none"></span></a>
+      <a href="<?= APP_BASE ?>/logout.php">Se déconnecter</a>
+    </div>
   </nav>
-
-  <!-- Formulaire de recherche.
-       On reconduit le contexte (mine/tag) via des inputs hidden. -->
- <form method="get" action="<?= APP_BASE ?>/index.php" style="display:flex;gap:8px;align-items:center">
-  <?php foreach ($baseQuery as $k=>$v): ?>
-    <input type="hidden" name="<?= htmlspecialchars($k,ENT_QUOTES) ?>" value="<?= htmlspecialchars((string)$v,ENT_QUOTES) ?>">
-  <?php endforeach; ?>
-
-  <input name="q" value="<?= htmlspecialchars($q, ENT_QUOTES) ?>" placeholder="Rechercher... (@pseudo pour un utilisateur)" maxlength="30"
-         style="padding:8px 10px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb">
-  <select name="scope" style="padding:8px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb">
-    <option value="">Tout</option>
-    <option value="users" <?= (($_GET['scope']??'')==='users'?'selected':'') ?>>Utilisateurs</option>
-  </select>
-  <button class="btn" type="submit" style="padding:8px 12px">Rechercher</button>
-
-  <?php if ($q !== ''): ?>
-    <a class="btn" href="<?= APP_BASE ?>/index.php<?= $baseQuery ? ('?'.http_build_query($baseQuery)) : '' ?>" style="background:#374151">Effacer</a>
-  <?php endif; ?>
-</form>
-
-  <!-- Zone utilisateur -->
-  <div>
-<span style="margin-right:12px;color:#cbd5e1">
-  Salut,
-  <a href="#"
-     class="user-link"
-     data-user-id="<?= (int)$_SESSION['user_id'] ?>"
-     style="color:#cbd5e1; text-decoration:underline;">
-     <?= htmlspecialchars($_SESSION['pseudo'], ENT_QUOTES) ?>
-  </a> 👋
-</span>
-    <a class="btn" href="<?= APP_BASE ?>/write.php">Écrire un projet</a>
-    <a class="btn" style="margin-left:8px;background:#374151" href="<?= APP_BASE ?>/logout.php">Se déconnecter</a>
-  </div>
-
-
-  <a class="btn" href="<?= APP_BASE ?>/messages_inbox.php" style="position:relative">
-  Messages <span id="msgBadge" style="display:none;position:absolute;top:-6px;
-  right:-6px;background:#ef4444;color:#fff;border-radius:999px;padding:0 6px;font-size:11px;
-  line-height:18px;min-width:18px;text-align:center"></span>
-</a>
-
 </header>
 
 
@@ -710,6 +688,14 @@ refreshBadge();
 setInterval(refreshBadge, 20000);
 </script>
 
+<script>
+  const btn = document.querySelector('.nav-toggle');
+  const nav = document.getElementById('primary-nav');
+  btn.addEventListener('click', ()=>{
+    const open = nav.classList.toggle('is-open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
+</script>
 
 
 </body>
