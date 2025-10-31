@@ -11,75 +11,102 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Salons de discussion</title>
 <style>
-  :root{--bg:#0f172a;--card:#111827;--line:#334155;--txt:#e5e7eb;--mut:#94a3b8;--brand:#2563eb;}
-  body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-  .wrap{max-width:900px;margin:24px auto;padding:0 16px}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
-  .btn{background:var(--brand);color:#fff;border:none;border-radius:12px;padding:8px 12px;text-decoration:none;cursor:pointer}
-  .row{display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid var(--line);border-radius:12px;margin:8px 0}
-  .mut{color:var(--mut)}
-  .rooms{margin-top:10px}
-  .room{cursor:pointer}
-  #chatModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50}
-  #chatBox{background:var(--card);border:1px solid var(--line);border-radius:16px;width:min(900px,95vw);height:min(640px,90vh);display:flex;flex-direction:column}
-  #chatHead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
-  #chatMsgs{flex:1;overflow:auto;padding:12px 14px}
+:root{--bg:#0f172a;--card:#111827;--line:#334155;--txt:#e5e7eb;--mut:#94a3b8;--brand:#2563eb;}
+body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
+.wrap{max-width:900px;margin:24px auto;padding:0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.btn{background:var(--brand);color:#fff;border:none;border-radius:100px;padding:8px 12px;cursor:pointer}
+.row{display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid var(--line);border-radius:12px;margin:8px 0}
+.mut{color:var(--mut)}
+.rooms{margin-top:10px}
+.room{cursor:pointer}
 
-  #chatForm{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
-
+/* --- Modal principal --- */
+#chatModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50}
+#chatBox{background:var(--card);border:1px solid var(--line);border-radius:16px;width:min(900px,95vw);height:min(640px,90vh);display:flex;flex-direction:column;position:relative}
+#chatHead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
+#chatMsgs{flex:1;overflow:auto;padding:12px 14px}
+#chatForm{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
 #chatForm input[name="body"]{flex:1;min-height:46px;max-height:160px;background:#0b1220;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px}
-  .msg{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0; overflow-wrap: break-word;}
-  .msg .meta{font-size:12px;color:var(--mut);margin-bottom:4px}
 
-  #toBottom{
-  position:absolute; right:18px; bottom:82px;
-  display:none; border:1px solid var(--line); background:#111827; color:var(--txt);
-  border-radius:999px; padding:6px 10px; cursor:pointer; box-shadow:0 2px 10px rgba(0,0,0,.25)
+/* --- Messages --- */
+.msg{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0;overflow-wrap:break-word}
+.msg .meta{font-size:12px;color:var(--mut);margin-bottom:4px}
+
+/* --- Bouton bas --- */
+#toBottom{position:absolute;right:18px;bottom:82px;display:none;border:1px solid var(--line);background:#111827;color:var(--txt);border-radius:999px;padding:6px 10px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
+
+/* --- Image des messages --- */
+.chat-img{max-width:min(55%,420px);height:auto;border-radius:8px;cursor:zoom-in;display:block}
+
+/* --- Effet flou sur images non vues --- */
+.imageVeil{position:relative;width:auto;max-width:min(55%,420px);border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer;background-size:cover;background-position:center}
+.imageVeil span{color:var(--mut);font-size:14px;background:#111827;padding:8px 10px;border-radius:999px;border:1px solid var(--line)}
+.imageVeil--blur::after{content:"";position:absolute;inset:0;backdrop-filter:blur(14px);background:rgba(0,0,0,.35);border-radius:8px}
+
+/* --- Modal image --- */
+#imgModal{position:fixed;inset:0;background:rgb(0 0 0 / 65%);display:flex;align-items:center;justify-content:center;z-index:70}
+#imgModal[hidden]{display:none}
+.imgModal__box{max-width:55vw;max-height:40vh}
+#imgModalImg{max-width:85vw;max-height:65vh;border-radius:12px;display:block}
+
+/* ===== Mobile ===== */
+@media (max-width:640px){
+  .wrap{max-width:100%;padding:0}
+  .card{border-radius:0;border-left:0;border-right:0}
+  #chatModal{align-items:stretch;justify-content:stretch}
+  #chatBox{border-radius:0;width:100vw;height:100dvh;max-width:100vw;max-height:100dvh}
+  #chatHead{padding:12px}
+  #chatMsgs{padding:10px}
+  #chatForm{padding:10px;gap:8px}
+  #chatForm input[name="body"]{min-height:48px}
+  .msg{padding:10px;margin:10px 0}
+  .row{flex-direction:column;align-items:flex-start;gap:6px;padding:10px}
+
+  .chat-img,.imageVeil{
+        max-width: 50%;
+        margin-top: 8px;
+        border: 0.5px solid #66339985;
+        box-shadow: 5px -2px 5px #0000008c; }
+
+  #toBottom{right:10px;bottom:86px;padding:6px 10px}
+  #imgModal{align-items:center;justify-content:center}
+  .imgModal__box{max-width:96vw;max-height:90dvh}
+  #imgModalImg{max-width:96vw;max-height:90dvh}
 }
-#chatBox{ position:relative; } /* pour positionner le bouton */
 
-
-
-/* tu peux le placer dans le <style> existant */
-.imageVeil{
-    position: relative;
-    width: 20%;
-    min-height: 10px;                /* hauteur mini pour donner une zone cliquable */
-    border: 1px solid #334155;        /* cohérent avec ta palette */
-    border-radius: 8px;
-    background-size: cover;           /* couvre toute la zone */
-    background-position: center;
-    overflow: hidden;
-    cursor: pointer;
-  }
-
-
-  
-  .imageVeil--blur::after{
-    /* couche d’effet : flou + assombrissement pour lire le texte */
-    content: "";
-    position: absolute; inset: 0;
-    backdrop-filter: blur(14px);
-    background: rgba(0,0,0,.35);
-  }
-
-
-.imageVeil span{ color:var(--mut); font-size:14px; background:#111827;
-  padding:8px 10px; border-radius:999px; border:1px solid var(--line);
+/* ===== Très petits écrans ===== */
+@media (max-width:360px){
+  #chatHead h3{font-size:15px}
+  .btn{padding:8px 8px}
 }
-.imageVeil--blur{ background-size:cover; background-position:center; }
-.imageVeil--blur::after{
-  content:""; position:absolute; inset:0; backdrop-filter: blur(16px);
-  background: rgba(0,0,0,.35); border-radius:10px;
+
+
+/* Form */
+.container_chatForm{padding:0 14px 12px;border-top:1px solid var(--line)}
+#chatForm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%}
+
+/* Aplatit les wrappers <div> du form */
+#chatForm > div{display:contents}
+
+/* Champs */
+#chatForm input[name="body"]{flex:1 1 260px;min-width:0}
+#chatForm input[type="file"]{flex:0 0 auto;max-width:100%}
+#chatForm button[type="submit"]{flex:0 0 auto}
+
+/* Mobile */
+@media (max-width:640px){
+  #chatForm{gap:8px}
+  #chatForm input[name="body"]{flex:1 1 100%}
+  #chatForm input[type="file"]{flex:1 1 calc(60% - 8px)}
+  #chatForm button[type="submit"]{flex:1 1 calc(40% - 8px)}
 }
-#imgModal{ position:fixed; inset:0; background:rgb(0 0 0 / 65%);
-  display:flex; align-items:center; justify-content:center; z-index:70;
-}
-#imgModal[hidden]{ display:none; }
-.imgModal__box{ max-width:55vw; max-height:40vh; }
-#imgModalImg{ max-width:85vw; max-height:65vh; border-radius:12px; display:block; }
+
+
+
 
 </style>
+
 </head><body>
 <div class="wrap">
   <div class="card">
@@ -103,20 +130,23 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
   <div id="chatBox">
     <div id="chatHead">
       <strong id="roomTitle">Salon</strong>
-      <button id="chatClose" class="btn" type="button" style="background:#374151">Fermer</button>
+      <button id="chatClose" class="btn" type="button" style="background:#374151">X</button>
     </div>
     <div id="chatMsgs"></div>
+
     <button id="toBottom" type="button" aria-label="Aller en bas">▼</button>
 
+<div class="container_chatForm">
+  <form id="chatForm" enctype="multipart/form-data">
+    <input type="hidden" name="room_id" id="room_id" value="">
+    <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>">
 
+    <input type="text" name="body" placeholder="Écrire…" maxlength="2000" autocomplete="off">
+    <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
+    <button type="submit" class="btn">Envoyer</button>
+  </form>
+</div>
 
-<form id="chatForm" enctype="multipart/form-data" style="display:flex;gap:8px">
-  <input type="text" name="body" placeholder="Écrire…" maxlength="2000" autocomplete="off" style="flex:1">
-  <input type="file" name="image" accept="image/jpeg,image/png,image/webp" />
-  <input type="hidden" name="room_id" id="room_id" value="">
-  <input type="hidden" name="csrf"  value="<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>">
-  <button type="submit">Envoyer</button>
-</form>
 
 <!-- Modal image -->
 <div id="imgModal" hidden>
@@ -294,9 +324,11 @@ function renderMessage(m){
       // Déjà vue : on l’affiche directement (cliquable -> modal)
       const img = document.createElement('img');
       Object.assign(img, { src, alt: 'image', loading: 'lazy' });
-      img.style.maxWidth = '100%';
-      img.style.borderRadius = '8px';
-      img.style.cursor = 'zoom-in';
+     // img.style.maxWidth = '15%';
+     // img.style.borderRadius = '8px';
+     // img.style.cursor = 'zoom-in';
+     img.className = 'chat-img';
+
       img.addEventListener('click', () => openImgModal(src));
       el.appendChild(img);
     }else{
@@ -313,8 +345,9 @@ function renderMessage(m){
         // Et remplace le voile par l’image nette dans le flux
         const img = document.createElement('img');
         Object.assign(img, { src, alt: 'image', loading: 'lazy' });
-        img.style.maxWidth = '100%';
-        img.style.borderRadius = '8px';
+        img.style.maxWidth = '20%';
+        img.style.Width = '20%';
+         img.style.borderRadius = '8px';
         img.style.cursor = 'zoom-in';
         img.addEventListener('click', () => openImgModal(src));
         veil.replaceWith(img);
