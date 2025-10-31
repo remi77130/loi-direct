@@ -646,8 +646,8 @@ umMsgForm.addEventListener('submit', async (e)=>{
   const btn = umMsgForm.querySelector('button[type="submit"]');
   btn.disabled = true;
   try{
-    //const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
-    const r = await fetch(`${BASE}/chat_message_send.php`, { method:'POST', body: fd });
+    const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
+    //const r = await fetch(`${BASE}/chat_message_send.php`, { method:'POST', body: fd });
 
     const j = await r.json();
     if(j.ok){
