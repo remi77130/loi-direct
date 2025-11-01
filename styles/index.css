@@ -74,6 +74,16 @@
 
 }
 
+
+
+.user-greeting
+{
+  text-align: center;
+  font-weight: 700;
+}
+
+
+
 .card h3 {
     
     white-space: nowrap;
@@ -112,7 +122,7 @@ header{backdrop-filter:saturate(1.2) blur(6px); border-bottom:1px solid #0b1220}
 .nav a.active,.nav a:hover{background:#0b12205c}
 
 /* Inputs & buttons */
-input[name="q"]{min-width:260px; transition:border .15s, box-shadow .15s}
+input[name="q"]{min-width:200px; transition:border .15s, box-shadow .15s}
 input[name="q"]:focus{outline:none;border-color:#475569; box-shadow:0 0 0 3px #2563eb33}
 .btn{transition:transform .04s ease, box-shadow .15s}
 .btn:hover{box-shadow:0 6px 18px #1d4ed81c}

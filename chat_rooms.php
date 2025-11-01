@@ -233,23 +233,81 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !imgModal.
 document.getElementById('newRoom').addEventListener('submit', async (e) => {
   e.preventDefault();
   NST.textContent = '';
+
   try{
-    const r = await fetch(`${BASE}/chat_room_create.php`, { method: 'POST', body: new FormData(e.target) });
+    const r = await fetch(`${BASE}/chat_room_create.php`, { method:'POST', body:new FormData(e.target) });
+
+    if (r.status === 429) {
+      let left = 0;
+      try {
+        const j = await r.json();
+        if (j?.error === 'limit' && Number.isFinite(j.retry_after)) {
+          left = Math.max(0, j.retry_after|0);
+        }
+      } catch {}
+
+      NST.style.color = '#f87171';
+      NST.textContent = left > 0
+        ? 'Vous pourrez recréer un salon dans ' + formatDelay(left) + '.'
+        : 'Limite atteinte.';
+
+      if (left > 0) startCreateCountdown(left);
+      return;
+    }
+
     const j = await r.json();
     if (j.ok){
       NST.style.color = '#34d399';
-      NST.textContent = 'Créé';
+      NST.textContent = 'Salon créé.';
       e.target.reset();
-      loadRooms();                 // recharge la liste
-    }else{
+      loadRooms();
+    } else {
       NST.style.color = '#f87171';
       NST.textContent = j.error || 'Erreur';
     }
-  }catch{
+  } catch {
     NST.style.color = '#f87171';
     NST.textContent = 'Réseau';
   }
 });
+
+
+let createUntil = 0; // timestamp ms
+
+function startCreateCountdown(sec){
+  createUntil = Date.now() + sec*1000;
+  tickCreateCountdown();
+}
+
+function tickCreateCountdown(){
+  const btn = document.querySelector('#newRoom button[type="submit"]');
+  const span = NST; // ton élément statut
+  const left = Math.max(0, Math.floor((createUntil - Date.now())/1000));
+  if (left > 0){
+    btn.disabled = true;
+    span.style.color = '#f87171';
+    span.textContent = 'Vous pourrez recréer un salon dans ' + formatDelay(left) + '.';
+    setTimeout(tickCreateCountdown, 1000);
+  }else{
+    btn.disabled = false;
+    span.textContent = '';
+  }
+}
+
+
+
+
+/* Utilitaire formatage secondes -> "X h Y min" ou "Y min Z s" */
+function formatDelay(sec){
+  sec = Math.max(0, Math.floor(sec));
+  const h = Math.floor(sec/3600);
+  const m = Math.floor((sec%3600)/60);
+  const s = sec%60;
+  if (h > 0) return `${h} h ${m.toString().padStart(2,'0')} min`;
+  if (m > 0) return `${m} min ${s.toString().padStart(2,'0')} s`;
+  return `${s} s`;
+}
+
 
 /* Récupère la liste des salons et l’affiche */
 async function loadRooms(){
