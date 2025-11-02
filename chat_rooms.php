@@ -50,6 +50,15 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe 
 .imgModal__box{max-width:55vw;max-height:40vh}
 #imgModalImg{max-width:85vw;max-height:65vh;border-radius:12px;display:block}
 
+
+#lockModal{position:fixed;inset:0;background:rgb(0 0 0 / 65%);display:flex;align-items:center;justify-content:center;z-index:80}
+#lockModal[hidden]{display:none}
+.userModal__box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;width:min(520px,92vw)}
+.userActions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+
+
+
+
 /* ===== Mobile ===== */
 @media (max-width:640px){
   .wrap{max-width:100%;padding:0}
@@ -111,13 +120,54 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe 
 <div class="wrap">
   <div class="card">
     <h1 style="margin:0 0 6px">Salons de discussion</h1>
+
     <form id="newRoom" autocomplete="off" style="display:flex;gap:8px;align-items:center;margin-top:10px">
-      <input name="name" maxlength="60" placeholder="Nom du salon (ex: Discu Sympa)" required
+      <input name="name" maxlength="20" placeholder="Nom du salon (ex: Discu Sympa)" required
              style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--txt)">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
       <button class="btn" type="submit">Créer</button>
       <span id="roomStatus" class="mut"></span>
+
+<label style="display:inline-flex;align-items:center;gap:8px;margin-left:8px">
+  <input type="checkbox" name="is_private" id="is_private">
+  Protégé
+</label>
+<input type="password" name="password" id="room_pwd" placeholder="Mot de passe" maxlenght="20" style="display:none">
+<script>
+const chk = document.getElementById('is_private');
+const pwd = document.getElementById('room_pwd');
+chk.addEventListener('change', (e)=>{
+  const on = e.target.checked;
+  pwd.style.display = on ? 'inline-block' : 'none';
+  pwd.toggleAttribute('required', on); // ← ajoute/enlève required
+  if (!on) pwd.value = '';
+});
+</script>
+
+
     </form>
+
+<div id="lockModal" hidden>
+  <div class="userModal__box">
+    <h3>Salon protégé</h3>
+    <p class="mut">Entrez le mot de passe.</p>
+    <form id="lockForm">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>">
+      <input type="hidden" name="room_id" id="lock_room_id">
+
+      <input type="password" name="password" placeholder="Mot de passe" required>
+      <div class="userActions" style="margin-top:12px">
+
+        <button class="btn" type="submit">Entrer</button>
+        <button id="lockClose" class="btn" type="button" style="background:#374151">Fermer</button>
+      </div>
+      <div id="lockStatus" class="mut" style="margin-top:8px"></div>
+    </form>
+  </div>
+</div>
+
+
+
 
     <div class="rooms" id="rooms"></div>
   </div>
@@ -185,6 +235,8 @@ const roomIdInp = document.getElementById('room_id');    // hidden: id du salon 
 const roomTitle = document.getElementById('roomTitle');  // titre du salon
 const toBottom  = document.getElementById('toBottom');   // bouton « aller en bas »
 
+
+
 let pollTimer = null;                                   // timer du polling
 let lastId    = 0;                                      // dernier id de message reçu
 let currentRoom = 0;                                    // id du salon courant
@@ -232,36 +284,34 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape' && !imgModal.
 /* Création d’un salon : POST simple + refresh de la liste */
 document.getElementById('newRoom').addEventListener('submit', async (e) => {
   e.preventDefault();
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.disabled = true;
   NST.textContent = '';
 
-  try{
+  try {
     const r = await fetch(`${BASE}/chat_room_create.php`, { method:'POST', body:new FormData(e.target) });
-
     if (r.status === 429) {
       let left = 0;
-      try {
-        const j = await r.json();
-        if (j?.error === 'limit' && Number.isFinite(j.retry_after)) {
-          left = Math.max(0, j.retry_after|0);
-        }
-      } catch {}
-
+      try { const j = await r.json(); if (j?.error==='limit' && Number.isFinite(j.retry_after)) left = Math.max(0, j.retry_after|0); } catch {}
       NST.style.color = '#f87171';
-      NST.textContent = left > 0
-        ? 'Vous pourrez recréer un salon dans ' + formatDelay(left) + '.'
-        : 'Limite atteinte.';
-
-      if (left > 0) startCreateCountdown(left);
+      NST.textContent = left>0 ? 'Vous pourrez recréer un salon dans '+formatDelay(left)+'.' : 'Limite atteinte.';
+      if (left>0) startCreateCountdown(left);
       return;
     }
 
-    const j = await r.json();
-    if (j.ok){
+ const j = await r.json();
+    if (j.ok) {
       NST.style.color = '#34d399';
       NST.textContent = 'Salon créé.';
       e.target.reset();
+      // masque le champ password si on vient de décocher “Protégé”
+      const pwd = document.getElementById('room_pwd'); if (pwd) pwd.style.display = 'none';
       loadRooms();
-    } else {
+
+    } 
+    
+    else 
+      {
       NST.style.color = '#f87171';
       NST.textContent = j.error || 'Erreur';
     }
@@ -269,6 +319,10 @@ document.getElementById('newRoom').addEventListener('submit', async (e) => {
     NST.style.color = '#f87171';
     NST.textContent = 'Réseau';
   }
+finally {
+    btn.disabled = false;
+  }
+
 });
 
 
@@ -281,20 +335,32 @@ function startCreateCountdown(sec){
 
 function tickCreateCountdown(){
   const btn = document.querySelector('#newRoom button[type="submit"]');
-  const span = NST; // ton élément statut
-  const left = Math.max(0, Math.floor((createUntil - Date.now())/1000));
+   const left = Math.max(0, Math.floor((createUntil - Date.now())/1000));
   if (left > 0){
     btn.disabled = true;
-    span.style.color = '#f87171';
-    span.textContent = 'Vous pourrez recréer un salon dans ' + formatDelay(left) + '.';
+    NST.style.color = '#f87171';
+    NST.textContent = 'Vous pourrez recréer un salon dans ' + formatDelay(left) + '.';
     setTimeout(tickCreateCountdown, 1000);
   }else{
     btn.disabled = false;
-    span.textContent = '';
+    NST.textContent = '';
   }
 }
 
 
+async function checkCreateQuota(){
+  try{
+    const r = await fetch(`${BASE}/chat_room_quota.php`, {cache:'no-store', credentials:'same-origin'});
+    if (!r.ok) return;
+    const j = await r.json();
+    if (j?.ok && Number.isFinite(j.retry_after) && j.retry_after > 0){
+      startCreateCountdown(j.retry_after|0);
+    }
+  }catch{}
+}
+
+checkCreateQuota();
+loadRooms();
 
 
 /* Utilitaire formatage secondes -> "X h Y min" ou "Y min Z s" */
@@ -309,7 +375,9 @@ function formatDelay(sec){
 }
 
 
-/* Récupère la liste des salons et l’affiche */
+/*loadRooms  Récupère la liste des salons et l’affiche */
+
+
 async function loadRooms(){
   RLIST.innerHTML = '<div class="mut">Chargement…</div>';
   try{
@@ -320,23 +388,87 @@ async function loadRooms(){
       RLIST.innerHTML = '<div class="mut">Aucun salon.</div>';
       return;
     }
-    RLIST.innerHTML = j.rooms.map(x => `
-      <div class="row room" data-id="${x.id}" data-name="${escapeHtml(x.name)}">
-        <div><strong>${escapeHtml(x.name)}</strong></div>
-        <div class="mut">${x.last_at ? new Date(x.last_at.replace(' ','T')).toLocaleString() : '—'}</div>
-      </div>
-    `).join('');
+
+    // Affiche le cadenas pour les salons privés et stocke data-private
+
+    RLIST.innerHTML = j.rooms.map(x => {
+  const priv = Number(x.is_private) === 1; // ← coercition sûre
+  const last = x.last_at ? new Date(x.last_at.replace(' ','T')).toLocaleString() : '—';
+  return `
+    <div class="row room"
+         data-id="${x.id}"
+         data-name="${escapeHtml(x.name)}"
+         data-private="${priv ? 1 : 0}">
+      <div><strong>${escapeHtml(x.name)}${priv ? ' 🔒' : ''}</strong></div>
+      <div class="mut">${last}</div>
+    </div>
+  `;
+}).join('');
+
   }catch{
     RLIST.innerHTML = '<div class="mut">Erreur.</div>';
   }
 }
+/* Clic sur un salon : l’ouvre (ou demande mot de passe si privé) */
 
-/* Click sur un salon -> ouverture du chat associé */
+
 RLIST.addEventListener('click', (e) => {
   const row = e.target.closest('.room');
   if (!row) return;
-  openRoom(parseInt(row.dataset.id, 10), row.dataset.name);
+  const id = parseInt(row.dataset.id, 10);
+  const name = row.dataset.name;
+  const priv = row.dataset.private === '1';
+
+  if (priv) {
+    // ouvre la modal de mot de passe
+    document.getElementById('lock_room_id').value = id;
+    document.getElementById('lockStatus').textContent = '';
+    document.getElementById('lockModal').hidden = false;
+  } else {
+    openRoom(id, name);
+  }
 });
+
+const lockModal = document.getElementById('lockModal');
+const lockForm  = document.getElementById('lockForm');
+const lockClose = document.getElementById('lockClose');
+const lockStatus= document.getElementById('lockStatus');
+
+lockClose.addEventListener('click', ()=> lockModal.hidden = true);
+lockModal.addEventListener('click', e => { if (e.target === lockModal) lockModal.hidden = true; });
+
+lockForm.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  lockStatus.textContent = '';
+  const pwdInput = lockForm.querySelector('input[type="password"]');
+  try{
+    const r = await fetch(`${BASE}/chat_room_unlock.php`, { method:'POST', body:new FormData(lockForm), credentials:'same-origin' });
+    if (r.status === 429){ lockStatus.textContent = 'Trop d’essais. Attendez un peu.'; return; }
+    const j = await r.json();
+    if (j.ok){
+      lockModal.hidden = true;
+      const id = parseInt(document.getElementById('lock_room_id').value,10);
+      const row = RLIST.querySelector(`.room[data-id="${id}"]`);
+      openRoom(id, row ? row.dataset.name : 'Salon');
+    } else if (j.error==='bad_password'){
+      lockStatus.textContent = 'Mot de passe incorrect.';
+    } else {
+      lockStatus.textContent = 'Erreur.';
+    }
+  } catch {
+    lockStatus.textContent = 'Réseau indisponible.';
+  } finally {
+    if (pwdInput) pwdInput.value = ''; // clear
+  }
+});
+
+
+
+
+
+
+
+
 
 /* Ouvre un salon : nettoie l’état, montre le modal, démarre le polling */
 function openRoom(id, name){
@@ -404,7 +536,7 @@ function renderMessage(m){
         const img = document.createElement('img');
         Object.assign(img, { src, alt: 'image', loading: 'lazy' });
         img.style.maxWidth = '20%';
-        img.style.Width = '20%';
+        img.style.width = '20%';
          img.style.borderRadius = '8px';
         img.style.cursor = 'zoom-in';
         img.addEventListener('click', () => openImgModal(src));
@@ -423,26 +555,28 @@ async function fetchMessages(){
   if (!currentRoom) return;
   try{
     const r = await fetch(`${BASE}/chat_messages_fetch.php?room_id=${currentRoom}&after_id=${lastId}`, { cache: 'no-store' });
+    if (!r.ok) {
+      if (r.status === 403 || r.status === 404) { /* salon verrouillé (sécurité côté serveur) */
+        stopPolling();
+        toBottom.style.display = 'none';
+      }
+      return;
+    }
     const j = await r.json();
     if (!j.ok) return;
 
     if (j.messages.length){
-      // Si l’utilisateur est déjà près du bas, on garde l’auto-scroll.
       const stick = isNearBottom(chatMsgs);
       const frag = document.createDocumentFragment();
-
       j.messages.forEach(m => {
         frag.appendChild(renderMessage(m));
         lastId = Math.max(lastId, m.id);
       });
-
       chatMsgs.appendChild(frag);
       if (stick) scrollToBottom(chatMsgs, true);
-
-      // Mise à jour visibilité du bouton
       toBottom.style.display = isNearBottom(chatMsgs) ? 'none' : 'block';
     }
-  }catch{/* silencieux */}
+  } catch {/* silencieux */}
 }
 
 /* Démarre/arrête le polling (2s) */
