@@ -1,42 +1,54 @@
-<?php // api_user_profile.php
+<?php
 declare(strict_types=1);
 session_start();
+
+require __DIR__.'/config.php';
 require __DIR__.'/db.php';
 require __DIR__.'/auth.php';
 require_login();
 
-/*
-Ce fichier api_user_profile.php sert d’API (interface entre ton front-end et la base de données) 
-pour récupérer les informations détaillées d’un utilisateur lorsqu’on clique sur son pseudo dans le chat.
-Fonction concrète
-Le navigateur envoie une requête AJAX à api_user_profile.php avec :
-soit ?id=14,
-soit ?username=sandra77.
-Le script :
-vérifie la session (l’utilisateur doit être connecté) ;
-interroge la table users en base pour récupérer les champs :
-id, username, email, city, age, about, avatar_url ;
-renvoie ces données au format JSON au navigateur.
-Le navigateur reçoit ce JSON et l’affiche dans la modal profil (photo, nom, ville, âge, description, etc.).
-Sans ce fichier
-Le JavaScript ne peut pas remplir la fenêtre de profil, car il ne connaît pas les données de l’utilisateur.
-Autrement dit :
-Sans api_user_profile.php → la modal afficherait seulement le pseudo cliqué.
-Avec → la modal affiche les infos complètes, directement extraites de ta base.
-*/
 header('Content-Type: application/json; charset=utf-8');
-$qId = trim($_GET['id'] ?? '');
-$qName = trim($_GET['username'] ?? '');
+header('Cache-Control: no-store');
 
-if ($qId===' ' && $qName==='') { echo json_encode(['ok'=>false]); exit; }
+try {
+    $user_id = isset($_GET['user_id']) ? (int)$_GET['user_id'] : 0;
+    if ($user_id <= 0) {
+        http_response_code(400);
+        echo json_encode(['ok'=>false,'error'=>'bad_user_id']);
+        exit;
+    }
 
-if ($qId!=='') {
-  $st = $pdo->prepare('SELECT id,username,email,city,age,about,avatar_url FROM users WHERE id=?');
-  $st->execute([$qId]);
-} else {
-  $st = $pdo->prepare('SELECT id,username,email,city,age,about,avatar_url FROM users WHERE username=?');
-  $st->execute([$qName]);
+    $sql = "SELECT id, pseudo, city, sex, height_cm, postal_code, relationship_status
+            FROM users WHERE id = ?";
+    $stmt = $mysqli->prepare($sql);
+    $stmt->bind_param('i', $user_id);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    $u   = $res->fetch_assoc();
+    $stmt->close();
+
+    if (!$u) {
+        http_response_code(404);
+        echo json_encode(['ok'=>false,'error'=>'not_found']);
+        exit;
+    }
+
+    $out = [
+        'id'   => (int)$u['id'],
+        'pseudo' => $u['pseudo'],
+        'city' => $u['city'] ?? null,
+        'avatar_url' => null,
+        'bio'        => null,
+        'age'        => null,
+        'sex'                 => $u['sex'] ?? null,
+        'height_cm'           => $u['height_cm'] !== null ? (int)$u['height_cm'] : null,
+        'postal_code'         => $u['postal_code'] ?? null,
+        'relationship_status' => $u['relationship_status'] ?? null,
+    ];
+
+    echo json_encode(['ok'=>true,'user'=>$out], JSON_UNESCAPED_UNICODE);
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode(['ok'=>false,'error'=>'server']);
 }
-$u = $st->fetch(PDO::FETCH_ASSOC);
-if (!$u){ echo json_encode(['ok'=>false]); exit; }
-echo json_encode($u);
+    

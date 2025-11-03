@@ -56,7 +56,15 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe 
 .userModal__box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;width:min(520px,92vw)}
 .userActions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 
-
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:90}
+.modal-overlay[hidden]{display:none}
+.modal-box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;width:min(520px,92vw)}
+.btn[disabled],
+.btn[aria-disabled="true"]{
+  opacity:.5;
+  cursor:not-allowed;
+  pointer-events:none;
+}
 
 
 /* ===== Mobile ===== */
@@ -132,7 +140,7 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe 
   <input type="checkbox" name="is_private" id="is_private">
   Protégé
 </label>
-<input type="password" name="password" id="room_pwd" placeholder="Mot de passe" maxlenght="20" style="display:none">
+<input type="password" name="password" id="room_pwd" placeholder="Mot de passe" maxlength="20" style="display:none">
 <script>
 const chk = document.getElementById('is_private');
 const pwd = document.getElementById('room_pwd');
@@ -147,15 +155,33 @@ chk.addEventListener('change', (e)=>{
 
     </form>
 
-<div id="lockModal" hidden>
-  <div class="userModal__box">
+
+<div id="userModal" class="modal-overlay" role="dialog" aria-modal="true" hidden hidden>
+  <div class="modal-box">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <h3 id="umName" style="margin:0">Profil</h3>
+      <button id="umClose" class="btn" type="button" style="background:#374151">Fermer</button>
+    </div>
+    <div id="umBody" class="mut" style="margin-top:8px">Chargement…</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
+      <button id="umDM" class="btn" type="button">Envoyer un message</button>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+<div id="lockModal" class="modal-overlay"  role="dialog" aria-modal="true" hidden hidden>
+  <div class="modal-box">
     <h3>Salon protégé</h3>
     <p class="mut">Entrez le mot de passe.</p>
     <form id="lockForm">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>">
       <input type="hidden" name="room_id" id="lock_room_id">
 
-      <input type="password" name="password" placeholder="Mot de passe" required>
+      <input type="password" name="password" autocomplete="new-password" style="display:block" placeholder="Mot de passe" required>
       <div class="userActions" style="margin-top:12px">
 
         <button class="btn" type="submit">Entrer</button>
@@ -225,6 +251,8 @@ chk.addEventListener('change', (e)=>{
 
 /* --- Raccourcis DOM & état global --- */
 const BASE      = '<?= APP_BASE ?>';                 // base path côté PHP
+  const CURRENT_USER_ID = <?= (int)($_SESSION['user_id'] ?? 0) ?>;
+
 const RLIST     = document.getElementById('rooms');  // conteneur de la liste des salons
 const NST       = document.getElementById('roomStatus'); // statut création de salon
 const chatModal = document.getElementById('chatModal');  // overlay du chat
@@ -237,9 +265,13 @@ const toBottom  = document.getElementById('toBottom');   // bouton « aller en b
 
 
 
+
 let pollTimer = null;                                   // timer du polling
+let pollToken = 0; // <- nouveau
 let lastId    = 0;                                      // dernier id de message reçu
 let currentRoom = 0;                                    // id du salon courant
+let pollDelay = 2000;
+
 
 /* --- Helpers génériques --- */
 function escapeHtml(s){ return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
@@ -274,8 +306,21 @@ function closeImgModal(){
 }
 // Fermer en cliquant en dehors de l’image
 imgModal.addEventListener('click', e => { if (e.target === imgModal) closeImgModal(); });
-// Fermer à Échap
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && !imgModal.hidden) closeImgModal(); });
+
+// Fermer à Échap Fermer les modales avec Échap (user + lock) — tu as déjà l’image
+
+// Ajoute une seule écoute clavier globale :
+document.addEventListener('keydown', e => { 
+  if (e.key !== 'Escape') return;
+  if (!imgModal.hidden) closeImgModal();
+  const userModal = document.getElementById('userModal');
+  const lockModal = document.getElementById('lockModal');
+  if (userModal && !userModal.hidden) userModal.hidden = true;
+  if (lockModal && !lockModal.hidden) lockModal.hidden = true;
+});
+
+
+
 
 /* ============================================================================
  *                               Salons
@@ -381,7 +426,7 @@ function formatDelay(sec){
 async function loadRooms(){
   RLIST.innerHTML = '<div class="mut">Chargement…</div>';
   try{
-    const r = await fetch(`${BASE}/chat_rooms_list.php`, { cache: 'no-store' });
+    const r = await fetch(`${BASE}/chat_rooms_list.php`, { cache: 'no-store', credentials:'same-origin' });
     const j = await r.json();
     if (!j.ok) throw 0;
     if (j.rooms.length === 0){
@@ -437,32 +482,49 @@ const lockStatus= document.getElementById('lockStatus');
 lockClose.addEventListener('click', ()=> lockModal.hidden = true);
 lockModal.addEventListener('click', e => { if (e.target === lockModal) lockModal.hidden = true; });
 
+// helper tolérant
+async function safeJson(resp){
+  try { return await resp.json(); } catch { return null; }
+}
+
 lockForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
   lockStatus.textContent = '';
+  
+  const btn = lockForm.querySelector('button[type="submit"]');
   const pwdInput = lockForm.querySelector('input[type="password"]');
+  btn.disabled = true;
+
   try{
-    const r = await fetch(`${BASE}/chat_room_unlock.php`, { method:'POST', body:new FormData(lockForm), credentials:'same-origin' });
-    if (r.status === 429){ lockStatus.textContent = 'Trop d’essais. Attendez un peu.'; return; }
-    const j = await r.json();
-    if (j.ok){
+    const r = await fetch(`${BASE}/chat_room_unlock.php`, {
+      method:'POST',
+      body:new FormData(lockForm),
+      credentials:'same-origin'
+    });
+    if (r.status === 429){
+      lockStatus.textContent = 'Trop d’essais. Attendez un peu.';
+      return;
+    }
+
+    const j = await safeJson(r);
+    if (j && j.ok){
       lockModal.hidden = true;
-      const id = parseInt(document.getElementById('lock_room_id').value,10);
+      const id  = parseInt(document.getElementById('lock_room_id').value,10);
       const row = RLIST.querySelector(`.room[data-id="${id}"]`);
       openRoom(id, row ? row.dataset.name : 'Salon');
-    } else if (j.error==='bad_password'){
+    } else if (j && j.error === 'bad_password'){
       lockStatus.textContent = 'Mot de passe incorrect.';
     } else {
       lockStatus.textContent = 'Erreur.';
     }
+
   } catch {
     lockStatus.textContent = 'Réseau indisponible.';
   } finally {
     if (pwdInput) pwdInput.value = ''; // clear
+    btn.disabled = false;
   }
 });
-
-
 
 
 
@@ -480,7 +542,9 @@ function openRoom(id, name){
   toBottom.style.display = 'none';
   chatModal.style.display = 'flex';
   startPolling();
-}
+// focus input
+  const bodyInput = chatForm.querySelector('input[name="body"]');
+  if (bodyInput) setTimeout(() => bodyInput.focus(), 50);}
 
 /* Fermer le chat */
 chatClose.onclick = () => { chatModal.style.display = 'none'; stopPolling(); };
@@ -501,48 +565,51 @@ function renderMessage(m){
   const el = document.createElement('div');
   el.className = 'msg';
 
-  // En-tête (auteur + horodatage)
+  const when = new Date(m.created_at.replace(' ','T')).toLocaleString();
+  const senderLabel = escapeHtml(m.sender || '—');
+  const senderId = m.sender_id ? Number(m.sender_id) : 0;
+
+  // En-tête unique avec pseudo cliquable si sender_id dispo
   el.innerHTML =
-    `<div class="meta">${escapeHtml(m.sender)} — ${new Date(m.created_at.replace(' ','T')).toLocaleString()}</div>` +
+    `<div class="meta">
+      ${senderId
+        ? `<button class="userLink" data-user-id="${senderId}" title="Voir le profil"
+                   style="all:unset;cursor:pointer;color:#93c5fd">${senderLabel}</button>`
+        : senderLabel}
+      — ${when}
+     </div>` +
     (m.body ? `<div style="white-space:pre-wrap">${escapeHtml(m.body)}</div>` : '');
 
-  // Si c’est une image
+
+async function safeJson(resp){ try { return await resp.json(); } catch { return null; } }
+
+
+  // Image éventuelle (inchangé)
   if (m.file_url && /^image\//.test(m.file_mime || '')){
     const src = m.file_url;
-
     if (isViewed(src)){
-      // Déjà vue : on l’affiche directement (cliquable -> modal)
       const img = document.createElement('img');
       Object.assign(img, { src, alt: 'image', loading: 'lazy' });
-     // img.style.maxWidth = '15%';
-     // img.style.borderRadius = '8px';
-     // img.style.cursor = 'zoom-in';
-     img.className = 'chat-img';
-
+      img.className = 'chat-img';
       img.addEventListener('click', () => openImgModal(src));
       el.appendChild(img);
-    }else{
-      // Pas encore vue : on affiche un voile flouté cliquable
+    } else {
       const veil = document.createElement('div');
       veil.className = 'imageVeil imageVeil--blur';
       veil.style.backgroundImage = `url('${src}')`;
       veil.innerHTML = `<span>Cliquer pour afficher l’image</span>`;
-
       veil.addEventListener('click', () => {
-        openImgModal(src);   // affiche en grand
-        markViewed(src);     // mémorise comme "vue"
-
-        // Et remplace le voile par l’image nette dans le flux
+        openImgModal(src);
+        markViewed(src);
         const img = document.createElement('img');
         Object.assign(img, { src, alt: 'image', loading: 'lazy' });
         img.style.maxWidth = '20%';
         img.style.width = '20%';
-         img.style.borderRadius = '8px';
+        img.style.borderRadius = '8px';
         img.style.cursor = 'zoom-in';
         img.addEventListener('click', () => openImgModal(src));
         veil.replaceWith(img);
       });
-
       el.appendChild(veil);
     }
   }
@@ -550,11 +617,19 @@ function renderMessage(m){
   return el;
 }
 
+const fileInput = chatForm.querySelector('input[type="file"]');
+if (fileInput) fileInput.value = '';
+
+
 /* Récupère les nouveaux messages depuis le serveur */
 async function fetchMessages(){
   if (!currentRoom) return;
   try{
-    const r = await fetch(`${BASE}/chat_messages_fetch.php?room_id=${currentRoom}&after_id=${lastId}`, { cache: 'no-store' });
+// fetchMessages()
+const r = await fetch(`${BASE}/chat_messages_fetch.php?room_id=${currentRoom}&after_id=${lastId}`, {
+  cache: 'no-store',
+  credentials:'same-origin'
+});    
     if (!r.ok) {
       if (r.status === 403 || r.status === 404) { /* salon verrouillé (sécurité côté serveur) */
         stopPolling();
@@ -579,15 +654,31 @@ async function fetchMessages(){
   } catch {/* silencieux */}
 }
 
-/* Démarre/arrête le polling (2s) */
+/* Démarre/arrête le polling (2s), Annuler les requêtes de polling quand 
+on change de salon (anti “réponses tardives”)
+Évite qu’une réponse d’un ancien salon arrive après coup et pollue l’UI. */
 function startPolling(){
   stopPolling();
-  fetchMessages();                       // premier fetch immédiat
-  pollTimer = setInterval(fetchMessages, 2000);
+  const myToken = ++pollToken;
+  const wrappedFetch = async () => {
+    // si on a changé de salon entre temps, on ignore
+    if (myToken !== pollToken) return;
+    await fetchMessages();
+  };
+  wrappedFetch();
+  pollTimer = setInterval(wrappedFetch, 2000);
 }
 function stopPolling(){
+  pollToken++; // invalide le token courant
   if (pollTimer){ clearInterval(pollTimer); pollTimer = null; }
 }
+
+
+
+
+
+
+
 
 /* ============================================================================
  *                Compression image côté client AVANT upload
@@ -678,8 +769,119 @@ chatForm.addEventListener('submit', async (e) => {
   }
 });
 
+
+
+
+
+// Réfs modal
+const userModal = document.getElementById('userModal');
+const umClose   = document.getElementById('umClose');
+const umBody    = document.getElementById('umBody');
+const umName    = document.getElementById('umName');
+const umDM      = document.getElementById('umDM');
+
+let umUserId = 0;
+
+function openUserModal(){ 
+  userModal.hidden = false; 
+    // par défaut visible
+  umDM.hidden = false; 
+  umDM.disabled = false; 
+
+
+}
+function closeUserModal(){ 
+  userModal.hidden = true; 
+  umBody.textContent = ''; 
+  umUserId = 0; 
+// reset du bouton au cas où
+  umDM.hidden = false;
+  umDM.disabled = false;
+  umDM.removeAttribute('aria-disabled');
+  umDM.textContent = 'Envoyer un message';
+
+}
+
+umClose.addEventListener('click', closeUserModal);
+userModal.addEventListener('click', e => { if (e.target === userModal) closeUserModal(); });
+
+// Délégation de clic sur pseudo
+// Clic sur pseudo → ouvre la modale et charge le profil// Clic sur pseudo → ouvre la modale et charge le profil
+chatMsgs.addEventListener('click', async (e) => {
+  const a = e.target.closest('.userLink');
+  if (!a) return;
+
+  const uid = parseInt(a.dataset.userId, 10) || 0;
+  if (!uid) return;
+
+  umUserId = uid;
+  umName.textContent = 'Profil';
+  umBody.textContent = 'Chargement…';
+
+// si c’est ton propre profil → cache le bouton DM
+ if (umUserId === CURRENT_USER_ID) {
+  umDM.disabled = true;
+  umDM.textContent = 'C’est vous';
+  umDM.setAttribute('aria-disabled','true');
+}
+
+  openUserModal();
+
+  try {
+    const url = `${BASE}/api_user_profile.php?user_id=${uid}`;
+    const r   = await fetch(url, { cache:'no-store', credentials:'same-origin' });
+    if (!r.ok) {
+      umBody.textContent = r.status === 404 ? 'Utilisateur introuvable.' : 'Erreur serveur.';
+      return;
+    }
+    const j = await r.json();
+    if (!j || !j.ok) {
+      umBody.textContent = (j && j.error) || 'Erreur.';
+      return;
+    }
+
+    const u = j.user;
+    umName.textContent = u.pseudo || 'Profil';
+
+    umBody.innerHTML =
+      `<div style="display:flex;gap:12px;align-items:flex-start">
+         ${u.avatar_url ? `<img src="${u.avatar_url}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:1px solid var(--line)">` : ''}
+         <div>
+           ${u.city ? `<div><strong>Ville:</strong> ${escapeHtml(u.city)}</div>` : ''}
+           ${u.sex ? `<div><strong>Sexe:</strong> ${escapeHtml(u.sex)}</div>` : ''}
+           ${u.height_cm ? `<div><strong>Taille:</strong> ${u.height_cm} cm</div>` : ''}
+           ${u.postal_code ? `<div><strong>CP:</strong> ${escapeHtml(u.postal_code)}</div>` : ''}
+           ${u.relationship_status ? `<div><strong>Statut:</strong> ${escapeHtml(u.relationship_status)}</div>` : ''}
+           ${u.bio ? `<div style="margin-top:6px;white-space:pre-wrap">${escapeHtml(u.bio)}</div>` : ''}
+         </div>
+       </div>`;
+  } catch {
+    umBody.textContent = 'Réseau indisponible.';
+  }
+});
+
+
+
+
+
+
 /* --- Bootstrapping : charge la liste des salons au chargement de la page --- */
 loadRooms();
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </script>
 
 </body></html>

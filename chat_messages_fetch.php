@@ -39,18 +39,41 @@ if ((int)$is_private === 1 && empty($_SESSION['rooms_ok'][$room_id])) {
 }
 
 
-
 /* 3) Requêtes messages */
 if ($after > 0) {
-  $sql = "SELECT m.id,m.body,m.created_at,m.file_url,m.file_mime,u.id AS sender_id,u.pseudo AS sender
-          FROM chat_messages m JOIN users u ON u.id=m.sender_id
-          WHERE m.room_id=? AND m.id>? ORDER BY m.id ASC LIMIT 200";
+  $sql = "
+    SELECT
+      m.id,
+      m.sender_id,                      -- ← une seule fois
+      m.body,
+      m.created_at,
+      m.file_url,
+      m.file_mime,
+      u.pseudo AS sender
+    FROM chat_messages m
+    LEFT JOIN users u ON u.id = m.sender_id
+    WHERE m.room_id = ? AND m.id > ?
+    ORDER BY m.id ASC
+    LIMIT 200
+  ";
   $stmt = $mysqli->prepare($sql);
   $stmt->bind_param('ii', $room_id, $after);
 } else {
-  $sql = "SELECT m.id,m.body,m.created_at,m.file_url,m.file_mime,u.id AS sender_id,u.pseudo AS sender
-          FROM chat_messages m JOIN users u ON u.id=m.sender_id
-          WHERE m.room_id=? ORDER BY m.id DESC LIMIT 50";
+  $sql = "
+    SELECT
+      m.id,
+      m.sender_id,                      -- ← une seule fois
+      m.body,
+      m.created_at,
+      m.file_url,
+      m.file_mime,
+      u.pseudo AS sender
+    FROM chat_messages m
+    LEFT JOIN users u ON u.id = m.sender_id
+    WHERE m.room_id = ?
+    ORDER BY m.id DESC
+    LIMIT 50
+  ";
   $stmt = $mysqli->prepare($sql);
   $stmt->bind_param('i', $room_id);
 }
@@ -60,7 +83,9 @@ $res  = $stmt->get_result();
 $rows = $res->fetch_all(MYSQLI_ASSOC);
 $stmt->close();
 
-if ($after === 0) $rows = array_reverse($rows);
+if ($after === 0) {
+  $rows = array_reverse($rows);
+}
 
 /* 4) Sortie */
 echo json_encode(['ok'=>true,'messages'=>$rows], JSON_UNESCAPED_UNICODE);
