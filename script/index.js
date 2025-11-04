@@ -1,3 +1,5 @@
+
+
 const umSex   = document.getElementById('umSex');
 const umHeight= document.getElementById('umHeight');
 const umStatus= document.getElementById('umStatus');
@@ -66,50 +68,6 @@ umMsgToggle.addEventListener('click', ()=> {
   umMsgForm.style.display = umMsgForm.style.display==='none' ? 'block' : 'none';
 });
 
-// open modal on user click
-const umInfos = document.getElementById('umInfos');
-
-document.addEventListener('click', async (e) => {
-  const a = e.target.closest('.user-link, .js-open-user');
-  if (!a) return;
-  e.preventDefault();
-  const id = a.getAttribute('data-user-id');
-
-  try {
-    const r = await fetch(`${BASE}/user_card.php?id=${encodeURIComponent(id)}`, {cache:'no-store'});
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'Réponse invalide');
-
-  umPseudo.textContent = j.pseudo;
-umCount.textContent  = j.projects_count;
-umStatus.textContent = j.relationship_status ?? '—';
-umSex.textContent    = j.sex ?? '—';
-umHeight.textContent = (j.height_cm ? (j.height_cm + ' cm') : '—');
-umLink.href       = `${BASE}/profile.php?id=${encodeURIComponent(id)}`;
-umRecipient.value = id; // pour l’envoi de message
-
-
-    // Construit la ligne d’infos: “Homme • 175 cm”, sinon “—”
-    const parts = [];
-    if (j.sex) parts.push(j.sex);
-    if (typeof j.height_cm === 'number') parts.push(`${j.height_cm} cm`);
-    umInfos.textContent = parts.length ? parts.join(' • ') : '—';
-
-    if (parseInt(id,10) === <?= (int)$_SESSION['user_id'] ?>) {
-      umMsgToggle.style.display = 'none';
-      umMsgForm.style.display   = 'none';
-    } else {
-      umMsgToggle.style.display = '';
-    }
-
-    modal.style.display  = 'flex';
-  } catch (err) {
-    
-    console.error('user_card.php error:', err);
-  }
-});
-
 
 // submit messages
 umMsgForm.addEventListener('submit', async (e)=>{
@@ -119,8 +77,8 @@ umMsgForm.addEventListener('submit', async (e)=>{
   const btn = umMsgForm.querySelector('button[type="submit"]');
   btn.disabled = true;
   try{
-    //const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
-    const r = await fetch(`${BASE}/chat_message_send.php`, { method:'POST', body: fd });
+    const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
+    //const r = await fetch(`${BASE}/chat_message_send.php`, { method:'POST', body: fd });
 
     const j = await r.json();
     if(j.ok){
@@ -159,3 +117,11 @@ async function refreshBadge(){
 }
 refreshBadge();
 setInterval(refreshBadge, 20000);
+
+
+  const btn = document.querySelector('.nav-toggle');
+  const nav = document.getElementById('primary-nav');
+  btn.addEventListener('click', ()=>{
+    const open = nav.classList.toggle('is-open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });

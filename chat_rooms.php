@@ -155,19 +155,32 @@ chk.addEventListener('change', (e)=>{
 
     </form>
 
-
-<div id="userModal" class="modal-overlay" role="dialog" aria-modal="true" hidden hidden>
+<div id="userModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="umName" hidden>
   <div class="modal-box">
     <div style="display:flex;justify-content:space-between;align-items:center">
       <h3 id="umName" style="margin:0">Profil</h3>
       <button id="umClose" class="btn" type="button" style="background:#374151">Fermer</button>
     </div>
+
     <div id="umBody" class="mut" style="margin-top:8px">Chargement…</div>
+
     <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
       <button id="umDM" class="btn" type="button">Envoyer un message</button>
     </div>
+
+    <div id="umDMBox" hidden style="margin-top:10px">
+      <form id="dmSend" method="post" enctype="multipart/form-data" autocomplete="off">
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'] ?? '') ?>">
+        <input type="hidden" name="recipient_id" id="dmRecipient">
+        <textarea name="body" id="dmBody" rows="3" maxlength="2000" placeholder="Votre message…"></textarea>
+        <input type="file" name="image" accept="image/*">
+        <button type="submit" id="dmBtn">Envoyer</button>
+      </form>
+      <div id="dmHint" class="muted" style="margin-top:6px"></div>
+    </div>
   </div>
 </div>
+
 
 
 
@@ -528,10 +541,6 @@ lockForm.addEventListener('submit', async (e)=>{
 
 
 
-
-
-
-
 /* Ouvre un salon : nettoie l’état, montre le modal, démarre le polling */
 function openRoom(id, name){
   currentRoom = id;
@@ -543,7 +552,7 @@ function openRoom(id, name){
   chatModal.style.display = 'flex';
   startPolling();
 // focus input
-  const bodyInput = chatForm.querySelector('input[name="body"]');
+  const bodyInput = chatForm.querySelector('[name="body"]');
   if (bodyInput) setTimeout(() => bodyInput.focus(), 50);}
 
 /* Fermer le chat */
@@ -581,7 +590,6 @@ function renderMessage(m){
     (m.body ? `<div style="white-space:pre-wrap">${escapeHtml(m.body)}</div>` : '');
 
 
-async function safeJson(resp){ try { return await resp.json(); } catch { return null; } }
 
 
   // Image éventuelle (inchangé)
@@ -780,7 +788,60 @@ const umBody    = document.getElementById('umBody');
 const umName    = document.getElementById('umName');
 const umDM      = document.getElementById('umDM');
 
+const umBox = document.getElementById('umDMBox');
+const dmForm = document.getElementById('dmSend');
+const dmRecipient = document.getElementById('dmRecipient');
+const dmBody = document.getElementById('dmBody');
+const dmBtn = document.getElementById('dmBtn');
+const dmHint = document.getElementById('dmHint');
+
+let dmTarget = null; // défini quand on ouvre le profil
+
 let umUserId = 0;
+
+
+// quand tu hydrates le profil via /user_card.php :
+function hydrateUserModal(data){
+  dmTarget = data.id;                 // <- ID cible
+  dmRecipient.value = String(dmTarget);
+  umBox.hidden = false;               // affiche le mini-formulaire
+  dmBody.value = '';
+  dmHint.textContent = '';
+}
+
+
+// envoi DM
+dmForm?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  if (!dmTarget) return;
+  const fd = new FormData(dmForm);
+  dmBtn.disabled = true;
+  dmHint.textContent = 'Envoi…';
+  try{
+const r = await fetch(`${BASE}/chat_dm_send.php`, { method:'POST', body: fd, cache:'no-store', credentials:'same-origin' });
+    if(!r.ok){
+      const text = await r.text();
+      throw new Error('HTTP '+r.status+' '+text);
+    }
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error||'error');
+    dmBody.value = '';
+    dmForm.querySelector('input[name="image"]').value = '';
+    dmHint.textContent = 'Message envoyé.';
+  }catch(err){
+    const msg = String(err.message||'Erreur');
+    dmHint.textContent = /rate/.test(msg) ? 'Trop de messages. Réessayez dans un instant.' : 'Échec de l’envoi.';
+  }finally{
+    dmBtn.disabled = false;
+  }
+});
+
+// option: clic sur #umDM focus le textarea
+umDM?.addEventListener('click', ()=>{
+  if (umBox.hidden) umBox.hidden = false;
+  dmBody?.focus();
+});
+
 
 function openUserModal(){ 
   userModal.hidden = false; 
@@ -790,11 +851,13 @@ function openUserModal(){
 
 
 }
-function closeUserModal(){ 
-  userModal.hidden = true; 
-  umBody.textContent = ''; 
-  umUserId = 0; 
-// reset du bouton au cas où
+function closeUserModal(){ // Évite un ancien destinataire résiduel.
+   userModal.hidden = true;
+  umBody.textContent = '';
+  umUserId = 0;
+  dmTarget = null;
+  dmRecipient.value = '';
+  umBox.hidden = true;
   umDM.hidden = false;
   umDM.disabled = false;
   umDM.removeAttribute('aria-disabled');
@@ -807,6 +870,7 @@ userModal.addEventListener('click', e => { if (e.target === userModal) closeUser
 
 // Délégation de clic sur pseudo
 // Clic sur pseudo → ouvre la modale et charge le profil// Clic sur pseudo → ouvre la modale et charge le profil
+
 chatMsgs.addEventListener('click', async (e) => {
   const a = e.target.closest('.userLink');
   if (!a) return;
@@ -819,10 +883,11 @@ chatMsgs.addEventListener('click', async (e) => {
   umBody.textContent = 'Chargement…';
 
 // si c’est ton propre profil → cache le bouton DM
- if (umUserId === CURRENT_USER_ID) {
+if (umUserId === CURRENT_USER_ID) {
   umDM.disabled = true;
   umDM.textContent = 'C’est vous';
   umDM.setAttribute('aria-disabled','true');
+  umBox.hidden = true;      // important
 }
 
   openUserModal();
@@ -841,7 +906,10 @@ chatMsgs.addEventListener('click', async (e) => {
     }
 
     const u = j.user;
+    hydrateUserModal({ id: u.id }); // définit dmTarget + dmRecipient
+
     umName.textContent = u.pseudo || 'Profil';
+
 
     umBody.innerHTML =
       `<div style="display:flex;gap:12px;align-items:flex-start">

@@ -535,7 +535,12 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
   </div>
 </div>
 
-<script>const umSex   = document.getElementById('umSex');
+
+<script>
+
+  
+
+const umSex   = document.getElementById('umSex');
 const umHeight= document.getElementById('umHeight');
 const umStatus= document.getElementById('umStatus');
 
@@ -696,9 +701,8 @@ async function refreshBadge(){
 }
 refreshBadge();
 setInterval(refreshBadge, 20000);
-</script>
 
-<script>
+
   const btn = document.querySelector('.nav-toggle');
   const nav = document.getElementById('primary-nav');
   btn.addEventListener('click', ()=>{
@@ -706,7 +710,6 @@ setInterval(refreshBadge, 20000);
     btn.setAttribute('aria-expanded', open ? 'true' : 'false');
   });
 </script>
-
 
 </body>
 </html>
