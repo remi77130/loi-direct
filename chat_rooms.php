@@ -21,8 +21,13 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe 
 .rooms{margin-top:10px}
 .room{cursor:pointer}
 
+.activeRow { padding: 8px 10px; border-radius: 8px; }
+.activeRow.is-me { outline: 2px solid var(--brand); background: rgba(37,99,235,.08); }
+.meTag { font-size: .75rem; padding: 2px 6px; border: 1px solid var(--line); border-radius: 999px; margin-left: 6px; }
+
+
 /* --- Modal principal --- */
-#chatModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50}
+#chatModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;}
 #chatBox{background:var(--card);border:1px solid var(--line);border-radius:16px;width:min(900px,95vw);height:min(640px,90vh);display:flex;flex-direction:column;position:relative}
 #chatHead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
 #chatMsgs{flex:1;overflow:auto;padding:12px 14px}
@@ -66,9 +71,11 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe 
   pointer-events:none;
 }
 .modal { position: fixed; inset: 0; }
-#chatModal { z-index: 9000; }
-#userModal { z-index: 10000; }    /* toujours au-dessus du chat */
-.modal.behind { z-index: 8000; pointer-events: none; } /* option: passe le chat derrière et non cliquable */
+#chatModal   { z-index: 1002; }
+#userModal   { z-index: 1003; }   /* au-dessus du chat */
+#activeModal { z-index: 1004; }   /* au-dessus du userModal */
+.modal.behind { z-index: 800; pointer-events: none; } /* passe visuellement derrière */
+
 
 
 /* ===== Mobile ===== */
@@ -159,6 +166,22 @@ chk.addEventListener('change', (e)=>{
 
     </form>
 
+
+    
+<!-- Modale utilisateurs actifs -->
+<div id="activeModal" class="modal" hidden>
+  <div class="modal-box">
+    <div class="modal-head">
+      <strong>Utilisateurs actifs</strong>
+      <button id="activeClose" type="button" class="btn">X</button>
+    </div>
+    <div id="activeModalBody"></div>
+  </div>
+</div>
+
+
+
+
 <div id="userModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="umName" hidden>
   <div class="modal-box">
     <div style="display:flex;justify-content:space-between;align-items:center">
@@ -170,9 +193,14 @@ chk.addEventListener('change', (e)=>{
 
 
 
+
+
+
+
+
     <div id="umDMBox" hidden style="margin-top:10px">
       <form id="dmSend" method="post" enctype="multipart/form-data" autocomplete="off">
-        <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'] ?? '') ?>">
+  <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'] ?? '', ENT_QUOTES) ?>">
         <input type="hidden" name="recipient_id" id="dmRecipient">
         <textarea name="body" id="dmBody" rows="3" maxlength="2000" placeholder="Votre message…"></textarea>
         <input type="file" name="image" accept="image/*">
@@ -221,6 +249,9 @@ chk.addEventListener('change', (e)=>{
   <div id="chatBox">
     <div id="chatHead">
       <strong id="roomTitle">Salon</strong>
+<button id="showActive" type="button">Actifs</button>
+
+
       <button id="chatClose" class="btn" type="button" style="background:#374151">X</button>
     </div>
     <div id="chatMsgs"></div>
@@ -277,7 +308,43 @@ const chatForm  = document.getElementById('chatForm');   // formulaire d’envoi
 const roomIdInp = document.getElementById('room_id');    // hidden: id du salon courant
 const roomTitle = document.getElementById('roomTitle');  // titre du salon
 const toBottom  = document.getElementById('toBottom');   // bouton « aller en bas »
+const lockModal = document.getElementById('lockModal');
+const lockForm  = document.getElementById('lockForm');
+const lockClose = document.getElementById('lockClose');
+const lockStatus= document.getElementById('lockStatus');
+const showActive     = document.getElementById('showActive');
+const activeModal    = document.getElementById('activeModal');
+const activeModalBody= document.getElementById('activeModalBody');
+const activeClose    = document.getElementById('activeClose');
 
+// Réfs modales AVANT toute fonction qui les touche
+const userModal = document.getElementById('userModal');
+const umClose   = document.getElementById('umClose');
+const umBody    = document.getElementById('umBody');
+const umName    = document.getElementById('umName');
+
+const umBox       = document.getElementById('umDMBox');
+const dmForm      = document.getElementById('dmSend');
+const dmRecipient = document.getElementById('dmRecipient');
+const dmBody      = document.getElementById('dmBody');
+const dmBtn       = document.getElementById('dmBtn');
+const dmHint      = document.getElementById('dmHint');
+
+// Optionnel si img modal peut manquer
+const imgModal    = document.getElementById('imgModal');
+const imgModalImg = document.getElementById('imgModalImg');
+
+
+
+
+
+
+
+
+
+
+activeModal?.addEventListener('click', e => { if (e.target === e.currentTarget) activeModal.hidden = true; });
+activeClose?.addEventListener('click', () => { activeModal.hidden = true; });
 
 
 
@@ -307,20 +374,24 @@ function markViewed(src){
   localStorage.setItem(VIEWED_KEY, JSON.stringify([...viewed]));
 }
 
-/* --- Modal image (ouverture/fermeture) --- */
-const imgModal    = document.getElementById('imgModal');
-const imgModalImg = document.getElementById('imgModalImg');
+
 
 function openImgModal(src){
+
+ if (!imgModal || !imgModalImg) return;
+  imgModalImg.src = src;
+  imgModal.hidden = false;
+
   imgModalImg.src = src;
   imgModal.hidden = false;
 }
 function closeImgModal(){
+  if (!imgModal || !imgModalImg) return;
   imgModal.hidden = true;
   imgModalImg.removeAttribute('src');
 }
 // Fermer en cliquant en dehors de l’image
-imgModal.addEventListener('click', e => { if (e.target === imgModal) closeImgModal(); });
+imgModal?.addEventListener('click', e => { if (e.target === imgModal) closeImgModal(); });
 
 // Fermer à Échap Fermer les modales avec Échap (user + lock) — tu as déjà l’image
 
@@ -486,13 +557,78 @@ RLIST.addEventListener('click', (e) => {
     document.getElementById('lockModal').hidden = false;
   } else {
     openRoom(id, name);
+
   }
+});// --- Presence ---------------------------------------------------------------
+const PRESENCE_KEY = localStorage.getItem('presence_uuid')
+  || (()=>{ const u = crypto.randomUUID(); localStorage.setItem('presence_uuid', u); return u; })();
+
+let presenceTimer = null;
+
+function startPresence(){
+    stopPresence();                 // évite les doublons
+
+  if (!currentRoom) return;
+  presenceTimer = setInterval(presencePing, 20000);
+  presencePing(); // ping immédiat à l’ouverture
+}
+function stopPresence(){
+  if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; }
+}
+
+
+
+async function presencePing(){
+  if (!currentRoom) return;
+  try {
+    const body = new URLSearchParams({
+      room_id: String(currentRoom),
+      session_key: PRESENCE_KEY
+      // csrf: window.CSRF ?? '' // décommente si besoin
+    });
+    await fetch(`${BASE}/chat_presence_ping.php`, {
+      method: 'POST',
+      body,
+      credentials: 'same-origin',
+      cache: 'no-store'
+    });
+  } catch {}
+}
+
+
+showActive?.addEventListener('click', async () => {
+  if (!currentRoom) return;
+
+  try { await presencePing(); } catch {}
+
+  try {
+    const r = await fetch(`${BASE}/chat_presence_list.php?room_id=${currentRoom}`, {
+      cache: 'no-store', credentials: 'same-origin'
+    });
+    const j = await r.json();
+    const list = Array.isArray(j?.users) ? j.users : [];
+
+    // rendu
+    activeModalBody.innerHTML = list.length
+      ? list.map(u => `
+          <div class="activeRow" data-id="${u.id}">
+            ${escapeHtml(u.pseudo || '—')}${u.id===CURRENT_USER_ID ? ' <span class="meTag">vous</span>' : ''}
+          </div>
+        `).join('')
+      : '<div>Aucun actif</div>';
+
+    activeModal.hidden = false;
+
+    // te surligner + centrer
+    const me = activeModalBody.querySelector(`.activeRow[data-id="${CURRENT_USER_ID}"]`);
+    if (me) {
+      me.classList.add('is-me');
+      me.scrollIntoView({ block: 'center' });
+    }
+  } catch {}
 });
 
-const lockModal = document.getElementById('lockModal');
-const lockForm  = document.getElementById('lockForm');
-const lockClose = document.getElementById('lockClose');
-const lockStatus= document.getElementById('lockStatus');
+
 
 lockClose.addEventListener('click', ()=> lockModal.hidden = true);
 lockModal.addEventListener('click', e => { if (e.target === lockModal) lockModal.hidden = true; });
@@ -545,8 +681,8 @@ lockForm.addEventListener('submit', async (e)=>{
 
 /* Ouvre un salon : nettoie l’état, montre le modal, démarre le polling */
 function openRoom(id, name){
-    chatModal.classList.remove('behind');
-  userModal.hidden = true;
+  chatModal.classList.remove('behind');
+  if (userModal) userModal.hidden = true;   // garde-fou
   currentRoom = id;
   lastId = 0;
   roomIdInp.value = id;
@@ -554,14 +690,27 @@ function openRoom(id, name){
   chatMsgs.innerHTML = '';
   toBottom.style.display = 'none';
   chatModal.style.display = 'flex';
-  startPolling();
-// focus input
+  stopPolling(); startPolling();
+  stopPresence(); startPresence();
   const bodyInput = chatForm.querySelector('[name="body"]');
-  if (bodyInput) setTimeout(() => bodyInput.focus(), 50);}
+  if (bodyInput) setTimeout(() => bodyInput.focus(), 50);
+}
 
 /* Fermer le chat */
-chatClose.onclick = () => { chatModal.style.display = 'none'; stopPolling(); };
-chatModal.addEventListener('click', (e) => { if (e.target === chatModal){ chatModal.style.display = 'none'; stopPolling(); }});
+chatClose.onclick = () => {
+  chatModal.style.display = 'none';
+  stopPolling();
+  stopPresence(); 
+};
+
+chatModal.addEventListener('click', (e) => {
+  if (e.target === chatModal) {
+    chatModal.style.display = 'none';
+    stopPolling();
+    stopPresence();     
+  }
+});
+
 
 /* ============================================================================
  *                              Messages
@@ -785,30 +934,27 @@ chatForm.addEventListener('submit', async (e) => {
 
 
 
-// Réfs modal
-const userModal = document.getElementById('userModal');
-const umClose   = document.getElementById('umClose');
-const umBody    = document.getElementById('umBody');
-const umName    = document.getElementById('umName');
-
-
-const umBox = document.getElementById('umDMBox');
-const dmForm = document.getElementById('dmSend');
-const dmRecipient = document.getElementById('dmRecipient');
-const dmBody = document.getElementById('dmBody');
-const dmBtn = document.getElementById('dmBtn');
-const dmHint = document.getElementById('dmHint');
-
 let dmTarget = null; // défini quand on ouvre le profil
 
 let umUserId = 0;
 
 
 // quand tu hydrates le profil via /user_card.php :
+// Hydrate le profil sans ré‐afficher le DM pour soi-même
 function hydrateUserModal(data){
-  dmTarget = data.id;                 // <- ID cible
+  dmTarget = data.id;
+  const isSelf = Number(dmTarget) === Number(CURRENT_USER_ID);
+
+  if (isSelf) {
+    umBox.hidden = true;
+    dmRecipient.value = '';
+    dmBody.value = '';
+    dmHint.textContent = '';
+    return;
+  }
+
+  umBox.hidden = false;
   dmRecipient.value = String(dmTarget);
-  umBox.hidden = false;               // affiche le mini-formulaire
   dmBody.value = '';
   dmHint.textContent = '';
 }
@@ -881,6 +1027,8 @@ chatMsgs.addEventListener('click', async (e) => {
   if (!a) return;
 
   const uid = parseInt(a.dataset.userId, 10) || 0;
+  const isSelf = Number(uid) === Number(CURRENT_USER_ID);
+  umBox.hidden = isSelf;           // cache le DM si c’est ton profil
   if (!uid) return;
 
   umUserId = uid;
@@ -892,8 +1040,8 @@ chatMsgs.addEventListener('click', async (e) => {
   openUserModal();
 
   try {
-    const url = `${BASE}/api_user_profile.php?user_id=${uid}`;
-    const r   = await fetch(url, { cache:'no-store', credentials:'same-origin' });
+const url = `${BASE}/api_user_profile.php?user_id=${uid}`;
+const r   = await fetch(url, { cache:'no-store', credentials:'same-origin' });
     if (!r.ok) {
       umBody.textContent = r.status === 404 ? 'Utilisateur introuvable.' : 'Erreur serveur.';
       return;
