@@ -65,6 +65,10 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe 
   cursor:not-allowed;
   pointer-events:none;
 }
+.modal { position: fixed; inset: 0; }
+#chatModal { z-index: 9000; }
+#userModal { z-index: 10000; }    /* toujours au-dessus du chat */
+.modal.behind { z-index: 8000; pointer-events: none; } /* option: passe le chat derrière et non cliquable */
 
 
 /* ===== Mobile ===== */
@@ -164,9 +168,7 @@ chk.addEventListener('change', (e)=>{
 
     <div id="umBody" class="mut" style="margin-top:8px">Chargement…</div>
 
-    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px">
-      <button id="umDM" class="btn" type="button">Envoyer un message</button>
-    </div>
+
 
     <div id="umDMBox" hidden style="margin-top:10px">
       <form id="dmSend" method="post" enctype="multipart/form-data" autocomplete="off">
@@ -215,7 +217,7 @@ chk.addEventListener('change', (e)=>{
 </div>
 
 <!-- Modal chat -->
-<div id="chatModal">
+<div id="chatModal" class="modal" hidden >
   <div id="chatBox">
     <div id="chatHead">
       <strong id="roomTitle">Salon</strong>
@@ -543,6 +545,8 @@ lockForm.addEventListener('submit', async (e)=>{
 
 /* Ouvre un salon : nettoie l’état, montre le modal, démarre le polling */
 function openRoom(id, name){
+    chatModal.classList.remove('behind');
+  userModal.hidden = true;
   currentRoom = id;
   lastId = 0;
   roomIdInp.value = id;
@@ -786,7 +790,7 @@ const userModal = document.getElementById('userModal');
 const umClose   = document.getElementById('umClose');
 const umBody    = document.getElementById('umBody');
 const umName    = document.getElementById('umName');
-const umDM      = document.getElementById('umDM');
+
 
 const umBox = document.getElementById('umDMBox');
 const dmForm = document.getElementById('dmSend');
@@ -836,32 +840,33 @@ const r = await fetch(`${BASE}/chat_dm_send.php`, { method:'POST', body: fd, cac
   }
 });
 
-// option: clic sur #umDM focus le textarea
-umDM?.addEventListener('click', ()=>{
-  if (umBox.hidden) umBox.hidden = false;
-  dmBody?.focus();
-});
+
 
 
 function openUserModal(){ 
+
+
+   // au cas où l’HTML serait mal placé, on “remonte” dans <body>
+  if (userModal.parentNode !== document.body) document.body.appendChild(userModal);
+  if (chatModal.parentNode !== document.body) document.body.appendChild(chatModal);
+    // priorité à la fiche utilisateur
+  chatModal.classList.add('behind');      // optionnel mais utile pour bloquer les clics
   userModal.hidden = false; 
     // par défaut visible
-  umDM.hidden = false; 
-  umDM.disabled = false; 
+  
+umBox.hidden = true;
 
 
 }
 function closeUserModal(){ // Évite un ancien destinataire résiduel.
-   userModal.hidden = true;
+  userModal.hidden = true;
+  chatModal.classList.remove('behind');
   umBody.textContent = '';
   umUserId = 0;
   dmTarget = null;
   dmRecipient.value = '';
   umBox.hidden = true;
-  umDM.hidden = false;
-  umDM.disabled = false;
-  umDM.removeAttribute('aria-disabled');
-  umDM.textContent = 'Envoyer un message';
+
 
 }
 
@@ -883,12 +888,6 @@ chatMsgs.addEventListener('click', async (e) => {
   umBody.textContent = 'Chargement…';
 
 // si c’est ton propre profil → cache le bouton DM
-if (umUserId === CURRENT_USER_ID) {
-  umDM.disabled = true;
-  umDM.textContent = 'C’est vous';
-  umDM.setAttribute('aria-disabled','true');
-  umBox.hidden = true;      // important
-}
 
   openUserModal();
 
