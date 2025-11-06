@@ -30,13 +30,23 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe 
 #chatModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;}
 #chatBox{background:var(--card);border:1px solid var(--line);border-radius:16px;width:min(900px,95vw);height:min(640px,90vh);display:flex;flex-direction:column;position:relative}
 #chatHead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
-#chatMsgs{flex:1;overflow:auto;padding:12px 14px}
+#chatMsgs{flex:1;overflow:auto;padding:12px 14px;}
 #chatForm{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
 #chatForm input[name="body"]{flex:1;min-height:46px;max-height:160px;background:#0b1220;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px}
 
 /* --- Messages --- */
 .msg{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0;overflow-wrap:break-word}
 .msg .meta{font-size:12px;color:var(--mut);margin-bottom:4px}
+
+.msg-body { white-space:pre-wrap; }
+
+.msg-body > span {
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.meta { color: var(--mut); } /* déjà présent chez toi */
+
 
 /* --- Bouton bas --- */
 #toBottom{position:absolute;right:18px;bottom:82px;display:none;border:1px solid var(--line);background:#111827;color:var(--txt);border-radius:999px;padding:6px 10px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
@@ -70,9 +80,18 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe 
   cursor:not-allowed;
   pointer-events:none;
 }
+
+
+
+.msg-foot{ display:flex; gap:8px; align-items:center; margin-top:6px }
+.likeBtn{ background:none; border:0; color:#fca5a5; cursor:pointer; font:inherit }
+.likeBtn[aria-pressed="true"]{ color:#ef4444 }
+
+
+/* On s'assure que #activeModal > #chatModal.*/
 .modal { position: fixed; inset: 0; }
-#chatModal   { z-index: 1002; }
-#userModal   { z-index: 1003; }   /* au-dessus du chat */
+#chatModal   { z-index: 1002; } /* au-dessus de modal.behind */
+#userModal   { z-index: 1003; }   /* au-dessus du chatModal */
 #activeModal { z-index: 1004; }   /* au-dessus du userModal */
 .modal.behind { z-index: 800; pointer-events: none; } /* passe visuellement derrière */
 
@@ -265,6 +284,8 @@ chk.addEventListener('change', (e)=>{
 
     <input type="text" name="body" placeholder="Écrire…" maxlength="2000" autocomplete="off">
     <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
+      <input type="color" id="msgColor" name="color" value="#FFFFFF" title="Choisir une couleur de message (optionnel)">
+
     <button type="submit" class="btn">Envoyer</button>
   </form>
 </div>
@@ -281,92 +302,99 @@ chk.addEventListener('change', (e)=>{
 </div>
 
 
-
 <script>
-/* ============================================================================
- *           CHAT — logique côté client (commentée pour futur dev)
- * ============================================================================
- * Responsabilités :
- *  - Charger la liste des salons, en créer et en ouvrir un
- *  - Polling des messages (2s) + rendu des messages
- *  - Envoi de message (texte + image), avec compression côté client
- *  - Anti-abus : gestion des réponses 429 renvoyées par le serveur
- *  - Images : voile/blur tant qu’elles n’ont pas été vues + modal plein écran
- *  - UX : auto-scroll intelligent + bouton « aller en bas »
- * ==========================================================================*/
+/* =============================================================================
+ *  CHAT — logique côté client
+ *  But : vue unique gérant la liste des salons, l’ouverture d’un salon, 
+ *        la présence temps réel par ping périodique, l’échange de messages,
+ *        l’aperçu d’images et la fiche utilisateur + DM.
+ *
+    - Sécurité : le code suppose que le backend valide toujours room_id, CSRF si activé, et filtre les fichiers uploadés.
+    - Perf : le polling est simple et robuste. Pour monter en charge, passer plus tard à SSE/WebSocket.
+    - Accessibilité : les modales devraient recevoir aria-modal="true" et focus management si requis.
 
-/* --- Raccourcis DOM & état global --- */
-const BASE      = '<?= APP_BASE ?>';                 // base path côté PHP
-  const CURRENT_USER_ID = <?= (int)($_SESSION['user_id'] ?? 0) ?>;
 
-const RLIST     = document.getElementById('rooms');  // conteneur de la liste des salons
-const NST       = document.getElementById('roomStatus'); // statut création de salon
-const chatModal = document.getElementById('chatModal');  // overlay du chat
-const chatClose = document.getElementById('chatClose');  // bouton fermer
-const chatMsgs  = document.getElementById('chatMsgs');   // liste des messages
-const chatForm  = document.getElementById('chatForm');   // formulaire d’envoi
-const roomIdInp = document.getElementById('room_id');    // hidden: id du salon courant
-const roomTitle = document.getElementById('roomTitle');  // titre du salon
-const toBottom  = document.getElementById('toBottom');   // bouton « aller en bas »
-const lockModal = document.getElementById('lockModal');
-const lockForm  = document.getElementById('lockForm');
-const lockClose = document.getElementById('lockClose');
-const lockStatus= document.getElementById('lockStatus');
-const showActive     = document.getElementById('showActive');
-const activeModal    = document.getElementById('activeModal');
-const activeModalBody= document.getElementById('activeModalBody');
-const activeClose    = document.getElementById('activeClose');
+ *  Hypothèses côté serveur :
+ *   - Endpoints REST existants :
+ *       GET  /chat_rooms_list.php
+ *       POST /chat_room_create.php
+ *       GET  /chat_messages_fetch.php?room_id=...&after_id=...
+ *       POST /chat_message_send.php   (FormData texte + image)
+ *       POST /chat_room_unlock.php    (déverrouillage des salons privés)
+ *       GET  /chat_room_quota.php     (quota création salon)
+ *       POST /chat_presence_ping.php  (ping présence)
+ *       GET  /chat_presence_list.php?room_id=...
+ *       GET  /api_user_profile.php?user_id=...
+ *   - PHP expose APP_BASE et user_id en session.
+ *   - Le HTML fournit les IDs utilisés plus bas.
+ * =============================================================================*/
 
-// Réfs modales AVANT toute fonction qui les touche
-const userModal = document.getElementById('userModal');
-const umClose   = document.getElementById('umClose');
-const umBody    = document.getElementById('umBody');
-const umName    = document.getElementById('umName');
+/* === Références DOM + état global ========================================= */
+const BASE = '<?= APP_BASE ?>';                       // Base URL de l’app
+const CURRENT_USER_ID = <?= (int)($_SESSION['user_id'] ?? 0) ?>;
 
-const umBox       = document.getElementById('umDMBox');
-const dmForm      = document.getElementById('dmSend');
-const dmRecipient = document.getElementById('dmRecipient');
-const dmBody      = document.getElementById('dmBody');
-const dmBtn       = document.getElementById('dmBtn');
-const dmHint      = document.getElementById('dmHint');
+const RLIST       = document.getElementById('rooms');       // Liste des salons
+const NST         = document.getElementById('roomStatus');  // Zone statut création
+const chatModal   = document.getElementById('chatModal');   // Overlay chat
+const chatClose   = document.getElementById('chatClose');   // Bouton fermer chat
+const chatMsgs    = document.getElementById('chatMsgs');    // Flux des messages
+const chatForm    = document.getElementById('chatForm');    // Form d’envoi
+const roomIdInp   = document.getElementById('room_id');     // Hidden room_id
+const roomTitle   = document.getElementById('roomTitle');   // Titre salon
+const toBottom    = document.getElementById('toBottom');    // Bouton “aller en bas”
 
-// Optionnel si img modal peut manquer
+// Modale “salon privé”
+const lockModal   = document.getElementById('lockModal');
+const lockForm    = document.getElementById('lockForm');
+const lockClose   = document.getElementById('lockClose');
+const lockStatus  = document.getElementById('lockStatus');
+
+// Modale “actifs”
+const showActive      = document.getElementById('showActive');
+const activeModal     = document.getElementById('activeModal');
+const activeModalBody = document.getElementById('activeModalBody');
+const activeClose     = document.getElementById('activeClose');
+
+// Modale “profil utilisateur”
+const userModal  = document.getElementById('userModal');
+const umClose    = document.getElementById('umClose');
+const umBody     = document.getElementById('umBody');
+const umName     = document.getElementById('umName');
+
+// Mini-form DM dans la modale user
+const umBox        = document.getElementById('umDMBox');
+const dmForm       = document.getElementById('dmSend');
+const dmRecipient  = document.getElementById('dmRecipient');
+const dmBody       = document.getElementById('dmBody');
+const dmBtn        = document.getElementById('dmBtn');
+const dmHint       = document.getElementById('dmHint');
+
+// Modale image (optionnelle)
 const imgModal    = document.getElementById('imgModal');
 const imgModalImg = document.getElementById('imgModalImg');
 
+// État runtime
+let pollTimer   = null;     // Interval du polling messages
+let pollToken   = 0;        // Invalide les anciens polls lors d’un changement de salon
+let lastId      = 0;        // Dernier id message reçu
+let currentRoom = 0;        // Room ouverte
+let pollDelay   = 2000;     // 2s
 
-
-
-
-
-
-
-
-
-activeModal?.addEventListener('click', e => { if (e.target === e.currentTarget) activeModal.hidden = true; });
-activeClose?.addEventListener('click', () => { activeModal.hidden = true; });
-
-
-
-let pollTimer = null;                                   // timer du polling
-let pollToken = 0; // <- nouveau
-let lastId    = 0;                                      // dernier id de message reçu
-let currentRoom = 0;                                    // id du salon courant
-let pollDelay = 2000;
-
-
-/* --- Helpers génériques --- */
-function escapeHtml(s){ return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-function isNearBottom(el, px=80){ return el.scrollHeight - el.scrollTop - el.clientHeight <= px; }
+/* === Aides génériques ====================================================== */
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+}
+function isNearBottom(el, px=80){
+  return el.scrollHeight - el.scrollTop - el.clientHeight <= px;
+}
 function scrollToBottom(el, smooth=true){
   const last = el.lastElementChild;
   if (last) last.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto', block: 'end' });
 }
 
-/* --- Persistance locale : images déjà vues (évite de re-blurer) --- */
+/* === Persistance locale : images déjà vues (pour éviter un re-blur) ======== */
 const VIEWED_KEY = 'chat_viewed_images_v1';
 const viewed = new Set(JSON.parse(localStorage.getItem(VIEWED_KEY) || '[]'));
-
 function isViewed(src){ return viewed.has(src); }
 function markViewed(src){
   if (!src) return;
@@ -374,14 +402,9 @@ function markViewed(src){
   localStorage.setItem(VIEWED_KEY, JSON.stringify([...viewed]));
 }
 
-
-
+/* === Modale image ========================================================== */
 function openImgModal(src){
-
- if (!imgModal || !imgModalImg) return;
-  imgModalImg.src = src;
-  imgModal.hidden = false;
-
+  if (!imgModal || !imgModalImg) return;  // HTML optionnel
   imgModalImg.src = src;
   imgModal.hidden = false;
 }
@@ -390,29 +413,25 @@ function closeImgModal(){
   imgModal.hidden = true;
   imgModalImg.removeAttribute('src');
 }
-// Fermer en cliquant en dehors de l’image
 imgModal?.addEventListener('click', e => { if (e.target === imgModal) closeImgModal(); });
 
-// Fermer à Échap Fermer les modales avec Échap (user + lock) — tu as déjà l’image
-
-// Ajoute une seule écoute clavier globale :
-document.addEventListener('keydown', e => { 
+/* Fermer toutes les modales à Échap (image + user + lock) */
+document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
-  if (!imgModal.hidden) closeImgModal();
-  const userModal = document.getElementById('userModal');
-  const lockModal = document.getElementById('lockModal');
+  if (!imgModal?.hidden) closeImgModal();
   if (userModal && !userModal.hidden) userModal.hidden = true;
   if (lockModal && !lockModal.hidden) lockModal.hidden = true;
 });
 
+/* === Modale “actifs” : close handlers ===================================== */
+activeModal?.addEventListener('click', e => { if (e.target === e.currentTarget) activeModal.hidden = true; });
+activeClose?.addEventListener('click', () => { activeModal.hidden = true; });
 
+/* =============================================================================
+ *                                SALONS
+ * =============================================================================*/
 
-
-/* ============================================================================
- *                               Salons
- * ==========================================================================*/
-
-/* Création d’un salon : POST simple + refresh de la liste */
+/* Création d’un salon */
 document.getElementById('newRoom').addEventListener('submit', async (e) => {
   e.preventDefault();
   const btn = e.target.querySelector('button[type="submit"]');
@@ -422,63 +441,53 @@ document.getElementById('newRoom').addEventListener('submit', async (e) => {
   try {
     const r = await fetch(`${BASE}/chat_room_create.php`, { method:'POST', body:new FormData(e.target) });
     if (r.status === 429) {
+      // Le serveur renvoie au besoin un retry_after
       let left = 0;
-      try { const j = await r.json(); if (j?.error==='limit' && Number.isFinite(j.retry_after)) left = Math.max(0, j.retry_after|0); } catch {}
+      try {
+        const j = await r.json();
+        if (j?.error === 'limit' && Number.isFinite(j.retry_after)) left = Math.max(0, j.retry_after|0);
+      } catch {}
       NST.style.color = '#f87171';
       NST.textContent = left>0 ? 'Vous pourrez recréer un salon dans '+formatDelay(left)+'.' : 'Limite atteinte.';
       if (left>0) startCreateCountdown(left);
       return;
     }
 
- const j = await r.json();
+    const j = await r.json();
     if (j.ok) {
       NST.style.color = '#34d399';
       NST.textContent = 'Salon créé.';
       e.target.reset();
-      // masque le champ password si on vient de décocher “Protégé”
       const pwd = document.getElementById('room_pwd'); if (pwd) pwd.style.display = 'none';
-      loadRooms();
-
-    } 
-    
-    else 
-      {
+      loadRooms();         // Rafraîchit la liste
+    } else {
       NST.style.color = '#f87171';
       NST.textContent = j.error || 'Erreur';
     }
   } catch {
     NST.style.color = '#f87171';
     NST.textContent = 'Réseau';
-  }
-finally {
+  } finally {
     btn.disabled = false;
   }
-
 });
 
-
-let createUntil = 0; // timestamp ms
-
-function startCreateCountdown(sec){
-  createUntil = Date.now() + sec*1000;
-  tickCreateCountdown();
-}
-
+/* Countdown côté client pour le quota création */
+let createUntil = 0;
+function startCreateCountdown(sec){ createUntil = Date.now() + sec*1000; tickCreateCountdown(); }
 function tickCreateCountdown(){
   const btn = document.querySelector('#newRoom button[type="submit"]');
-   const left = Math.max(0, Math.floor((createUntil - Date.now())/1000));
+  const left = Math.max(0, Math.floor((createUntil - Date.now())/1000));
   if (left > 0){
     btn.disabled = true;
     NST.style.color = '#f87171';
     NST.textContent = 'Vous pourrez recréer un salon dans ' + formatDelay(left) + '.';
     setTimeout(tickCreateCountdown, 1000);
-  }else{
+  } else {
     btn.disabled = false;
     NST.textContent = '';
   }
 }
-
-
 async function checkCreateQuota(){
   try{
     const r = await fetch(`${BASE}/chat_room_quota.php`, {cache:'no-store', credentials:'same-origin'});
@@ -490,11 +499,7 @@ async function checkCreateQuota(){
   }catch{}
 }
 
-checkCreateQuota();
-loadRooms();
-
-
-/* Utilitaire formatage secondes -> "X h Y min" ou "Y min Z s" */
+/* Format “X h Y min / Y min Z s / s s” */
 function formatDelay(sec){
   sec = Math.max(0, Math.floor(sec));
   const h = Math.floor(sec/3600);
@@ -505,97 +510,91 @@ function formatDelay(sec){
   return `${s} s`;
 }
 
-
-/*loadRooms  Récupère la liste des salons et l’affiche */
-
-
+/* Liste des salons */
 async function loadRooms(){
   RLIST.innerHTML = '<div class="mut">Chargement…</div>';
   try{
-    const r = await fetch(`${BASE}/chat_rooms_list.php`, { cache: 'no-store', credentials:'same-origin' });
+    const r = await fetch(`${BASE}/chat_rooms_list.php`, { cache:'no-store', credentials:'same-origin' });
     const j = await r.json();
     if (!j.ok) throw 0;
     if (j.rooms.length === 0){
       RLIST.innerHTML = '<div class="mut">Aucun salon.</div>';
       return;
     }
-
-    // Affiche le cadenas pour les salons privés et stocke data-private
-
     RLIST.innerHTML = j.rooms.map(x => {
-  const priv = Number(x.is_private) === 1; // ← coercition sûre
-  const last = x.last_at ? new Date(x.last_at.replace(' ','T')).toLocaleString() : '—';
-  return `
-    <div class="row room"
-         data-id="${x.id}"
-         data-name="${escapeHtml(x.name)}"
-         data-private="${priv ? 1 : 0}">
-      <div><strong>${escapeHtml(x.name)}${priv ? ' 🔒' : ''}</strong></div>
-      <div class="mut">${last}</div>
-    </div>
-  `;
-}).join('');
-
-  }catch{
+      const priv = Number(x.is_private) === 1;
+      const last = x.last_at ? new Date(x.last_at.replace(' ','T')).toLocaleString() : '—';
+      return `
+        <div class="row room"
+             data-id="${x.id}"
+             data-name="${escapeHtml(x.name)}"
+             data-private="${priv ? 1 : 0}">
+          <div><strong>${escapeHtml(x.name)}${priv ? ' 🔒' : ''}</strong></div>
+          <div class="mut">${last}</div>
+        </div>`;
+    }).join('');
+  } catch {
     RLIST.innerHTML = '<div class="mut">Erreur.</div>';
   }
 }
-/* Clic sur un salon : l’ouvre (ou demande mot de passe si privé) */
 
-
+/* Click sur un salon : ouvre ou demande le mot de passe */
 RLIST.addEventListener('click', (e) => {
   const row = e.target.closest('.room');
   if (!row) return;
-  const id = parseInt(row.dataset.id, 10);
+  const id   = parseInt(row.dataset.id, 10);
   const name = row.dataset.name;
   const priv = row.dataset.private === '1';
 
   if (priv) {
-    // ouvre la modal de mot de passe
+    // Affiche la modale “privé”
     document.getElementById('lock_room_id').value = id;
     document.getElementById('lockStatus').textContent = '';
     document.getElementById('lockModal').hidden = false;
   } else {
     openRoom(id, name);
-
   }
-});// --- Presence ---------------------------------------------------------------
+});
+
+/* Quotas init + charge la liste au boot */
+checkCreateQuota();
+loadRooms();
+
+/* =============================================================================
+ *                          PRÉSENCE EN TEMPS RÉEL
+ * =============================================================================
+ * Un identifiant “session_key” est stocké en localStorage pour représenter
+ * l’onglet courant. On ping le serveur toutes les 20 s.
+ * La liste des actifs se base sur un “last_seen” < 45 s.
+ */
 const PRESENCE_KEY = localStorage.getItem('presence_uuid')
-  || (()=>{ const u = crypto.randomUUID(); localStorage.setItem('presence_uuid', u); return u; })();
+  || (() => { const u = crypto.randomUUID(); localStorage.setItem('presence_uuid', u); return u; })();
 
 let presenceTimer = null;
 
 function startPresence(){
-    stopPresence();                 // évite les doublons
-
+  stopPresence();             // pas de doublon de timers
   if (!currentRoom) return;
   presenceTimer = setInterval(presencePing, 20000);
-  presencePing(); // ping immédiat à l’ouverture
+  presencePing();             // ping immédiat dès l’ouverture
 }
 function stopPresence(){
   if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; }
 }
 
-
-
 async function presencePing(){
   if (!currentRoom) return;
   try {
-    const body = new URLSearchParams({
-      room_id: String(currentRoom),
-      session_key: PRESENCE_KEY
-      // csrf: window.CSRF ?? '' // décommente si besoin
+    const body = new URLSearchParams({ room_id:String(currentRoom), session_key:PRESENCE_KEY });
+    const r = await fetch(`${BASE}/chat_presence_ping.php`, {
+      method:'POST', body, credentials:'same-origin', cache:'no-store'
     });
-    await fetch(`${BASE}/chat_presence_ping.php`, {
-      method: 'POST',
-      body,
-      credentials: 'same-origin',
-      cache: 'no-store'
-    });
+    // DEBUG temporaire ; à retirer en prod si bruyant :
+    // const t = await r.clone().text(); console.debug('presencePing', r.status, t);
   } catch {}
 }
 
-
+/* Ouvre la modale “Actifs” et te surligne si présent */
 showActive?.addEventListener('click', async () => {
   if (!currentRoom) return;
 
@@ -603,54 +602,47 @@ showActive?.addEventListener('click', async () => {
 
   try {
     const r = await fetch(`${BASE}/chat_presence_list.php?room_id=${currentRoom}`, {
-      cache: 'no-store', credentials: 'same-origin'
+      cache:'no-store', credentials:'same-origin'
     });
     const j = await r.json();
     const list = Array.isArray(j?.users) ? j.users : [];
 
-    // rendu
     activeModalBody.innerHTML = list.length
       ? list.map(u => `
           <div class="activeRow" data-id="${u.id}">
             ${escapeHtml(u.pseudo || '—')}${u.id===CURRENT_USER_ID ? ' <span class="meTag">vous</span>' : ''}
-          </div>
-        `).join('')
+          </div>`).join('')
       : '<div>Aucun actif</div>';
 
     activeModal.hidden = false;
 
-    // te surligner + centrer
+    // Scroll vers toi si tu es listé
     const me = activeModalBody.querySelector(`.activeRow[data-id="${CURRENT_USER_ID}"]`);
     if (me) {
       me.classList.add('is-me');
-      me.scrollIntoView({ block: 'center' });
+      me.scrollIntoView({ block:'center' });
     }
   } catch {}
 });
 
-
-
+/* =============================================================================
+ *                         DÉVERROUILLAGE SALON PRIVÉ
+ * =============================================================================*/
 lockClose.addEventListener('click', ()=> lockModal.hidden = true);
 lockModal.addEventListener('click', e => { if (e.target === lockModal) lockModal.hidden = true; });
 
-// helper tolérant
-async function safeJson(resp){
-  try { return await resp.json(); } catch { return null; }
-}
+async function safeJson(resp){ try { return await resp.json(); } catch { return null; } }
 
 lockForm.addEventListener('submit', async (e)=>{
   e.preventDefault();
   lockStatus.textContent = '';
-  
   const btn = lockForm.querySelector('button[type="submit"]');
   const pwdInput = lockForm.querySelector('input[type="password"]');
   btn.disabled = true;
 
   try{
     const r = await fetch(`${BASE}/chat_room_unlock.php`, {
-      method:'POST',
-      body:new FormData(lockForm),
-      credentials:'same-origin'
+      method:'POST', body:new FormData(lockForm), credentials:'same-origin'
     });
     if (r.status === 429){
       lockStatus.textContent = 'Trop d’essais. Attendez un peu.';
@@ -668,21 +660,23 @@ lockForm.addEventListener('submit', async (e)=>{
     } else {
       lockStatus.textContent = 'Erreur.';
     }
-
   } catch {
     lockStatus.textContent = 'Réseau indisponible.';
   } finally {
-    if (pwdInput) pwdInput.value = ''; // clear
+    if (pwdInput) pwdInput.value = '';
     btn.disabled = false;
   }
 });
 
-
-
-/* Ouvre un salon : nettoie l’état, montre le modal, démarre le polling */
+/* =============================================================================
+ *                          OUVERTURE / FERMETURE SALON
+ * =============================================================================*/
 function openRoom(id, name){
+  // Place le chat devant, ferme la fiche user si ouverte
   chatModal.classList.remove('behind');
-  if (userModal) userModal.hidden = true;   // garde-fou
+  if (userModal) userModal.hidden = true;
+
+  // Reset d’état pour ce salon
   currentRoom = id;
   lastId = 0;
   roomIdInp.value = id;
@@ -690,67 +684,113 @@ function openRoom(id, name){
   chatMsgs.innerHTML = '';
   toBottom.style.display = 'none';
   chatModal.style.display = 'flex';
-  stopPolling(); startPolling();
+
+  // Redémarre polling messages + présence
+  stopPolling();  startPolling();
   stopPresence(); startPresence();
+
+  // Focus rapide dans la zone de saisie
   const bodyInput = chatForm.querySelector('[name="body"]');
   if (bodyInput) setTimeout(() => bodyInput.focus(), 50);
 }
 
-/* Fermer le chat */
 chatClose.onclick = () => {
   chatModal.style.display = 'none';
   stopPolling();
-  stopPresence(); 
+  stopPresence();
 };
-
 chatModal.addEventListener('click', (e) => {
   if (e.target === chatModal) {
     chatModal.style.display = 'none';
     stopPolling();
-    stopPresence();     
+    stopPresence();
   }
 });
 
+/* =============================================================================
+ *                                 MESSAGES
+ * =============================================================================*/
 
-/* ============================================================================
- *                              Messages
- * ==========================================================================*/
-
-/* Bouton « aller en bas » visible seulement si on s’éloigne du bas */
+/* Bouton “aller en bas” activé si on remonte dans l’historique */
 chatMsgs.addEventListener('scroll', () => {
   toBottom.style.display = isNearBottom(chatMsgs) ? 'none' : 'block';
 });
 toBottom.addEventListener('click', () => scrollToBottom(chatMsgs, true));
-
-/* Rendu d’un message (texte + éventuellement image avec voile/blur) */
+/* Rendu d’un message (texte + image) */
 function renderMessage(m){
   const el = document.createElement('div');
   el.className = 'msg';
 
-  const when = new Date(m.created_at.replace(' ','T')).toLocaleString();
-  const senderLabel = escapeHtml(m.sender || '—');
-  const senderId = m.sender_id ? Number(m.sender_id) : 0;
-
-  // En-tête unique avec pseudo cliquable si sender_id dispo
-  el.innerHTML =
-    `<div class="meta">
-      ${senderId
-        ? `<button class="userLink" data-user-id="${senderId}" title="Voir le profil"
-                   style="all:unset;cursor:pointer;color:#93c5fd">${senderLabel}</button>`
-        : senderLabel}
-      — ${when}
-     </div>` +
-    (m.body ? `<div style="white-space:pre-wrap">${escapeHtml(m.body)}</div>` : '');
 
 
+// Pied: like
+const foot = document.createElement('div');
+foot.className = 'msg-foot';
+
+const likeBtn = document.createElement('button');
+likeBtn.type = 'button';
+likeBtn.className = 'likeBtn';
+likeBtn.dataset.id = String(m.id);
+likeBtn.setAttribute('aria-pressed', m.liked_by_me ? 'true' : 'false');
+likeBtn.textContent = m.liked_by_me ? `❤️ ${m.like_count||0}` : `🤍 ${m.like_count||0}`;
+
+foot.appendChild(likeBtn);
+el.appendChild(foot);
 
 
-  // Image éventuelle (inchangé)
-  if (m.file_url && /^image\//.test(m.file_mime || '')){
+
+
+
+
+
+
+
+
+
+  // Meta: pseudo + horodatage
+  const meta = document.createElement('div');
+  meta.className = 'meta';
+  const when = new Date(String(m.created_at).replace(' ','T')).toLocaleString();
+
+  const who = document.createElement(m.sender_id ? 'button' : 'span');
+  if (m.sender_id) {
+    who.type = 'button';
+    who.className = 'userLink';
+    who.dataset.userId = String(m.sender_id);
+    who.title = 'Voir le profil';
+    who.style.all = 'unset';
+    who.style.cursor = 'pointer';
+    who.style.color = '#93c5fd';
+  }
+  who.textContent = typeof m.sender === 'string' ? m.sender : '—';
+
+  const sep = document.createElement('span');
+  sep.textContent = ' • ' + when;
+
+  meta.appendChild(who);
+  meta.appendChild(sep); // DATE ET HEURE
+  el.appendChild(meta);
+
+  // Corps texte
+  if (m.body) {
+    const body = document.createElement('div');
+    body.className = 'msg-body';
+    body.style.whiteSpace = 'pre-wrap';
+    const span = document.createElement('span');
+    span.textContent = m.body;                 // anti-XSS
+    if (m.color && /^#[0-9A-Fa-f]{6}$/.test(m.color)) {
+      span.style.color = m.color;              // visible 5 min côté serveur
+    }
+    body.appendChild(span);
+    el.appendChild(body);
+  }
+
+  // Image éventuelle
+  if (m.file_url && /^image\//.test(m.file_mime || '')) {
     const src = m.file_url;
-    if (isViewed(src)){
+    if (isViewed(src)) {
       const img = document.createElement('img');
-      Object.assign(img, { src, alt: 'image', loading: 'lazy' });
+      Object.assign(img, { src, alt:'image', loading:'lazy' });
       img.className = 'chat-img';
       img.addEventListener('click', () => openImgModal(src));
       el.appendChild(img);
@@ -758,12 +798,12 @@ function renderMessage(m){
       const veil = document.createElement('div');
       veil.className = 'imageVeil imageVeil--blur';
       veil.style.backgroundImage = `url('${src}')`;
-      veil.innerHTML = `<span>Cliquer pour afficher l’image</span>`;
+      veil.innerHTML = '<span>Cliquer pour afficher l’image</span>';
       veil.addEventListener('click', () => {
         openImgModal(src);
         markViewed(src);
         const img = document.createElement('img');
-        Object.assign(img, { src, alt: 'image', loading: 'lazy' });
+        Object.assign(img, { src, alt:'image', loading:'lazy' });
         img.style.maxWidth = '20%';
         img.style.width = '20%';
         img.style.borderRadius = '8px';
@@ -778,21 +818,16 @@ function renderMessage(m){
   return el;
 }
 
-const fileInput = chatForm.querySelector('input[type="file"]');
-if (fileInput) fileInput.value = '';
-
-
-/* Récupère les nouveaux messages depuis le serveur */
+/* Fetch des nouveaux messages depuis lastId */
 async function fetchMessages(){
   if (!currentRoom) return;
   try{
-// fetchMessages()
-const r = await fetch(`${BASE}/chat_messages_fetch.php?room_id=${currentRoom}&after_id=${lastId}`, {
-  cache: 'no-store',
-  credentials:'same-origin'
-});    
+    const r = await fetch(`${BASE}/chat_messages_fetch.php?room_id=${currentRoom}&after_id=${lastId}`, {
+      cache:'no-store', credentials:'same-origin'
+    });
     if (!r.ok) {
-      if (r.status === 403 || r.status === 404) { /* salon verrouillé (sécurité côté serveur) */
+      // 403/404 : on stoppe le polling (ex: salon redevenu privé)
+      if (r.status === 403 || r.status === 404) {
         stopPolling();
         toBottom.style.display = 'none';
       }
@@ -804,106 +839,73 @@ const r = await fetch(`${BASE}/chat_messages_fetch.php?room_id=${currentRoom}&af
     if (j.messages.length){
       const stick = isNearBottom(chatMsgs);
       const frag = document.createDocumentFragment();
-      j.messages.forEach(m => {
-        frag.appendChild(renderMessage(m));
-        lastId = Math.max(lastId, m.id);
-      });
+      j.messages.forEach(m => { frag.appendChild(renderMessage(m)); lastId = Math.max(lastId, m.id); });
       chatMsgs.appendChild(frag);
       if (stick) scrollToBottom(chatMsgs, true);
       toBottom.style.display = isNearBottom(chatMsgs) ? 'none' : 'block';
     }
-  } catch {/* silencieux */}
+  } catch { /* silencieux */ }
 }
 
-/* Démarre/arrête le polling (2s), Annuler les requêtes de polling quand 
-on change de salon (anti “réponses tardives”)
-Évite qu’une réponse d’un ancien salon arrive après coup et pollue l’UI. */
+/* Polling 2 s avec token pour éviter les “réponses tardives” d’un ancien salon */
 function startPolling(){
   stopPolling();
   const myToken = ++pollToken;
   const wrappedFetch = async () => {
-    // si on a changé de salon entre temps, on ignore
-    if (myToken !== pollToken) return;
+    if (myToken !== pollToken) return; // on a changé de salon entre-temps
     await fetchMessages();
   };
   wrappedFetch();
-  pollTimer = setInterval(wrappedFetch, 2000);
+  pollTimer = setInterval(wrappedFetch, pollDelay);
 }
 function stopPolling(){
-  pollToken++; // invalide le token courant
+  pollToken++;                 // invalide le tour courant
   if (pollTimer){ clearInterval(pollTimer); pollTimer = null; }
 }
 
-
-
-
-
-
-
-
-/* ============================================================================
- *                Compression image côté client AVANT upload
- * ============================================================================
- * - Accepte jpeg/png/webp, convertit en JPEG.
- * - Redimensionne dans un carré max 1280 px (proportionnel).
- * - Qualité JPEG à 0.8 (ajuste si besoin).
- * ==========================================================================*/
+/* Upload image : compression côté client avant envoi
+   - formats acceptés : jpeg/png/webp → converti en JPEG
+   - max dimension 1280 px, qualité 0.8 */
 chatForm.querySelector('input[type="file"]').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file || !/^image\/(jpeg|png|webp)$/.test(file.type)) return;
 
-  // Crée un ObjectURL et charge dans un Image() pour connaître dimensions
   const url = URL.createObjectURL(file);
-  const img = new Image();
-  img.src = url;
+  const img = new Image(); img.src = url;
   await new Promise(res => img.onload = res);
 
-  // Redimension proportionnel (max 1280)
   const MAX = 1280;
   let { width, height } = img;
   if (width > height && width > MAX){ height *= MAX/width; width = MAX; }
   else if (height > width && height > MAX){ width *= MAX/height; height = MAX; }
 
-  // Dessine dans canvas
   const canvas = document.createElement('canvas');
   canvas.width = width; canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img, 0, 0, width, height);
+  const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, width, height);
 
-  // Exporte en JPEG (qualité 0.8)
   const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.8));
-  const compressed = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' });
+  const compressed = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type:'image/jpeg' });
 
-  // Remplace le fichier original dans l’input
-  const dt = new DataTransfer();
-  dt.items.add(compressed);
+  const dt = new DataTransfer(); dt.items.add(compressed);
   e.target.files = dt.files;
 
   URL.revokeObjectURL(url);
 });
 
-/* ============================================================================
- *                    Envoi du message (texte + image)
- * ============================================================================
- * - Envoie le FormData vers chat_message_send.php
- * - Gère les erreurs 429 de rate limiting renvoyées par le serveur :
- *   rate_glob (3/30s), rate_room (2/5s), rate_fast (~1s)
- * ==========================================================================*/
+/* Envoi d’un message (texte + image) */
 chatForm.addEventListener('submit', async (e) => {
   e.preventDefault();
-
+  
   const btn = chatForm.querySelector('button[type="submit"]');
   btn.disabled = true;
 
   try{
     const r = await fetch(`${BASE}/chat_message_send.php`, {
-      method: 'POST',
-      body: new FormData(chatForm),
-      credentials: 'same-origin'
+      method:'POST', body:new FormData(chatForm), credentials:'same-origin'
     });
 
-    // Si le serveur renvoie 429, affiche un message plus précis
     if (r.status === 429){
+      // Cas limites gérés côté serveur pour anti-spam
       let msg = 'Trop de messages.';
       try{
         const j = await r.json();
@@ -915,32 +917,28 @@ chatForm.addEventListener('submit', async (e) => {
       return;
     }
 
-    // Réponse JSON standard
     const j = await r.json();
     if (!j.ok){ alert(j.error || 'Erreur'); return; }
 
-    // Reset du formulaire + scroll vers le bas (léger délai pour laisser le DOM s’actualiser)
     chatForm.reset();
     setTimeout(() => scrollToBottom(chatMsgs, true), 50);
-
-  }catch{
+  } catch {
     alert('Réseau indisponible');
-  }finally{
+  } finally {
     btn.disabled = false;
   }
 });
 
+/* =============================================================================
+ *                           MODALE PROFIL + DM
+ * =============================================================================*/
 
-
-
-
-let dmTarget = null; // défini quand on ouvre le profil
-
+// Cible DM en cours
+let dmTarget = null;
 let umUserId = 0;
 
-
-// quand tu hydrates le profil via /user_card.php :
-// Hydrate le profil sans ré‐afficher le DM pour soi-même
+/* Hydratation de la modale profil.
+   - Cache le mini-formulaire DM si on ouvre son propre profil. */
 function hydrateUserModal(data){
   dmTarget = data.id;
   const isSelf = Number(dmTarget) === Number(CURRENT_USER_ID);
@@ -952,23 +950,22 @@ function hydrateUserModal(data){
     dmHint.textContent = '';
     return;
   }
-
   umBox.hidden = false;
   dmRecipient.value = String(dmTarget);
   dmBody.value = '';
   dmHint.textContent = '';
 }
 
-
-// envoi DM
+/* Envoi DM */
 dmForm?.addEventListener('submit', async (e)=>{
   e.preventDefault();
   if (!dmTarget) return;
   const fd = new FormData(dmForm);
+  
   dmBtn.disabled = true;
   dmHint.textContent = 'Envoi…';
   try{
-const r = await fetch(`${BASE}/chat_dm_send.php`, { method:'POST', body: fd, cache:'no-store', credentials:'same-origin' });
+    const r = await fetch(`${BASE}/chat_dm_send.php`, { method:'POST', body:fd, cache:'no-store', credentials:'same-origin' });
     if(!r.ok){
       const text = await r.text();
       throw new Error('HTTP '+r.status+' '+text);
@@ -986,25 +983,18 @@ const r = await fetch(`${BASE}/chat_dm_send.php`, { method:'POST', body: fd, cac
   }
 });
 
+/* Ouverture / fermeture modale profil */
+function openUserModal(){
+  // S’assure que les modales sont au bon niveau du DOM
+  if (userModal?.parentNode !== document.body) document.body.appendChild(userModal);
+  if (chatModal?.parentNode !== document.body) document.body.appendChild(chatModal);
 
-
-
-function openUserModal(){ 
-
-
-   // au cas où l’HTML serait mal placé, on “remonte” dans <body>
-  if (userModal.parentNode !== document.body) document.body.appendChild(userModal);
-  if (chatModal.parentNode !== document.body) document.body.appendChild(chatModal);
-    // priorité à la fiche utilisateur
-  chatModal.classList.add('behind');      // optionnel mais utile pour bloquer les clics
-  userModal.hidden = false; 
-    // par défaut visible
-  
-umBox.hidden = true;
-
-
+  // Donne la priorité visuelle à la fiche utilisateur
+  chatModal.classList.add('behind');   // bloque les clics sur le chat
+  userModal.hidden = false;
+  umBox.hidden = true;
 }
-function closeUserModal(){ // Évite un ancien destinataire résiduel.
+function closeUserModal(){
   userModal.hidden = true;
   chatModal.classList.remove('behind');
   umBody.textContent = '';
@@ -1012,91 +1002,109 @@ function closeUserModal(){ // Évite un ancien destinataire résiduel.
   dmTarget = null;
   dmRecipient.value = '';
   umBox.hidden = true;
-
-
 }
+umClose?.addEventListener('click', closeUserModal);
+userModal?.addEventListener('click', e => { if (e.target === userModal) closeUserModal(); });
 
-umClose.addEventListener('click', closeUserModal);
-userModal.addEventListener('click', e => { if (e.target === userModal) closeUserModal(); });
-
-// Délégation de clic sur pseudo
-// Clic sur pseudo → ouvre la modale et charge le profil// Clic sur pseudo → ouvre la modale et charge le profil
-
+/* Délégation : clic sur pseudo dans le flux messages → card profil *//* Délégation : profil OU like */
 chatMsgs.addEventListener('click', async (e) => {
-  const a = e.target.closest('.userLink');
-  if (!a) return;
+  // 1) Profil si clic sur pseudo
+  const link = e.target.closest('.userLink');
+  if (link) {
+    const uid = parseInt(link.dataset.userId || '0', 10);
+    if (!uid) return;
 
-  const uid = parseInt(a.dataset.userId, 10) || 0;
-  const isSelf = Number(uid) === Number(CURRENT_USER_ID);
-  umBox.hidden = isSelf;           // cache le DM si c’est ton profil
-  if (!uid) return;
+    const isSelf = uid === Number(CURRENT_USER_ID);
+    umBox.hidden = isSelf;
+    umUserId = uid;
+    umName.textContent = 'Profil';
+    umBody.textContent = 'Chargement…';
+    openUserModal();
 
-  umUserId = uid;
-  umName.textContent = 'Profil';
-  umBody.textContent = 'Chargement…';
+    try {
+      const r = await fetch(`${BASE}/api_user_profile.php?user_id=${uid}`, { cache:'no-store', credentials:'same-origin' });
+      const j = await r.json();
+      if (!r.ok || !j?.ok) { umBody.textContent = 'Erreur.'; return; }
+      const u = j.user;
+      hydrateUserModal({ id: u.id });
 
-// si c’est ton propre profil → cache le bouton DM
-
-  openUserModal();
-
-  try {
-const url = `${BASE}/api_user_profile.php?user_id=${uid}`;
-const r   = await fetch(url, { cache:'no-store', credentials:'same-origin' });
-    if (!r.ok) {
-      umBody.textContent = r.status === 404 ? 'Utilisateur introuvable.' : 'Erreur serveur.';
-      return;
+      umName.textContent = u.pseudo || 'Profil';
+      umBody.innerHTML =
+        `<div style="display:flex;gap:12px;align-items:flex-start">
+           ${u.avatar_url ? `<img src="${u.avatar_url}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:1px solid var(--line)">` : ''}
+           <div>
+             ${u.city ? `<div><strong>Ville :</strong> ${escapeHtml(u.city)}</div>` : ''}
+             ${u.sex ? `<div><strong>Sexe :</strong> ${escapeHtml(u.sex)}</div>` : ''}
+             ${u.height_cm ? `<div><strong>Taille :</strong> ${u.height_cm} cm</div>` : ''}
+             ${u.postal_code ? `<div><strong>CP :</strong> ${escapeHtml(u.postal_code)}</div>` : ''}
+             ${u.relationship_status ? `<div><strong>Statut :</strong> ${escapeHtml(u.relationship_status)}</div>` : ''}
+             ${u.bio ? `<div style="margin-top:6px;white-space:pre-wrap">${escapeHtml(u.bio)}</div>` : ''}
+           </div>
+         </div>`;
+    } catch {
+      umBody.textContent = 'Réseau indisponible.';
     }
-    const j = await r.json();
-    if (!j || !j.ok) {
-      umBody.textContent = (j && j.error) || 'Erreur.';
-      return;
-    }
-
-    const u = j.user;
-    hydrateUserModal({ id: u.id }); // définit dmTarget + dmRecipient
-
-    umName.textContent = u.pseudo || 'Profil';
-
-
-    umBody.innerHTML =
-      `<div style="display:flex;gap:12px;align-items:flex-start">
-         ${u.avatar_url ? `<img src="${u.avatar_url}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:1px solid var(--line)">` : ''}
-         <div>
-           ${u.city ? `<div><strong>Ville:</strong> ${escapeHtml(u.city)}</div>` : ''}
-           ${u.sex ? `<div><strong>Sexe:</strong> ${escapeHtml(u.sex)}</div>` : ''}
-           ${u.height_cm ? `<div><strong>Taille:</strong> ${u.height_cm} cm</div>` : ''}
-           ${u.postal_code ? `<div><strong>CP:</strong> ${escapeHtml(u.postal_code)}</div>` : ''}
-           ${u.relationship_status ? `<div><strong>Statut:</strong> ${escapeHtml(u.relationship_status)}</div>` : ''}
-           ${u.bio ? `<div style="margin-top:6px;white-space:pre-wrap">${escapeHtml(u.bio)}</div>` : ''}
-         </div>
-       </div>`;
-  } catch {
-    umBody.textContent = 'Réseau indisponible.';
+    return; // on stoppe ici si c'était un clic profil
   }
+
+  // 2) Like si clic sur .msg-body ou .likeBtn
+  const likeTarget = e.target.closest('.msg-body, .likeBtn');
+  if (!likeTarget) return;
+
+  const card = likeTarget.closest('.msg');
+  if (!card) return;
+
+  const likeBtn = card.querySelector('.likeBtn');
+  if (!likeBtn) return;
+
+  const id = parseInt(likeBtn.dataset.id || '0', 10);
+  if (!id) return;
+
+  toggleLike(id, likeBtn);
 });
 
 
 
+let likeBusy = new Set(); // anti double-clic
+async function toggleLike(messageId, btn){
+  if (likeBusy.has(messageId)) return;
+  likeBusy.add(messageId);
+
+  // Optimiste
+  const pressed = btn.getAttribute('aria-pressed') === 'true';
+  const cur = parseInt((btn.textContent.match(/\d+/)||['0'])[0],10);
+  btn.setAttribute('aria-pressed', pressed ? 'false' : 'true');
+  btn.textContent = (pressed ? '🤍 ' : '❤️ ') + (pressed ? Math.max(cur-1,0) : cur+1);
+
+  try{
+    const fd = new FormData();
+    fd.append('message_id', String(messageId));
+    fd.append('csrf', document.querySelector('input[name="csrf"]').value);
+    const r = await fetch(`${BASE}/chat_message_like.php`, { method:'POST', body:fd, credentials:'same-origin' });
+    const j = await r.json();
+    if (!r.ok || !j.ok){
+      throw new Error(j.error||'server');
+    }
+    // sync état serveur
+    btn.setAttribute('aria-pressed', j.liked ? 'true' : 'false');
+    btn.textContent = (j.liked ? '❤️ ' : '🤍 ') + j.like_count;
+  } catch {
+    // rollback si échec
+    btn.setAttribute('aria-pressed', pressed ? 'true' : 'false');
+    btn.textContent = (pressed ? '❤️ ' : '🤍 ') + cur;
+  } finally {
+    likeBusy.delete(messageId);
+  }
+}
 
 
 
-/* --- Bootstrapping : charge la liste des salons au chargement de la page --- */
-loadRooms();
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+/* =============================================================================
+ *                                   BOOT
+ * =============================================================================*/
+ // Rien d’autre : la liste est chargée au boot plus haut.
 </script>
+
 
 </body></html>

@@ -30,6 +30,9 @@ if (!hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'] ?? '')) {
   echo json_encode(['ok'=>false,'error'=>'csrf']); exit;
 }
 
+$color = strtoupper(trim($_POST['color'] ?? ''));
+if (!preg_match('/^#[0-9A-F]{6}$/', $color)) { $color = null; }
+
 $user_id = (int)($_SESSION['user_id'] ?? 0);
 $room_id = (int)($_POST['room_id'] ?? 0);
 if ($room_id <= 0) { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'room']); exit; }
@@ -91,8 +94,8 @@ if ($body === '' && !$fileUrl) { echo json_encode(['ok'=>false,'error'=>'empty']
 
 /* 4) Insert */
 $mysqli->begin_transaction();
-$st = $mysqli->prepare("INSERT INTO chat_messages (room_id,sender_id,body,file_url,file_mime,file_w,file_h) VALUES (?,?,?,?,?,?,?)");
-$st->bind_param('iisssii', $room_id, $user_id, $body, $fileUrl, $fileMime, $w, $h);
+$st = $mysqli->prepare("INSERT INTO chat_messages (room_id,sender_id,body,file_url,file_mime,file_w,file_h, color) VALUES (?,?,?,?,?,?,?,?)");
+$st->bind_param('iisssiis', $room_id, $user_id, $body, $fileUrl, $fileMime, $w, $h, $color);
 $ok = $st->execute(); $id = $ok ? $st->insert_id : 0; $st->close();
 
 if ($ok) { $mysqli->commit(); echo json_encode(['ok'=>true,'id'=>$id]); }
