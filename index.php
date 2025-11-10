@@ -1,4 +1,5 @@
 <?php
+
 /**
  * index.php — Feeed des projet publiés
  * - Auth obligatoire (require_login)
@@ -7,6 +8,7 @@
  * - Affiche une miniature (cover) si dispo
  * - Requêtes préparées partout (SQLi-safe), pagination qui conserve le contexte
  */
+
 
 declare(strict_types=1);
 session_start();
@@ -274,6 +276,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tchat direct</title>
 <link rel="stylesheet" href="<?= APP_BASE ?>/styles/index.css">
+<meta name="robots" content="noindex, nofollow">
 
 
 </head>
@@ -282,8 +285,8 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 <header class="site-header">
   <a class="brand" href="<?= APP_BASE ?>/">Tchat direct</a>
 
-  <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu">
-    ☰
+  <button style="padding:5px"  class="nav-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu">
+    MENU
   </button>
 
   <nav id="primary-nav" class="nav">
@@ -298,7 +301,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 </span>
     <a href="<?= APP_BASE ?>/index.php" class="active">Récents</a>
     <a href="<?= APP_BASE ?>/index.php?mine=1">Mes post</a>
-    <a href="<?= APP_BASE ?>/chat_rooms.php" target="_blank" rel="noopener">Rooms</a>
+    <a style="color: pink;font-weight:700;" href="<?= APP_BASE ?>/chat_rooms.php" target="_blank" rel="noopener">Rooms</a>
 
     <!-- ton formulaire de recherche -->
     <form action="<?= APP_BASE ?>/index.php" method="get" class="nav-search">

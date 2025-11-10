@@ -1,0 +1,17 @@
+User-agent: *
+Allow: /
+
+# Empêcher Google d’indexer les pages techniques ou inutiles
+Disallow: /uploads/
+Disallow: /script/
+Disallow: /styles/
+Disallow: /db.php
+Disallow: /config.php
+Disallow: /auth.php
+Disallow: /check_pseudo.php
+Disallow: /chat_*
+
+
+
+# Sitemap principal
+Sitemap: https://tchat-direct.com/sitemap.xml

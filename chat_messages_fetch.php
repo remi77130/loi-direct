@@ -37,8 +37,10 @@ $baseSelect = "
     m.file_mime,
     m.file_w,
     m.file_h,
+u.avatar_url AS avatar_url,
     CASE
-      WHEN m.color IS NOT NULL AND m.created_at >= NOW() - INTERVAL 5 MINUTE
+      WHEN m.color IS NOT NULL
+       AND m.created_at >= NOW() - INTERVAL 5 MINUTE
       THEN m.color
       ELSE NULL
     END AS color,

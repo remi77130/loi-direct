@@ -1,11 +1,28 @@
 <?php
 // db.php Ignore db.php (dans .gitignore) s’il contient identifiants. couche d’accès MySQL.
+/*
+Points clés:
+Mode “live” prévu en haut (hébergeur + identifiants prod) mais actuellement commenté.
+Création de $mysqli = new mysqli(...).
+Si erreur:
+HTTP 500 + message “Erreur BDD: ...”.
+set_charset('utf8mb4') propre pour gérer tous les caractères.
+Conclusion: fichier unique pour gérer la connexion BDD, utilisé partout via $mysqli. */
+
 declare(strict_types=1);
 
+ /*en live
+const DB_HOST = 'kuomkqatchatuser.mysql.db';
+const DB_NAME = 'kuomkqatchatuser';
+const DB_USER = 'kuomkqatchatuser';
+const DB_PASS = 'Champagne77';
+
+
+*/ //en local 
 const DB_HOST = '127.0.0.1';
-const DB_NAME = 'loi_direct';
+const DB_NAME = 'loi_direct'; 
 const DB_USER = 'root';
-const DB_PASS = ''; // XAMPP par défaut
+const DB_PASS = ''; // XAMPP par défaut */
 
 $mysqli = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 if ($mysqli->connect_errno) {

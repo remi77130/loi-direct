@@ -1,6 +1,9 @@
 <?php
+
 // login.php — Connexion sécurisée (validation serveur renforcée)
 declare(strict_types=1);
+
+
 session_start();
 
 require __DIR__ . '/db.php';
@@ -106,10 +109,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$blocked) {
     $pseudo = mb_substr(trim($pseudo_raw), 0, 100); // cut early, on validera la forme ensuite
     $password = $password_raw; // ne tronque pas le mot de passe — on vérifie longueur
 
-    // Pattern identique au front : 3-20 alnum + underscore
-    if (!preg_match('/^[A-Za-z0-9_]{3,20}$/', $pseudo)) {
-      $errors[] = 'Identifiants invalides.'; // message générique
-    }
+  // Même règle que register.php : 3-20, lettres (accents ok), chiffres, underscore, pas d'espace
+if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
+    $errors[] = 'Identifiants invalides.';
+}
 
     // Mot de passe : min 8, max raisonnable (ex: 128)
     $pwLen = mb_strlen($password);
@@ -187,6 +190,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$blocked) {
             $_SESSION['user_id'] = (int)$row['id'];
             $_SESSION['pseudo']  = $pseudo;
 
+             // message à afficher sur index.php après chaque connexion
+            $_SESSION['flash_success'] = random_punchline($pseudo);
+
             header('Location: '.rtrim(APP_BASE,'/').'/index.php', true, 303);
             exit;
           }
@@ -223,42 +229,130 @@ if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
 <!doctype html>
 <html lang="fr">
 <head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connexion — Loi Direct</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<title>Tchat Direct – Tchat en ligne anonyme et gratuit</title>
+
+<meta name="description" content="Tchat Direct est une plateforme de tchat en ligne anonyme et gratuit. Rejoignez des salons, créez vos propres rooms et discutez en direct.">
+<meta name="keywords" content="tchat direct, tchat en ligne, chat anonyme, salon de discussion">
+<link rel="canonical" href="https://tchat-direct.com/login.php">
+<meta name="robots" content="index,follow">
+
+<!-- Google Tag Manager -->
+<script>
+  window.dataLayer = window.dataLayer || [];
+</script>
+<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-WRBFLTW8"></script>
+<!-- End Google Tag Manager -->
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>
+
+
+
 <style>
 /* styles identiques à ton UI */
 :root{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-body{background:#0f172a;color:#e5e7eb;display:flex;min-height:100vh;align-items:center;justify-content:center;margin:0}
-.card{background:#111827;padding:24px;border-radius:16px;width:100%;max-width:420px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
+body{background:#0f172a;color:#e5e7eb;display:flex;flex-direction:column-reverse;min-height:100vh;align-items:center;justify-content:center;margin:0}
+.card{background:#111827;padding:24px;margin:5px;border-radius:16px;width:90%;max-width:420px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 h1{margin:0 0 16px;font-size:24px}
-label{display:block;font-size:14px;margin-bottom:8px;color:#cbd5e1}
-input{width:100%;padding:12px 14px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
+label{display:block;font-size:17px;font-weight: 500;margin-bottom:8px;color:#cbd5e1}
+input{width:90%;padding:12px 14px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
 .btn{width:100%;margin-top:16px;padding:12px;border:none;border-radius:10px;background:#2563eb;color:#fff;font-weight:600;cursor:pointer}
 .btn[disabled]{opacity:.6;cursor:not-allowed}
 .errors{background:#7f1d1d;color:#fecaca;padding:10px;border-radius:8px;margin-bottom:12px}
 a{color:#93c5fd;text-decoration:none}
+.container_text_login_01 {
+margin-top: 25px; width: 90%;
+}
+
+.pass-wrap { position:relative; }
+.toggle-pass {
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+  background:transparent;
+  border:none;
+  color:#93c5fd;
+  cursor:pointer;
+  font-weight:600;
+  padding:6px;
+  border-radius:6px;
+}
+.toggle-pass:focus { outline:2px solid rgba(147,197,253,.25); }
+
 </style>
 </head>
 <body>
+  
+<!-- Google Tag Manager (noscript) -->
+
+<noscript>
+  <iframe src="https://www.googletagmanager.com/ns.html?id=GTM-WRBFLTW8"
+          height="0" width="0" style="display:none;visibility:hidden"></iframe>
+</noscript>
+
+
+
+<div class="container_text_login_01">
+<p class="text_login_01">  Interface simple, accès rapide, salons publics et privés, discussions anonymes :
+      Tchat Direct vise l’efficacité sans inscription lourde. Tu te connectes, tu choisis un salon, tu échanges.
+    </p>
+</div>
+
 <div class="card">
   <h1>Connexion</h1>
-
   <?php if ($errors): ?>
     <div class="errors"><?php foreach ($errors as $e) echo '<div>'.htmlspecialchars($e,ENT_QUOTES).'</div>'; ?></div>
   <?php endif; ?>
 
   <form method="post" novalidate>
     <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
-    <label>Pseudo
-      <input type="text" name="pseudo" autocomplete="pseudo" required minlength="3" maxlength="20" pattern="[A-Za-z0-9_]{3,20}">
-    </label>
-    <label>Mot de passe
-      <input type="password" name="password" required minlength="8" autocomplete="current-password">
-    </label>
+   <label>Pseudo
+  <input type="text" name="pseudo"
+         autocomplete="username"
+         required
+         minlength="3"
+         maxlength="30"
+         pattern="^[\p{L}0-9_.-]{3,20}$">
+</label>
+
+  <label>Mot de passe
+  <div class="pass-wrap">
+    <input type="password" name="password" id="login_password" required minlength="8" autocomplete="current-password">
+    <button type="button" class="toggle-pass" data-target="login_password" aria-pressed="false" title="Voir le mot de passe">Voir</button>
+  </div>
+</label>
+
     <button class="btn" type="submit" <?= $blocked ? 'disabled' : '' ?>>Se connecter</button>
   </form>
 
   <p style="margin-top:12px;font-size:12px;color:#94a3b8">Pas encore inscrit ? <a href="register.php">Créer un compte</a></p>
 </div>
+
+
+
+<script>
+document.querySelectorAll('.toggle-pass').forEach(btn=>{
+  btn.addEventListener('click', ()=> {
+    const targetId = btn.getAttribute('data-target');
+    const input = document.getElementById(targetId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.textContent = 'Cacher';
+      btn.setAttribute('aria-pressed','true');
+      // Optionnel: éviter que le champ reste visible trop longtemps
+      // setTimeout(()=>{ input.type='password'; btn.textContent='Voir'; btn.setAttribute('aria-pressed','false'); }, 30000);
+    } else {
+      input.type = 'password';
+      btn.textContent = 'Voir';
+      btn.setAttribute('aria-pressed','false');
+    }
+  });
+});
+</script>
+
 </body>
 </html>

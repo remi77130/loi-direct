@@ -33,10 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pass1   = (string)($_POST['password'] ?? '');
     $pass2   = (string)($_POST['password_confirm'] ?? '');
 
-    // 3) Validations serveur (ne jamais se fier uniquement au HTML)
-    if (!preg_match('/^[A-Za-z0-9_]{3,20}$/', $pseudo)) {
-      $errors[] = "Le pseudo doit faire 3 à 20 caractères (lettres, chiffres, underscore).";
-    }
+   // pseudo déjà trim()
+if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
+    $errors[] = "Le pseudo doit faire 3 à 20 caractères (lettres avec accents, chiffres, . _ -, Pas despace).";
+}
+
+
     $len = mb_strlen($pass1);
     if ($len < 8 || $len > 128) {
       $errors[] = "Mot de passe : 8 à 128 caractères.";
@@ -104,10 +106,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     body { background:#0f172a; color:#e5e7eb; display:flex; min-height:100vh; align-items:center; justify-content:center; margin:0; }
-    .card { background:#111827; padding:24px; border-radius:16px; width:100%; max-width:420px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
+    .card { background:#111827;margin:5px; padding:24px; border-radius:16px; width:90%; max-width:420px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
     h1 { margin:0 0 16px; font-size:24px; }
-    label { display:block; font-size:14px; margin-bottom:8px; color:#cbd5e1; }
-    input { width:100%; padding:12px 14px; border-radius:10px; border:1px solid #334155; background:#0b1220; color:#e5e7eb; outline:none; }
+    label { display:block; font-size:17px;     font-weight: 500; margin-bottom:12px; color:#cbd5e1; }
+    input { width:90%; padding:12px 14px; border-radius:10px; border:1px solid #334155; background:#0b1220; color:#e5e7eb; outline:none; }
     .hint { font-size:12px; color:#94a3b8; margin-top:6px; }
     .status { font-size:12px; margin-top:6px; }
     .ok { color:#34d399; } .ko { color:#f87171; }
@@ -116,6 +118,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     .errors { background:#7f1d1d; color:#fecaca; padding:10px; border-radius:8px; margin-bottom:12px; }
     .footer { margin-top:14px; font-size:12px; color:#94a3b8; text-align:center; }
     a { color:#93c5fd; text-decoration: none; }
+
+    .pass-wrap { position:relative; }
+.toggle-pass {
+  position:absolute;
+  right:10px;
+  top:50%;
+  transform:translateY(-50%);
+  background:transparent;
+  border:none;
+  color:#93c5fd;
+  cursor:pointer;
+  font-weight:600;
+  padding:6px;
+  border-radius:6px;
+}
+.toggle-pass:focus { outline:2px solid rgba(147,197,253,.25); }
+
+
+
   </style>
 </head>
 <body>
@@ -129,20 +150,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <?php endif; ?>
 
     <form method="post" autocomplete="off" novalidate>
-      <label for="pseudo">Pseudo</label>
+      <label for="pseudo">Pseudo
+</label>
       <input type="text" id="pseudo" name="pseudo" minlength="3" maxlength="20"
-             pattern="[A-Za-z0-9_]{3,20}" required placeholder="ex: Remi_81" autocomplete="username">
+      pattern="^[\p{L}0-9_.-]{3,20}$" required placeholder="ex: Remi_85, 3–20 caractères, Pas d'espace"
+>
+       
       <div class="hint">3–20 caractères. Lettres, chiffres et underscore uniquement.</div>
       <div id="status" class="status"></div>
+<label for="password">Mot de passe</label>
+<div class="pass-wrap">
+  <input type="password" id="password" name="password" minlength="8" maxlength="128"
+         required placeholder="••••••••" autocomplete="new-password">
+  <button type="button" class="toggle-pass" data-target="password" aria-pressed="false" title="Voir le mot de passe">Voir</button>
+</div>
 
-      <label for="password">Mot de passe</label>
-      <input type="password" id="password" name="password" minlength="8" maxlength="128"
-             required placeholder="••••••••" autocomplete="new-password">
-      <div class="hint">8 à 128 caractères.</div>
-
-      <label for="password_confirm">Confirmer le mot de passe</label>
-      <input type="password" id="password_confirm" name="password_confirm" minlength="8" maxlength="128"
-             required placeholder="••••••••" autocomplete="new-password">
+<label for="password_confirm">Confirmer le mot de passe</label>
+<div class="pass-wrap">
+  <input type="password" id="password_confirm" name="password_confirm" minlength="8" maxlength="128"
+         required placeholder="••••••••" autocomplete="new-password">
+  <button type="button" class="toggle-pass" data-target="password_confirm" aria-pressed="false" 
+  title="Voir le mot de passe">Voir</button>
+</div>
 
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>">
       <button id="submitBtn" class="btn" type="submit">S’inscrire</button>
@@ -159,7 +188,7 @@ let t = null;
 $pseudo.addEventListener('input', () => {
   const v = $pseudo.value.trim();
   $status.textContent = '';
-  if (!/^[A-Za-z0-9_]{3,20}$/.test(v)) {
+  if (!/^[\p{L}0-9_.-]{3,30}$/u.test(v)) {
     $status.textContent = 'Format invalide.'; $status.className = 'status ko'; return;
   }
   clearTimeout(t);
@@ -174,5 +203,28 @@ $pseudo.addEventListener('input', () => {
   }, 250);
 });
 </script>
+
+
+<script>
+document.querySelectorAll('.toggle-pass').forEach(btn=>{
+  btn.addEventListener('click', ()=> {
+    const targetId = btn.getAttribute('data-target');
+    const input = document.getElementById(targetId);
+    if (!input) return;
+    if (input.type === 'password') {
+      input.type = 'text';
+      btn.textContent = 'Cacher';
+      btn.setAttribute('aria-pressed','true');
+      // Optionnel: éviter que le champ reste visible trop longtemps
+      // setTimeout(()=>{ input.type='password'; btn.textContent='Voir'; btn.setAttribute('aria-pressed','false'); }, 30000);
+    } else {
+      input.type = 'password';
+      btn.textContent = 'Voir';
+      btn.setAttribute('aria-pressed','false');
+    }
+  });
+});
+</script>
+
 </body>
 </html>

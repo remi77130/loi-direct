@@ -66,12 +66,77 @@ if ($status_in !== '') {
       }
     }
 
+
+$avatarUrl = $user['avatar_url'] ?? null;
+
+// Gestion upload avatar
+if (!empty($_FILES['avatar']['name'])) {
+    $file = $_FILES['avatar'];
+
+    if ($file['error'] === UPLOAD_ERR_OK) {
+        // Règles
+        $maxBytes = 2 * 1024 * 1024; // 2 Mo
+        if ($file['size'] > $maxBytes) {
+            $errors[] = "L'image de profil dépasse 2 Mo.";
+        } else {
+            $mime = mime_content_type($file['tmp_name']);
+            $allowed = ['image/jpeg' => 'jpg', 'image/png' => 'png', 'image/webp' => 'webp'];
+
+            if (!isset($allowed[$mime])) {
+                $errors[] = "Format d'image non autorisé. Utilise JPG, PNG ou WEBP.";
+            } else {
+                $ext = $allowed[$mime];
+
+                // Nom de fichier unique par user
+                $filename = 'avatar_' . $user['id'] . '_' . time() . '.' . $ext;
+                $targetDir = __DIR__ . '/uploads/avatars/';
+                $targetPath = $targetDir . $filename;
+
+                if (!is_dir($targetDir)) {
+                    mkdir($targetDir, 0755, true);
+                }
+
+                if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                    // Option: supprimer l'ancien avatar si présent et dans /uploads/avatars/
+                    if (!empty($avatarUrl)) {
+                        $old = __DIR__ . '/' . ltrim($avatarUrl, '/');
+                        if (is_file($old)) {
+                            @unlink($old);
+                        }
+                    }
+                    // URL publique stockée en BDD
+                    $avatarUrl = 'uploads/avatars/' . $filename;
+                } else {
+                    $errors[] = "Erreur lors de l'upload de l'image de profil.";
+                }
+            }
+        }
+    } elseif ($file['error'] !== UPLOAD_ERR_NO_FILE) {
+        $errors[] = "Erreur lors de l'envoi de l'image de profil.";
+    }
+}
+
+
+
+
+
+
+
+
+
     if (!$errors){
-      $st = $mysqli->prepare("UPDATE users SET sex=?, height_cm=?, relationship_status=? WHERE id=?");
+      $st = $mysqli->prepare("UPDATE users SET sex=?, height_cm=?, relationship_status=?, avatar_url = ? WHERE id=?");
       if (!$st) { $errors[]='Erreur serveur.'; }
       else {
         $height_param = $height_new ?? null; // NULL si non saisi
-        $st->bind_param('sisi', $sex_new, $height_param, $status_new, $uid);
+        $st->bind_param(
+          'sissi', 
+          $sex_new, 
+          $height_param, 
+          $status_new,
+          $avatarUrl,
+          $uid
+        );
         if ($st->execute()){
           $_SESSION['flash_success'] = 'Profil mis à jour.';
           header('Location: '.rtrim(APP_BASE,'/').'/index.php', true, 303);
@@ -115,7 +180,7 @@ if ($status_in !== '') {
       <div class="errors"><?php foreach($errors as $e) echo '<div>'.htmlspecialchars($e,ENT_QUOTES).'</div>'; ?></div>
     <?php endif; ?>
 
-    <form method="post" novalidate>
+    <form method="post" enctype="multipart/form-data" novalidate>
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
 
       <label for="sex">Sexe</label>
@@ -141,6 +206,14 @@ if ($status_in !== '') {
                  value="<?= $height!==null ? (int)$height : '' ?>" placeholder="ex: 175">
         </div>
       </div>
+
+
+          <div class="field">
+        <label for="avatar">Photo de profil (max 2 Mo)</label>
+        <input type="file" name="avatar" id="avatar" accept="image/jpeg,image/png,image/webp">
+    </div>
+
+
 
       <button class="btn" type="submit">Enregistrer</button>
       <div style="margin-top:10px;text-align:center">

@@ -1,4 +1,18 @@
 <?php // constantes globales appli, surtout upload.
+
+/*Rôle: config globale front + upload.
+Points clés:
+APP_BASE calcule automatiquement le chemin de base de l’application à partir de l’URL (pratique pour éviter le hardcode).
+PROJECT_PAGE = 'project.php' sert de page de référence principale pour un projet (probablement détail d’un projet / loi).
+random_punchline($pseudo) génère une phrase d’accueil dynamique avec le pseudo utilisateur, ton “welcome” fun post-inscription/connexion.
+Gestion des uploads:
+UPLOAD_DIR = dossier physique uploads à la racine du projet.
+UPLOAD_URL = URL publique correspondante.
+UPLOAD_MAX_MB = 5 et UPLOAD_MAX_FILES = 5 limitent poids et nombre d’images.
+MIME autorisés: jpeg, png, webp.
+THUMB_MAX_W / THUMB_MAX_H = dimensions max des miniatures générées.
+Conclusion: ce fichier pose le cadre global (routes, punchlines, règles d’upload).*/
+
 declare(strict_types=1);
 define('APP_BASE', rtrim(dirname($_SERVER['PHP_SELF']), '/\\')); // ex: /loi
 define('PROJECT_PAGE', 'project.php'); // unique
@@ -11,7 +25,7 @@ function random_punchline(string $pseudo): string { // Phrase dacceuil
     "C’est signé {pseudo}. On est bien 👌",
     "{pseudo}, t’es dans la place. Let’s go 🚀",
     "Bienvenue {pseudo} ! À toi de jouer ⚖️",
-    "Inscription validée, — ma p’tite gueule ! 😎",
+    "{pseudo}, Inscription validée, ma p’tite gueule ! 😎",
     "On t’attendait {pseudo} ! Fais-nous rêver ✍️",
     "{pseudo}, le peuple compte sur toi 💪",
     "Own the feed, {pseudo} ! 🏛️",

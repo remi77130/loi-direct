@@ -21,8 +21,71 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe 
 .rooms{margin-top:10px}
 .room{cursor:pointer}
 
-.activeRow { padding: 8px 10px; border-radius: 8px; }
+.activeRow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:6px 8px;
+  border-radius:8px;
+}
+
 .activeRow.is-me { outline: 2px solid var(--brand); background: rgba(37,99,235,.08); }
+
+/* Avatar dans les messages */
+.msg-avatar{
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  display: block;
+}
+
+/* Contenu texte à côté */
+.msg-content{
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.active-avatar{
+  width:24px;
+  height:24px;
+  border-radius:50%;
+  object-fit:cover;
+  flex-shrink:0;
+}
+
+
+
+
+/* DM header avec avatar destinataire */
+.dm-user{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-bottom:6px;
+}
+.dm-avatar{
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  object-fit:cover;
+  flex-shrink:0;
+}
+.dm-name{
+  font-size:14px;
+  color:var(--txt);
+  font-weight:500;
+}
+
+
+
+
+.active-name{
+  font-size:14px;
+  color:#e5e7eb;
+}
+
 .meTag { font-size: .75rem; padding: 2px 6px; border: 1px solid var(--line); border-radius: 999px; margin-left: 6px; }
 
 
@@ -80,12 +143,6 @@ body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe 
   cursor:not-allowed;
   pointer-events:none;
 }
-
-
-
-.msg-foot{ display:flex; gap:8px; align-items:center; margin-top:6px }
-.likeBtn{ background:none; border:0; color:#fca5a5; cursor:pointer; font:inherit }
-.likeBtn[aria-pressed="true"]{ color:#ef4444 }
 
 
 /* On s'assure que #activeModal > #chatModal.*/
@@ -215,11 +272,19 @@ chk.addEventListener('change', (e)=>{
 
 
 
+    
+
+
 
 
     <div id="umDMBox" hidden style="margin-top:10px">
+ <img id="dmAvatar" class="dm-avatar" src="" alt="">  
+
+     <div id="dmUser" class="dm-user">
+       
+      </div>
       <form id="dmSend" method="post" enctype="multipart/form-data" autocomplete="off">
-  <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'] ?? '', ENT_QUOTES) ?>">
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'] ?? '', ENT_QUOTES) ?>">
         <input type="hidden" name="recipient_id" id="dmRecipient">
         <textarea name="body" id="dmBody" rows="3" maxlength="2000" placeholder="Votre message…"></textarea>
         <input type="file" name="image" accept="image/*">
@@ -592,9 +657,7 @@ async function presencePing(){
     // DEBUG temporaire ; à retirer en prod si bruyant :
     // const t = await r.clone().text(); console.debug('presencePing', r.status, t);
   } catch {}
-}
-
-/* Ouvre la modale “Actifs” et te surligne si présent */
+}/* Ouvre la modale “Actifs” et te surligne si présent */
 showActive?.addEventListener('click', async () => {
   if (!currentRoom) return;
 
@@ -602,16 +665,28 @@ showActive?.addEventListener('click', async () => {
 
   try {
     const r = await fetch(`${BASE}/chat_presence_list.php?room_id=${currentRoom}`, {
-      cache:'no-store', credentials:'same-origin'
+      cache: 'no-store',
+      credentials: 'same-origin'
     });
     const j = await r.json();
     const list = Array.isArray(j?.users) ? j.users : [];
 
     activeModalBody.innerHTML = list.length
-      ? list.map(u => `
-          <div class="activeRow" data-id="${u.id}">
-            ${escapeHtml(u.pseudo || '—')}${u.id===CURRENT_USER_ID ? ' <span class="meTag">vous</span>' : ''}
-          </div>`).join('')
+      ? list.map(u => {
+          const safeName = escapeHtml(u.pseudo || '—');
+          const avatarSrc = u.avatar_url
+            ? `${BASE}/${u.avatar_url}`
+            : `${BASE}/uploads/avatars/default.png`;
+
+          return `
+            <div class="activeRow" data-id="${u.id}">
+              <img class="active-avatar" src="${avatarSrc}" alt="${safeName}" loading="lazy">
+              <span class="active-name">
+                ${safeName}${u.id === CURRENT_USER_ID ? ' <span class="meTag">vous</span>' : ''}
+              </span>
+            </div>
+          `;
+        }).join('')
       : '<div>Aucun actif</div>';
 
     activeModal.hidden = false;
@@ -620,7 +695,7 @@ showActive?.addEventListener('click', async () => {
     const me = activeModalBody.querySelector(`.activeRow[data-id="${CURRENT_USER_ID}"]`);
     if (me) {
       me.classList.add('is-me');
-      me.scrollIntoView({ block:'center' });
+      me.scrollIntoView({ block: 'center' });
     }
   } catch {}
 });
@@ -717,40 +792,29 @@ chatMsgs.addEventListener('scroll', () => {
 });
 toBottom.addEventListener('click', () => scrollToBottom(chatMsgs, true));
 /* Rendu d’un message (texte + image) */
+
 function renderMessage(m){
   const el = document.createElement('div');
   el.className = 'msg';
 
+  // Avatar
+  const avatar = document.createElement('img');
+  avatar.className = 'msg-avatar';
+  const avatarSrc = m.avatar_url
+    ? `${BASE}/${m.avatar_url}`
+    : `${BASE}/uploads/avatars/default.png`;
+  avatar.src = avatarSrc;
+  avatar.alt = m.sender || '';
+  avatar.loading = 'lazy';
+  el.appendChild(avatar);
 
+  // Conteneur texte
+  const content = document.createElement('div');
+  content.className = 'msg-content';
 
-// Pied: like
-const foot = document.createElement('div');
-foot.className = 'msg-foot';
-
-const likeBtn = document.createElement('button');
-likeBtn.type = 'button';
-likeBtn.className = 'likeBtn';
-likeBtn.dataset.id = String(m.id);
-likeBtn.setAttribute('aria-pressed', m.liked_by_me ? 'true' : 'false');
-likeBtn.textContent = m.liked_by_me ? `❤️ ${m.like_count||0}` : `🤍 ${m.like_count||0}`;
-
-foot.appendChild(likeBtn);
-el.appendChild(foot);
-
-
-
-
-
-
-
-
-
-
-
-  // Meta: pseudo + horodatage
+  // Meta: pseudo + date/heure
   const meta = document.createElement('div');
   meta.className = 'meta';
-  const when = new Date(String(m.created_at).replace(' ','T')).toLocaleString();
 
   const who = document.createElement(m.sender_id ? 'button' : 'span');
   if (m.sender_id) {
@@ -763,13 +827,16 @@ el.appendChild(foot);
     who.style.color = '#93c5fd';
   }
   who.textContent = typeof m.sender === 'string' ? m.sender : '—';
-
-  const sep = document.createElement('span');
-  sep.textContent = ' • ' + when;
-
   meta.appendChild(who);
-  meta.appendChild(sep); // DATE ET HEURE
-  el.appendChild(meta);
+
+  if (m.created_at) {
+    const when = new Date(String(m.created_at).replace(' ','T')).toLocaleString();
+    const sep = document.createElement('span');
+    sep.textContent = ' • ' + when;
+    meta.appendChild(sep);
+  }
+
+  content.appendChild(meta);
 
   // Corps texte
   if (m.body) {
@@ -777,23 +844,24 @@ el.appendChild(foot);
     body.className = 'msg-body';
     body.style.whiteSpace = 'pre-wrap';
     const span = document.createElement('span');
-    span.textContent = m.body;                 // anti-XSS
+    span.textContent = m.body;
     if (m.color && /^#[0-9A-Fa-f]{6}$/.test(m.color)) {
-      span.style.color = m.color;              // visible 5 min côté serveur
+      span.style.color = m.color;
     }
     body.appendChild(span);
-    el.appendChild(body);
+    content.appendChild(body);
   }
 
   // Image éventuelle
   if (m.file_url && /^image\//.test(m.file_mime || '')) {
     const src = m.file_url;
+
     if (isViewed(src)) {
       const img = document.createElement('img');
-      Object.assign(img, { src, alt:'image', loading:'lazy' });
+      Object.assign(img, { src, alt: 'image', loading: 'lazy' });
       img.className = 'chat-img';
       img.addEventListener('click', () => openImgModal(src));
-      el.appendChild(img);
+      content.appendChild(img);
     } else {
       const veil = document.createElement('div');
       veil.className = 'imageVeil imageVeil--blur';
@@ -803,20 +871,21 @@ el.appendChild(foot);
         openImgModal(src);
         markViewed(src);
         const img = document.createElement('img');
-        Object.assign(img, { src, alt:'image', loading:'lazy' });
-        img.style.maxWidth = '20%';
-        img.style.width = '20%';
-        img.style.borderRadius = '8px';
-        img.style.cursor = 'zoom-in';
+        Object.assign(img, { src, alt: 'image', loading: 'lazy' });
+        img.className = 'chat-img';
         img.addEventListener('click', () => openImgModal(src));
         veil.replaceWith(img);
       });
-      el.appendChild(veil);
+      content.appendChild(veil);
     }
   }
 
+  el.appendChild(content);
   return el;
 }
+
+
+
 
 /* Fetch des nouveaux messages depuis lastId */
 async function fetchMessages(){
@@ -938,24 +1007,52 @@ let dmTarget = null;
 let umUserId = 0;
 
 /* Hydratation de la modale profil.
-   - Cache le mini-formulaire DM si on ouvre son propre profil. */
-function hydrateUserModal(data){
-  dmTarget = data.id;
-  const isSelf = Number(dmTarget) === Number(CURRENT_USER_ID);
-
-  if (isSelf) {
+   - Initialise le bloc DM avec avatar + pseudo si ce n’est pas toi. */
+function hydrateUserModal(user){
+  if (!user || !user.id) {
     umBox.hidden = true;
+    dmTarget = null;
     dmRecipient.value = '';
     dmBody.value = '';
     dmHint.textContent = '';
     return;
   }
+
+  const isSelf = Number(user.id) === Number(CURRENT_USER_ID);
+
+  if (isSelf) {
+    umBox.hidden = true;
+    dmTarget = null;
+    dmRecipient.value = '';
+    dmBody.value = '';
+    dmHint.textContent = '';
+    return;
+  }
+
+  // Cible DM valide
+  dmTarget = user.id;
+  const name = user.pseudo || 'Utilisateur';
+
+  const avatarEl = document.getElementById('dmAvatar');
+  const nameEl   = document.getElementById('dmName');
+
+  if (avatarEl) {
+    const src = user.avatar_url
+      ? `${BASE}/${user.avatar_url}`
+      : `${BASE}/uploads/avatars/default.png`;
+    avatarEl.src = src;
+    avatarEl.alt = name;
+  }
+
+  if (nameEl) {
+    nameEl.textContent = name;
+  }
+
   umBox.hidden = false;
   dmRecipient.value = String(dmTarget);
   dmBody.value = '';
-  dmHint.textContent = '';
+  dmHint.textContent = `Message privé à ${name}`;
 }
-
 /* Envoi DM */
 dmForm?.addEventListener('submit', async (e)=>{
   e.preventDefault();
@@ -1006,105 +1103,65 @@ function closeUserModal(){
 umClose?.addEventListener('click', closeUserModal);
 userModal?.addEventListener('click', e => { if (e.target === userModal) closeUserModal(); });
 
-/* Délégation : clic sur pseudo dans le flux messages → card profil *//* Délégation : profil OU like */
+/* Délégation : clic sur pseudo dans le flux messages → card profil */
 chatMsgs.addEventListener('click', async (e) => {
-  // 1) Profil si clic sur pseudo
-  const link = e.target.closest('.userLink');
-  if (link) {
-    const uid = parseInt(link.dataset.userId || '0', 10);
-    if (!uid) return;
+  const a = e.target.closest('.userLink');
+  if (!a) return;
 
-    const isSelf = uid === Number(CURRENT_USER_ID);
-    umBox.hidden = isSelf;
-    umUserId = uid;
-    umName.textContent = 'Profil';
-    umBody.textContent = 'Chargement…';
-    openUserModal();
+  const uid = parseInt(a.dataset.userId, 10) || 0;
+  if (!uid) return;
 
-    try {
-      const r = await fetch(`${BASE}/api_user_profile.php?user_id=${uid}`, { cache:'no-store', credentials:'same-origin' });
-      const j = await r.json();
-      if (!r.ok || !j?.ok) { umBody.textContent = 'Erreur.'; return; }
-      const u = j.user;
-      hydrateUserModal({ id: u.id });
+  const isSelf = Number(uid) === Number(CURRENT_USER_ID);
+  umBox.hidden = isSelf;   // Cache DM si c’est toi
 
-      umName.textContent = u.pseudo || 'Profil';
-      umBody.innerHTML =
-        `<div style="display:flex;gap:12px;align-items:flex-start">
-           ${u.avatar_url ? `<img src="${u.avatar_url}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:1px solid var(--line)">` : ''}
-           <div>
-             ${u.city ? `<div><strong>Ville :</strong> ${escapeHtml(u.city)}</div>` : ''}
-             ${u.sex ? `<div><strong>Sexe :</strong> ${escapeHtml(u.sex)}</div>` : ''}
-             ${u.height_cm ? `<div><strong>Taille :</strong> ${u.height_cm} cm</div>` : ''}
-             ${u.postal_code ? `<div><strong>CP :</strong> ${escapeHtml(u.postal_code)}</div>` : ''}
-             ${u.relationship_status ? `<div><strong>Statut :</strong> ${escapeHtml(u.relationship_status)}</div>` : ''}
-             ${u.bio ? `<div style="margin-top:6px;white-space:pre-wrap">${escapeHtml(u.bio)}</div>` : ''}
-           </div>
-         </div>`;
-    } catch {
-      umBody.textContent = 'Réseau indisponible.';
+  umUserId = uid;
+  umName.textContent = 'Profil';
+  umBody.textContent = 'Chargement…';
+
+  openUserModal();
+
+  try {
+    const url = `${BASE}/api_user_profile.php?user_id=${uid}`;
+    const r   = await fetch(url, { cache:'no-store', credentials:'same-origin' });
+    if (!r.ok) {
+      umBody.textContent = r.status === 404 ? 'Utilisateur introuvable.' : 'Erreur serveur.';
+      return;
     }
-    return; // on stoppe ici si c'était un clic profil
-  }
-
-  // 2) Like si clic sur .msg-body ou .likeBtn
-  const likeTarget = e.target.closest('.msg-body, .likeBtn');
-  if (!likeTarget) return;
-
-  const card = likeTarget.closest('.msg');
-  if (!card) return;
-
-  const likeBtn = card.querySelector('.likeBtn');
-  if (!likeBtn) return;
-
-  const id = parseInt(likeBtn.dataset.id || '0', 10);
-  if (!id) return;
-
-  toggleLike(id, likeBtn);
-});
-
-
-
-let likeBusy = new Set(); // anti double-clic
-async function toggleLike(messageId, btn){
-  if (likeBusy.has(messageId)) return;
-  likeBusy.add(messageId);
-
-  // Optimiste
-  const pressed = btn.getAttribute('aria-pressed') === 'true';
-  const cur = parseInt((btn.textContent.match(/\d+/)||['0'])[0],10);
-  btn.setAttribute('aria-pressed', pressed ? 'false' : 'true');
-  btn.textContent = (pressed ? '🤍 ' : '❤️ ') + (pressed ? Math.max(cur-1,0) : cur+1);
-
-  try{
-    const fd = new FormData();
-    fd.append('message_id', String(messageId));
-    fd.append('csrf', document.querySelector('input[name="csrf"]').value);
-    const r = await fetch(`${BASE}/chat_message_like.php`, { method:'POST', body:fd, credentials:'same-origin' });
     const j = await r.json();
-    if (!r.ok || !j.ok){
-      throw new Error(j.error||'server');
+    if (!j || !j.ok) {
+      umBody.textContent = (j && j.error) || 'Erreur.';
+      return;
     }
-    // sync état serveur
-    btn.setAttribute('aria-pressed', j.liked ? 'true' : 'false');
-    btn.textContent = (j.liked ? '❤️ ' : '🤍 ') + j.like_count;
+
+    const u = j.user;
+    hydrateUserModal(u);  // initialise la cible DM avec avatar/pseudo si ≠ soi
+
+    umName.textContent = u.pseudo || 'Profil';
+    umBody.innerHTML =
+      `<div style="display:flex;gap:12px;align-items:flex-start">
+         ${u.avatar_url ? `<img src="${u.avatar_url}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:1px solid var(--line)">` : ''}
+         <div>
+           ${u.city ? `<div><strong>Ville :</strong> ${escapeHtml(u.city)}</div>` : ''}
+           ${u.sex ? `<div><strong>Sexe :</strong> ${escapeHtml(u.sex)}</div>` : ''}
+           ${u.height_cm ? `<div><strong>Taille :</strong> ${u.height_cm} cm</div>` : ''}
+
+
+           ${u.postal_code ? `<div><strong>CP :</strong> ${escapeHtml(u.postal_code)}</div>` : ''}
+           ${u.relationship_status ? `<div><strong>Statut :</strong> ${escapeHtml(u.relationship_status)}</div>` : ''}
+           ${u.bio ? `<div style="margin-top:6px;white-space:pre-wrap">${escapeHtml(u.bio)}</div>` : ''}
+         </div>
+       </div>`;
   } catch {
-    // rollback si échec
-    btn.setAttribute('aria-pressed', pressed ? 'true' : 'false');
-    btn.textContent = (pressed ? '❤️ ' : '🤍 ') + cur;
-  } finally {
-    likeBusy.delete(messageId);
+    umBody.textContent = 'Réseau indisponible.';
   }
-}
-
-
-
+});
 
 /* =============================================================================
  *                                   BOOT
  * =============================================================================*/
  // Rien d’autre : la liste est chargée au boot plus haut.
 </script>
+
 
 
 </body></html>
