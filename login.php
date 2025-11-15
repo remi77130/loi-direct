@@ -234,6 +234,9 @@ if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
 
 <title>Tchat Direct – Tchat en ligne anonyme et gratuit</title>
 
+<link rel="icon" type="image/png" href="uploads/tchat_direct_favicon.png">
+
+
 <meta name="description" content="Tchat Direct est une plateforme de tchat en ligne anonyme et gratuit. Rejoignez des salons, créez vos propres rooms et discutez en direct.">
 <meta name="keywords" content="tchat direct, tchat en ligne, chat anonyme, salon de discussion">
 <link rel="canonical" href="https://tchat-direct.com/login.php">
@@ -253,7 +256,38 @@ if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
 <style>
 /* styles identiques à ton UI */
 :root{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-body{background:#0f172a;color:#e5e7eb;display:flex;flex-direction:column-reverse;min-height:100vh;align-items:center;justify-content:center;margin:0}
+
+
+.site-header{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  padding:12px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  background:transparent;
+  z-index:5;
+}
+.logo-img{
+  height:150px;
+  display:block;
+}
+body{
+  background:#0f172a;
+  color:#e5e7eb;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  align-items:center;
+  justify-content:center;
+  margin:0;
+  padding-top:60px; /* pour ne pas que le contenu passe sous le header */
+}
+
+
+
 .card{background:#111827;padding:24px;margin:5px;border-radius:16px;width:90%;max-width:420px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
 h1{margin:0 0 16px;font-size:24px}
 label{display:block;font-size:17px;font-weight: 500;margin-bottom:8px;color:#cbd5e1}
@@ -285,6 +319,39 @@ margin-top: 25px; width: 90%;
 </style>
 </head>
 <body>
+
+
+<!-- Bannière version Bêta -->
+<div class="banner" id="betaBanner">
+  🚧 Ce site est actuellement en version <strong>Bêta</strong>. Certaines fonctionnalités peuvent être instables. Merci de na pas partager.
+</div>
+
+<style>
+#betaBanner {
+  margin-top: 100px;
+  background: linear-gradient(90deg, #1e293b, #0f172a);
+  color: #facc15;              /* jaune doré bien visible */
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid #334155;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+#betaBanner strong {
+  color: #fbbf24;              /* accent sur le mot "Bêta" */
+}
+</style>
+
+
+
+
+
+<header class="site-header">
+  <a href="index.php" class="logo-link">
+    <img src="uploads/tchat_direct_logo.webp" alt="Tchat Direct logo" class="logo-img">
+  </a>
+</header>
+
   
 <!-- Google Tag Manager (noscript) -->
 

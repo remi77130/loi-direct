@@ -101,7 +101,9 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <title>Inscription — Loi Direct</title>
+  <link rel="icon" type="image/png" href="uploads/tchat_direct_favicon.png">
+
+  <title>Inscription</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
@@ -136,10 +138,72 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
 .toggle-pass:focus { outline:2px solid rgba(147,197,253,.25); }
 
 
+.site-header{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  padding:12px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  background:transparent;
+  z-index:5;
+}
+.logo-img{
+  height:150px;
+  display:block;
+}
+body{
+  background:#0f172a;
+  color:#e5e7eb;
+  display:flex;
+  flex-direction:column;
+  min-height:100vh;
+  align-items:center;
+  justify-content:center;
+  margin:0;
+  padding-top:60px; /* pour ne pas que le contenu passe sous le header */
+}
+
+
+
 
   </style>
 </head>
 <body>
+
+
+
+<!-- Bannière version Bêta -->
+<div class="banner" id="betaBanner">
+  🚧 Ce site est actuellement en version <strong>Bêta</strong>. Certaines fonctionnalités peuvent être instables. Merci de na pas partager.
+</div>
+</div>
+
+<style>
+#betaBanner {
+  margin-top: 100px;
+  background: linear-gradient(90deg, #1e293b, #0f172a);
+  color: #facc15;              /* jaune doré bien visible */
+  text-align: center;
+  padding: 10px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid #334155;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+#betaBanner strong {
+  color: #fbbf24;              /* accent sur le mot "Bêta" */
+}
+</style>
+
+
+
+<header class="site-header">
+  <a href="register.php" class="logo-link">
+    <img src="uploads/tchat_direct_logo.webp" alt="Tchat Direct logo" class="logo-img">
+  </a>
+</header>
   <div class="card">
     <h1>Créer un compte</h1>
 
@@ -216,7 +280,7 @@ document.querySelectorAll('.toggle-pass').forEach(btn=>{
       btn.textContent = 'Cacher';
       btn.setAttribute('aria-pressed','true');
       // Optionnel: éviter que le champ reste visible trop longtemps
-      // setTimeout(()=>{ input.type='password'; btn.textContent='Voir'; btn.setAttribute('aria-pressed','false'); }, 30000);
+       setTimeout(()=>{ input.type='password'; btn.textContent='Voir'; btn.setAttribute('aria-pressed','false'); }, 10000);
     } else {
       input.type = 'password';
       btn.textContent = 'Voir';

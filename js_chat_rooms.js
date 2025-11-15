@@ -1,413 +1,43 @@
-<?php
-declare(strict_types=1);
-session_start();
-require __DIR__.'/config.php';
- require __DIR__.'/db.php';
-require __DIR__.'/auth.php';
-require_login();
-if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
-?>
-<!doctype html><html lang="fr"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Salons de discussion</title>
-<style>
-:root{--bg:#0f172a;--card:#111827;--line:#334155;--txt:#e5e7eb;--mut:#94a3b8;--brand:#2563eb;}
-body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-.wrap{max-width:900px;margin:24px auto;padding:0 16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
-.btn{background:var(--brand);color:#fff;border:none;border-radius:100px;padding:8px 12px;cursor:pointer}
-.row{display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid var(--line);border-radius:12px;margin:8px 0}
-.mut{color:var(--mut)}
-.rooms{margin-top:10px}
-.room{cursor:pointer}
 
-.activeRow{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:6px 8px;
-  border-radius:8px;
-}
-
-.activeRow.is-me { outline: 2px solid var(--brand); background: rgba(37,99,235,.08); }
-
-/* Avatar dans les messages */
-.msg-avatar{
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  display: block;
-}
-
-/* Contenu texte à côté */
-.msg-content{
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.active-avatar{
-  width:24px;
-  height:24px;
-  border-radius:50%;
-  object-fit:cover;
-  flex-shrink:0;
-}
-
-
-
-
-/* DM header avec avatar destinataire */
-.dm-user{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin-bottom:6px;
-}
-.dm-avatar{
-  width:32px;
-  height:32px;
-  border-radius:50%;
-  object-fit:cover;
-  flex-shrink:0;
-}
-.dm-name{
-  font-size:14px;
-  color:var(--txt);
-  font-weight:500;
-}
-
-
-
-
-.active-name{
-  font-size:14px;
-  color:#e5e7eb;
-}
-
-.meTag { font-size: .75rem; padding: 2px 6px; border: 1px solid var(--line); border-radius: 999px; margin-left: 6px; }
-
-
-/* --- Modal principal --- */
-#chatModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;}
-#chatBox{background:var(--card);border:1px solid var(--line);border-radius:16px;width:min(900px,95vw);height:min(640px,90vh);display:flex;flex-direction:column;position:relative}
-#chatHead{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-bottom:1px solid var(--line)}
-#chatMsgs{flex:1;overflow:auto;padding:12px 14px;}
-#chatForm{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
-#chatForm input[name="body"]{flex:1;min-height:46px;max-height:160px;background:#0b1220;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px}
-
-/* --- Messages --- */
-.msg{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin:8px 0;overflow-wrap:break-word}
-.msg .meta{font-size:12px;color:var(--mut);margin-bottom:4px}
-
-.msg-body { white-space:pre-wrap; }
-
-.msg-body > span {
-  font-weight: 500;
-  letter-spacing: 0.5px;
-}
-
-.meta { color: var(--mut); } /* déjà présent chez toi */
-
-
-/* --- Bouton bas --- */
-#toBottom{position:absolute;right:18px;bottom:82px;display:none;border:1px solid var(--line);background:#111827;color:var(--txt);border-radius:999px;padding:6px 10px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
-
-/* --- Image des messages --- */
-.chat-img{max-width:min(55%,420px);height:auto;border-radius:8px;cursor:zoom-in;display:block}
-
-/* --- Effet flou sur images non vues --- */
-.imageVeil{position:relative;width:auto;max-width:min(55%,420px);border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer;background-size:cover;background-position:center}
-.imageVeil span{color:var(--mut);font-size:14px;background:#111827;padding:8px 10px;border-radius:999px;border:1px solid var(--line)}
-.imageVeil--blur::after{content:"";position:absolute;inset:0;backdrop-filter:blur(14px);background:rgba(0,0,0,.35);border-radius:8px}
-
-/* --- Modal image --- */
-#imgModal{position:fixed;inset:0;background:rgb(0 0 0 / 65%);display:flex;align-items:center;justify-content:center;z-index:70}
-#imgModal[hidden]{display:none}
-.imgModal__box{max-width:55vw;max-height:40vh}
-#imgModalImg{max-width:85vw;max-height:65vh;border-radius:12px;display:block}
-
-
-#lockModal{position:fixed;inset:0;background:rgb(0 0 0 / 65%);display:flex;align-items:center;justify-content:center;z-index:80}
-#lockModal[hidden]{display:none}
-.userModal__box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;width:min(520px,92vw)}
-.userActions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:90}
-.modal-overlay[hidden]{display:none}
-.modal-box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;width:min(520px,92vw)}
-.btn[disabled],
-.btn[aria-disabled="true"]{
-  opacity:.5;
-  cursor:not-allowed;
-  pointer-events:none;
-}
-
-
-.mention {
-  color: #D052F2;      /* bleu clair */
-  font-weight: 600;    /* optionnel : plus visible */
-}
-
-
-/* On s'assure que #activeModal > #chatModal.*/
-.modal { position: fixed; inset: 0; }
-#chatModal   { z-index: 1002; } /* au-dessus de modal.behind */
-#userModal   { z-index: 1003; }   /* au-dessus du chatModal */
-#activeModal { z-index: 1004; }   /* au-dessus du userModal */
-.modal.behind { z-index: 800; pointer-events: none; } /* passe visuellement derrière */
-
-
-
-/* ===== Mobile ===== */
-@media (max-width:640px){
-  .wrap{max-width:100%;padding:0}
-  .card{border-radius:0;border-left:0;border-right:0}
-  #chatModal{align-items:stretch;justify-content:stretch}
-  #chatBox{border-radius:0;width:100vw;height:100dvh;max-width:100vw;max-height:100dvh}
-  #chatHead{padding:12px}
-  #chatMsgs{padding:10px}
-  #chatForm{padding:10px;gap:8px}
-  #chatForm input[name="body"]{min-height:48px}
-  .msg{padding:10px;margin:10px 0}
-  .row{flex-direction:column;align-items:flex-start;gap:6px;padding:10px}
-
-  .chat-img,.imageVeil{
-        max-width: 50%;
-        margin-top: 8px;
-        border: 0.5px solid #66339985;
-        box-shadow: 5px -2px 5px #0000008c; }
-
-  #toBottom{right:10px;bottom:86px;padding:6px 10px}
-  #imgModal{align-items:center;justify-content:center}
-  .imgModal__box{max-width:96vw;max-height:90dvh}
-  #imgModalImg{max-width:96vw;max-height:90dvh}
-}
-
-/* ===== Très petits écrans ===== */
-@media (max-width:360px){
-  #chatHead h3{font-size:15px}
-  .btn{padding:8px 8px}
-}
-
-
-/* Form */
-.container_chatForm{padding:0 14px 12px;border-top:1px solid var(--line)}
-#chatForm{display:flex;gap:8px;align-items:center;flex-wrap:wrap;width:100%}
-
-/* Aplatit les wrappers <div> du form */
-#chatForm > div{display:contents}
-
-/* Champs */
-#chatForm input[name="body"]{flex:1 1 260px;min-width:0}
-#chatForm input[type="file"]{flex:0 0 auto;max-width:100%}
-#chatForm button[type="submit"]{flex:0 0 auto}
-
-/* Mobile */
-@media (max-width:640px){
-  #chatForm{gap:8px}
-  #chatForm input[name="body"]{flex:1 1 100%}
-  #chatForm input[type="file"]{flex:1 1 calc(60% - 8px)}
-  #chatForm button[type="submit"]{flex:1 1 calc(40% - 8px)}
-}
-
-
-
-
-</style>
-
-</head>
-
-<body>
-
-
-
-
-
-
-<div class="wrap">
-  <div class="card">
-    <h1 style="margin:0 0 6px">Salons de discussion</h1>
-
-    <form id="newRoom" autocomplete="off" style="display:flex;gap:8px;align-items:center;margin-top:10px">
-      <input name="name" maxlength="20" placeholder="Nom du salon (ex: Discu Sympa)" required
-             style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--txt)">
-      <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
-      <button class="btn" type="submit">Créer</button>
-      <span id="roomStatus" class="mut"></span>
-
-<label style="display:inline-flex;align-items:center;gap:8px;margin-left:8px">
-  <input type="checkbox" name="is_private" id="is_private">
-  Protégé
-</label>
-<input type="password" name="password" id="room_pwd" placeholder="Mot de passe" maxlength="20" style="display:none">
-<script>
-const chk = document.getElementById('is_private');
-const pwd = document.getElementById('room_pwd');
-chk.addEventListener('change', (e)=>{
-  const on = e.target.checked;
-  pwd.style.display = on ? 'inline-block' : 'none';
-  pwd.toggleAttribute('required', on); // ← ajoute/enlève required
-  if (!on) pwd.value = '';
-});
-</script>
-
-
-    </form>
-
-
-    
-<!-- Modale utilisateurs actifs -->
-<div id="activeModal" class="modal" hidden>
-
-
-  <div class="modal-box">
-    <div class="modal-head">
-      <strong>Utilisateurs actifs</strong>
-      <button id="activeClose" type="button" class="btn">X</button>
-    </div>
-    <div id="activeModalBody"></div>
-  </div>
-</div>
-
-
-
-
-<div id="userModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="umName" hidden>
-  <div class="modal-box">
-    <div style="display:flex;justify-content:space-between;align-items:center">
-      
-      <h3 id="umName" style="margin:0">Profil</h3>
-      <button id="umClose" class="btn" type="button" style="background:#374151">Fermer</button>
-    </div>
-
-    <div id="umBody" class="mut" style="margin-top:8px">Chargement…</div>
-
-
-
-
-
-
-    
-
-
-
-
-    <div id="umDMBox" hidden style="margin-top:10px">
- <img id="dmAvatar" class="dm-avatar" src="" alt="">  
-
-     <div id="dmUser" class="dm-user">
-       
-      </div>
-      <form id="dmSend" method="post" enctype="multipart/form-data" autocomplete="off">
-        <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'] ?? '', ENT_QUOTES) ?>">
-        <input type="hidden" name="recipient_id" id="dmRecipient">
-        <textarea name="body" id="dmBody" rows="3" maxlength="2000" placeholder="Votre message…"></textarea>
-        <input type="file" name="image" accept="image/*">
-        <button type="submit" id="dmBtn">Envoyer</button>
-      </form>
-      <div id="dmHint" class="muted" style="margin-top:6px"></div>
-    </div>
-  </div>
-</div>
-
-
-
-
-
-
-<div id="lockModal" class="modal-overlay"  role="dialog" aria-modal="true" hidden hidden>
-  <div class="modal-box">
-    <h3>Salon protégé</h3>
-    <p class="mut">Entrez le mot de passe.</p>
-    <form id="lockForm">
-      <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>">
-      <input type="hidden" name="room_id" id="lock_room_id">
-
-      <input type="password" name="password" autocomplete="new-password" style="display:block" placeholder="Mot de passe" required>
-      <div class="userActions" style="margin-top:12px">
-
-        <button class="btn" type="submit">Entrer</button>
-        <button id="lockClose" class="btn" type="button" style="background:#374151">Fermer</button>
-      </div>
-      <div id="lockStatus" class="mut" style="margin-top:8px"></div>
-    </form>
-  </div>
-</div>
-
-
-
-
-    <div class="rooms" id="rooms"></div>
-
-        <h2 style="margin-top:16px;font-size:14px">Users en ligne</h2>
-    <div id="presenceInline"></div>
-
-
-  </div>
-
-  <p><a class="btn" href="<?= APP_BASE ?>/index.php">&larr; Retour</a></p>
-</div>
-
-<!-- Modal chat -->
-<div id="chatModal" class="modal" hidden >
-  <div id="chatBox">
-    <div id="chatHead">
-      <strong id="roomTitle">Salon</strong>
-<button id="showActive" type="button">Actifs</button>
-
-
-      <button id="chatClose" class="btn" type="button" style="background:#374151">X</button>
-    </div>
-    <div id="chatMsgs"></div>
-
-    <button id="toBottom" type="button" aria-label="Aller en bas">▼</button>
-
-<div class="container_chatForm">
-  <form id="chatForm" enctype="multipart/form-data">
-    <input type="hidden" name="room_id" id="room_id" value="">
-    <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>">
-
-    <input type="text" id="chatInput" name="body" placeholder="Écrire…" maxlength="200" autocomplete="off">
-    <input type="file" name="image" accept="image/jpeg,image/png,image/webp">
-      <input type="color" id="msgColor" name="color" value="#FFFFFF" title="Choisir une couleur de message (optionnel)">
-
-    <button type="submit" class="btn">Envoyer</button>
-  </form>
-</div>
-
-
-<!-- Modal image -->
-<div id="imgModal" hidden>
-  <div class="imgModal__box">
-    <img id="imgModalImg" alt="image">
-  </div>
-</div>
-
-  </div>
-</div>
-
-
-<script>
 /* =============================================================================
  *  CHAT — logique côté client
+ *  But : vue unique gérant la liste des salons, l’ouverture d’un salon, 
+ *        la présence temps réel par ping périodique, l’échange de messages,
+ *        l’aperçu d’images et la fiche utilisateur + DM.
+ *
+    - Sécurité : le code suppose que le backend valide toujours room_id, CSRF si activé, et filtre les fichiers uploadés.
+    - Perf : le polling est simple et robuste. Pour monter en charge, passer plus tard à SSE/WebSocket.
+    - Accessibilité : les modales devraient recevoir aria-modal="true" et focus management si requis.
+
+
+ *  Hypothèses côté serveur :
+ *   - Endpoints REST existants :
+ *       GET  /chat_rooms_list.php
+ *       POST /chat_room_create.php
+ *       GET  /chat_messages_fetch.php?room_id=...&after_id=...
+ *       POST /chat_message_send.php   (FormData texte + image)
+ *       POST /chat_room_unlock.php    (déverrouillage des salons privés)
+ *       GET  /chat_room_quota.php     (quota création salon)
+ *       POST /chat_presence_ping.php  (ping présence)
+ *       GET  /chat_presence_list.php?room_id=...
+ *       GET  /api_user_profile.php?user_id=...
+ *   - PHP expose APP_BASE et user_id en session.
+ *   - Le HTML fournit les IDs utilisés plus bas.
  * =============================================================================*/
 
 /* === Références DOM + état global ========================================= */
 const BASE = '<?= APP_BASE ?>';                       // Base URL de l’app
 const CURRENT_USER_ID = <?= (int)($_SESSION['user_id'] ?? 0) ?>;
 
-const RLIST          = document.getElementById('rooms');          // Liste des salons
-const presenceInline = document.getElementById('presenceInline'); // Users en ligne
-const NST            = document.getElementById('roomStatus');     // Zone statut création
-const chatModal      = document.getElementById('chatModal');      // Overlay chat
-const chatClose      = document.getElementById('chatClose');      // Bouton fermer chat
-const chatMsgs       = document.getElementById('chatMsgs');       // Flux des messages
-const chatForm       = document.getElementById('chatForm');       // Form d’envoi
-const roomIdInp      = document.getElementById('room_id');        // Hidden room_id
-const roomTitle      = document.getElementById('roomTitle');      // Titre salon
-const toBottom       = document.getElementById('toBottom');       // Bouton “aller en bas”
+const RLIST       = document.getElementById('rooms');       // Liste des salons
+const NST         = document.getElementById('roomStatus');  // Zone statut création
+const chatModal   = document.getElementById('chatModal');   // Overlay chat
+const chatClose   = document.getElementById('chatClose');   // Bouton fermer chat
+const chatMsgs    = document.getElementById('chatMsgs');    // Flux des messages
+const chatForm    = document.getElementById('chatForm');    // Form d’envoi
+const roomIdInp   = document.getElementById('room_id');     // Hidden room_id
+const roomTitle   = document.getElementById('roomTitle');   // Titre salon
+const toBottom    = document.getElementById('toBottom');    // Bouton “aller en bas”
 
 // Modale “salon privé”
 const lockModal   = document.getElementById('lockModal');
@@ -445,6 +75,98 @@ let pollToken   = 0;        // Invalide les anciens polls lors d’un changement
 let lastId      = 0;        // Dernier id message reçu
 let currentRoom = 0;        // Room ouverte
 let pollDelay   = 2000;     // 2s
+
+
+
+
+
+// Active Users — minimal JS module
+// Requirements: global BASE, CURRENT_USER_ID, escapeHtml(), and an endpoint /chat_presence_list.php
+// Optional: user profile endpoint at /user_card.php?id=... and showModal/hydrateUserModal helpers
+
+(function(){
+  const ACTIVE_BOX = document.getElementById('activeUsersBox');
+  if (!ACTIVE_BOX) return;
+
+  const PRESENCE_THRESHOLD_S = 90;
+
+  function getRoomParam(){
+    try { return (typeof currentRoom !== 'undefined' && currentRoom) ? `&room_id=${encodeURIComponent(currentRoom)}` : ''; }
+    catch { return ''; }
+  }
+
+const ACTIVE_BOX = document.getElementById('activeUsersBox');
+const PRESENCE_THRESHOLD_S = 90; // doit être ≤ au seuil serveur
+
+async function refreshActiveUsers(){
+  if (!ACTIVE_BOX) return;
+  try{
+    const roomParam = (typeof currentRoom !== 'undefined' && currentRoom) ? `&room_id=${encodeURIComponent(currentRoom)}` : '';
+    const r = await fetch(`${BASE}/chat_presence_list.php?threshold=${PRESENCE_THRESHOLD_S}${roomParam}`, {
+      credentials:'same-origin', cache:'no-store'
+    });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (!j.ok) return;
+
+    ACTIVE_BOX.innerHTML = '';
+    j.users.forEach(u => {
+      const d = document.createElement('div');
+      d.className = 'user-card';
+      d.dataset.userId = String(u.id);
+      const av = escapeHtml(u.avatar_url || `${BASE}/uploads/avatars/default.png`);
+      const name = escapeHtml(u.pseudo || 'Profil');
+      d.innerHTML = `<img class="av" src="${av}" alt=""><div class="name">${name}</div><div class="dot" title="actif"></div>`;
+      d.addEventListener('click', () => openUserModalById(u.id));
+      ACTIVE_BOX.appendChild(d);
+    });
+  }catch{}
+}
+
+ /* === OUVERTURE MODALE PROFIL PAR ID (unique, sans collision) === */
+
+async function openUserModalById(userId){
+  try{
+    const r = await fetch(`${BASE}/user_card.php?id=${encodeURIComponent(userId)}`, {
+      credentials:'same-origin', cache:'no-store'
+    });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (!j.ok || !j.user) return;
+
+    if (typeof hydrateUserModal === 'function') hydrateUserModal(j.user);
+    if (typeof showModal === 'function' && typeof userModal !== 'undefined') {
+      showModal(userModal);
+    } else if (typeof userModal !== 'undefined' && userModal) {
+      userModal.hidden = false;
+    }
+  }catch{}
+}
+ /* === BOUCLE ACTIFS (timer distinct de la présence) ================= */
+
+let activeUsersTimer = null;
+function startActiveUsersLoop(){
+  if (activeUsersTimer) clearInterval(activeUsersTimer);
+  refreshActiveUsers();
+  activeUsersTimer = setInterval(refreshActiveUsers, 15000);
+}
+function stopActiveUsersLoop(){
+  if (activeUsersTimer){ clearInterval(activeUsersTimer); activeUsersTimer = null; }
+}
+document.addEventListener('DOMContentLoaded', startActiveUsersLoop);
+
+// Si tu as déjà un hook d’ouverture de salon
+if (typeof onRoomChanged === 'function'){
+  const __prevOnRoomChanged = onRoomChanged;
+  window.onRoomChanged = function(){
+    try { __prevOnRoomChanged(); } catch {}
+    refreshActiveUsers();
+  };
+}
+
+
+
+
 
 /* === Aides génériques ====================================================== */
 function escapeHtml(s){
@@ -489,47 +211,9 @@ document.addEventListener('keydown', e => {
   if (lockModal && !lockModal.hidden) lockModal.hidden = true;
 });
 
-/* === Modale “actifs” : close + open handlers ============================== */
-activeModal?.addEventListener('click', e => {
-  if (e.target === e.currentTarget) activeModal.hidden = true;
-});
+/* === Modale “actifs” : close handlers ===================================== */
+activeModal?.addEventListener('click', e => { if (e.target === e.currentTarget) activeModal.hidden = true; });
 activeClose?.addEventListener('click', () => { activeModal.hidden = true; });
-
-showActive?.addEventListener('click', async () => {
-  if (!currentRoom) return;
-
-  try {
-    const r = await fetch(`${BASE}/chat_presence_list.php?room_id=${currentRoom}`, {
-      cache: 'no-store',
-      credentials: 'same-origin'
-    });
-    const j = await r.json();
-    const list = Array.isArray(j?.users) ? j.users : [];
-
-    activeModalBody.innerHTML = list.length
-      ? list.map(u => {
-          const safeName = escapeHtml(u.pseudo || '—');
-          const avatarSrc = u.avatar_url
-            ? `${BASE}/${u.avatar_url}`
-            : `${BASE}/uploads/avatars/default.png`;
-
-          return `
-            <div class="activeRow" data-id="${u.id}">
-              <img class="active-avatar" src="${avatarSrc}" alt="${safeName}" loading="lazy">
-              <span class="active-name">
-                ${safeName}${u.id === CURRENT_USER_ID ? ' <span class="meTag">vous</span>' : ''}
-              </span>
-            </div>
-          `;
-        }).join('')
-      : '<div class="mut">Aucun actif</div>';
-
-    activeModal.hidden = false;
-  } catch {
-    activeModalBody.innerHTML = '<div class="mut">Erreur de chargement</div>';
-    activeModal.hidden = false;
-  }
-});
 
 /* =============================================================================
  *                                SALONS
@@ -651,6 +335,7 @@ RLIST.addEventListener('click', (e) => {
   const priv = row.dataset.private === '1';
 
   if (priv) {
+    // Affiche la modale “privé”
     document.getElementById('lock_room_id').value = id;
     document.getElementById('lockStatus').textContent = '';
     document.getElementById('lockModal').hidden = false;
@@ -670,49 +355,36 @@ loadRooms();
  * l’onglet courant. On ping le serveur toutes les 20 s.
  * La liste des actifs se base sur un “last_seen” < 45 s.
  */
-/* Présence : ping + liste des actifs */
 const PRESENCE_KEY = localStorage.getItem('presence_uuid')
   || (() => { const u = crypto.randomUUID(); localStorage.setItem('presence_uuid', u); return u; })();
 
-let presenceTimer = null;       // ping last_seen
-let presenceListTimer = null;   // refresh affichage div
+let presenceTimer = null;
 
 function startPresence(){
   stopPresence();             // pas de doublon de timers
   if (!currentRoom) return;
-
-  // Ping BDD toutes les 20 s
   presenceTimer = setInterval(presencePing, 20000);
   presencePing();             // ping immédiat dès l’ouverture
-
-  // Rafraîchit la liste affichée toutes les 25 s
-  if (presenceInline) {
-    refreshInlinePresence();  // premier affichage
-    presenceListTimer = setInterval(refreshInlinePresence, 25000);
-  }
 }
-
 function stopPresence(){
   if (presenceTimer) { clearInterval(presenceTimer); presenceTimer = null; }
-  if (presenceListTimer) { clearInterval(presenceListTimer); presenceListTimer = null; }
 }
 
 async function presencePing(){
   if (!currentRoom) return;
   try {
     const body = new URLSearchParams({ room_id:String(currentRoom), session_key:PRESENCE_KEY });
-    await fetch(`${BASE}/chat_presence_ping.php`, {
-      method:'POST',
-      body,
-      credentials:'same-origin',
-      cache:'no-store'
+    const r = await fetch(`${BASE}/chat_presence_ping.php`, {
+      method:'POST', body, credentials:'same-origin', cache:'no-store'
     });
+    // DEBUG temporaire ; à retirer en prod si bruyant :
+    // const t = await r.clone().text(); console.debug('presencePing', r.status, t);
   } catch {}
-}
+}/* Ouvre la modale “Actifs” et te surligne si présent */
+showActive?.addEventListener('click', async () => {
+  if (!currentRoom) return;
 
-// Met à jour la div #presenceInline avec les users en ligne du salon courant
-async function refreshInlinePresence(){
-  if (!currentRoom || !presenceInline) return;
+  try { await presencePing(); } catch {}
 
   try {
     const r = await fetch(`${BASE}/chat_presence_list.php?room_id=${currentRoom}`, {
@@ -722,7 +394,7 @@ async function refreshInlinePresence(){
     const j = await r.json();
     const list = Array.isArray(j?.users) ? j.users : [];
 
-    presenceInline.innerHTML = list.length
+    activeModalBody.innerHTML = list.length
       ? list.map(u => {
           const safeName = escapeHtml(u.pseudo || '—');
           const avatarSrc = u.avatar_url
@@ -738,11 +410,18 @@ async function refreshInlinePresence(){
             </div>
           `;
         }).join('')
-      : '<div class="mut">Aucun utilisateur en ligne</div>';
-  } catch {
-    presenceInline.innerHTML = '<div class="mut">Erreur de chargement</div>';
-  }
-}
+      : '<div>Aucun actif</div>';
+
+    activeModal.hidden = false;
+
+    // Scroll vers toi si tu es listé
+    const me = activeModalBody.querySelector(`.activeRow[data-id="${CURRENT_USER_ID}"]`);
+    if (me) {
+      me.classList.add('is-me');
+      me.scrollIntoView({ block: 'center' });
+    }
+  } catch {}
+});
 
 /* =============================================================================
  *                         DÉVERROUILLAGE SALON PRIVÉ
@@ -791,9 +470,11 @@ lockForm.addEventListener('submit', async (e)=>{
  *                          OUVERTURE / FERMETURE SALON
  * =============================================================================*/
 function openRoom(id, name){
+  // Place le chat devant, ferme la fiche user si ouverte
   chatModal.classList.remove('behind');
   if (userModal) userModal.hidden = true;
 
+  // Reset d’état pour ce salon
   currentRoom = id;
   lastId = 0;
   roomIdInp.value = id;
@@ -802,9 +483,11 @@ function openRoom(id, name){
   toBottom.style.display = 'none';
   chatModal.style.display = 'flex';
 
+  // Redémarre polling messages + présence
   stopPolling();  startPolling();
   stopPresence(); startPresence();
 
+  // Focus rapide dans la zone de saisie
   const bodyInput = chatForm.querySelector('[name="body"]');
   if (bodyInput) setTimeout(() => bodyInput.focus(), 50);
 }
@@ -831,11 +514,15 @@ chatMsgs.addEventListener('scroll', () => {
   toBottom.style.display = isNearBottom(chatMsgs) ? 'none' : 'block';
 });
 toBottom.addEventListener('click', () => scrollToBottom(chatMsgs, true));
-
 /* Rendu d’un message (texte + image) */
+
 function renderMessage(m){
   const el = document.createElement('div');
   el.className = 'msg';
+
+
+
+
 
   // Avatar
   const avatar = document.createElement('img');
@@ -852,11 +539,11 @@ function renderMessage(m){
   const content = document.createElement('div');
   content.className = 'msg-content';
 
-  // Meta: pseudo + date/heure
+  // Meta: pseudo + date/heure construction du message 
   const meta = document.createElement('div');
   meta.className = 'meta';
 
-  const who = document.createElement(m.sender_id ? 'button' : 'span'); // pseudo CLICK
+   const who = document.createElement(m.sender_id ? 'button' : 'span'); // pseudo CLICK
   if (m.sender_id) {
     who.type = 'button';
     who.className = 'userLink';
@@ -865,10 +552,15 @@ function renderMessage(m){
     who.style.all = 'unset';
     who.style.cursor = 'pointer';
     who.style.color = '#93c5fd';
+  
+    
   }
-  who.textContent = typeof m.sender === 'string' ? m.sender : '—';
+  who.textContent = typeof m.sender === 'string' ? m.sender : '—'; // pseudo safe
+  
+  // ajoute le pseudo sur le conteneur du message pour le clic
   el.dataset.user = who.textContent || '';
-  meta.appendChild(who);
+
+  meta.appendChild(who); // pseudo CLICK
 
   if (m.created_at) {
     const when = new Date(String(m.created_at).replace(' ','T')).toLocaleString();
@@ -876,6 +568,7 @@ function renderMessage(m){
     sep.textContent = ' • ' + when;
     meta.appendChild(sep);
   }
+
   content.appendChild(meta);
 
   // Corps texte
@@ -884,11 +577,15 @@ function renderMessage(m){
     body.className = 'msg-body';
     body.style.whiteSpace = 'pre-wrap';
     const span = document.createElement('span');
-
+   // Mise en forme des @mentions dans le texte du message
+    // Exemple: "@Remi-85" devient <span class="mention">@Remi-85</span>
     const mentionRegex = /(@[A-Za-zÀ-ÖØ-öø-ÿ0-9_.-]+)/g;
     const htmlWithMentions = m.body.replace(mentionRegex, '<span class="mention">$1</span>');
+
+    // On injecte le HTML généré (ok ici car le texte vient de ton backend, pas d'un input brut non filtré)
     span.innerHTML = htmlWithMentions;
 
+    // Couleur perso si définie et valide (s'applique au texte entier du message)
     if (m.color && /^#[0-9A-Fa-f]{6}$/.test(m.color)) {
       span.style.color = m.color;
     }
@@ -896,6 +593,7 @@ function renderMessage(m){
     body.appendChild(span);
     content.appendChild(body);
   }
+
 
   // Image éventuelle
   if (m.file_url && /^image\//.test(m.file_mime || '')) {
@@ -925,9 +623,21 @@ function renderMessage(m){
     }
   }
 
+
+  
+
   el.appendChild(content);
   return el;
+
+
+
+
+
+  
 }
+
+
+
 
 /* Fetch des nouveaux messages depuis lastId */
 async function fetchMessages(){
@@ -937,6 +647,7 @@ async function fetchMessages(){
       cache:'no-store', credentials:'same-origin'
     });
     if (!r.ok) {
+      // 403/404 : on stoppe le polling (ex: salon redevenu privé)
       if (r.status === 403 || r.status === 404) {
         stopPolling();
         toBottom.style.display = 'none';
@@ -954,26 +665,28 @@ async function fetchMessages(){
       if (stick) scrollToBottom(chatMsgs, true);
       toBottom.style.display = isNearBottom(chatMsgs) ? 'none' : 'block';
     }
-  } catch {}
+  } catch { /* silencieux */ }
 }
 
-/* Polling 2 s avec token */
+/* Polling 2 s avec token pour éviter les “réponses tardives” d’un ancien salon */
 function startPolling(){
   stopPolling();
   const myToken = ++pollToken;
   const wrappedFetch = async () => {
-    if (myToken !== pollToken) return;
+    if (myToken !== pollToken) return; // on a changé de salon entre-temps
     await fetchMessages();
   };
   wrappedFetch();
   pollTimer = setInterval(wrappedFetch, pollDelay);
 }
 function stopPolling(){
-  pollToken++;
+  pollToken++;                 // invalide le tour courant
   if (pollTimer){ clearInterval(pollTimer); pollTimer = null; }
 }
 
-/* Upload image : compression côté client */
+/* Upload image : compression côté client avant envoi
+   - formats acceptés : jpeg/png/webp → converti en JPEG
+   - max dimension 1280 px, qualité 0.8 */
 chatForm.querySelector('input[type="file"]').addEventListener('change', async (e) => {
   const file = e.target.files[0];
   if (!file || !/^image\/(jpeg|png|webp)$/.test(file.type)) return;
@@ -1013,6 +726,7 @@ chatForm.addEventListener('submit', async (e) => {
     });
 
     if (r.status === 429){
+      // Cas limites gérés côté serveur pour anti-spam
       let msg = 'Trop de messages.';
       try{
         const j = await r.json();
@@ -1040,9 +754,12 @@ chatForm.addEventListener('submit', async (e) => {
  *                           MODALE PROFIL + DM
  * =============================================================================*/
 
+// Cible DM en cours
 let dmTarget = null;
 let umUserId = 0;
 
+/* Hydratation de la modale profil.
+   - Initialise le bloc DM avec avatar + pseudo si ce n’est pas toi. */
 function hydrateUserModal(user){
   if (!user || !user.id) {
     umBox.hidden = true;
@@ -1064,6 +781,7 @@ function hydrateUserModal(user){
     return;
   }
 
+  // Cible DM valide
   dmTarget = user.id;
   const name = user.pseudo || 'Utilisateur';
 
@@ -1087,7 +805,7 @@ function hydrateUserModal(user){
   dmBody.value = '';
   dmHint.textContent = `Message privé à ${name}`;
 }
-
+/* Envoi DM */
 dmForm?.addEventListener('submit', async (e)=>{
   e.preventDefault();
   if (!dmTarget) return;
@@ -1114,14 +832,38 @@ dmForm?.addEventListener('submit', async (e)=>{
   }
 });
 
-function openUserModal(){
-  if (userModal?.parentNode !== document.body) document.body.appendChild(userModal);
-  if (chatModal?.parentNode !== document.body) document.body.appendChild(chatModal);
 
-  chatModal.classList.add('behind');
-  userModal.hidden = false;
-  umBox.hidden = true;
+
+// 2) ouvre la modale utilisateur + hydrater le bloc DM
+async function openUserModal(userId){
+  try{
+    // Tu as déjà un endpoint profil; adapte l’URL si nécessaire
+    const r = await fetch(`${BASE}/user_card.php?id=${encodeURIComponent(userId)}`, {
+      credentials:'same-origin', cache:'no-store'
+    });
+    if (!r.ok) return;
+    const j = await r.json();
+    if (!j.ok || !j.user) return;
+
+    hydrateUserModal(j.user);  // ta fonction existante
+    showModal(userModal);      // ta fonction existante
+  }catch(e){/* silencieux */}
 }
+
+
+
+
+// Appelle startActiveUsersLoop() après que la page est prête
+document.addEventListener('DOMContentLoaded', startActiveUsersLoop);
+
+// Si tu changes de salon: relance pour prendre en compte room_id
+function onRoomChanged(){
+  // ... ton code existant ...
+  refreshActiveUsers(); // rafraîchit la liste pour ce salon
+}
+
+
+
 function closeUserModal(){
   userModal.hidden = true;
   chatModal.classList.remove('behind');
@@ -1134,21 +876,17 @@ function closeUserModal(){
 umClose?.addEventListener('click', closeUserModal);
 userModal?.addEventListener('click', e => { if (e.target === userModal) closeUserModal(); });
 
-chatMsgs.addEventListener('click', async (e) => {
+
+/* === DÉLÉGATION : clic pseudo dans le flux messages → modale profil === */
+
+chatMsgs.addEventListener('click', (e) => {
   const a = e.target.closest('.userLink');
   if (!a) return;
-
   const uid = parseInt(a.dataset.userId, 10) || 0;
   if (!uid) return;
+  openUserModalById(uid);
+});
 
-  const isSelf = Number(uid) === Number(CURRENT_USER_ID);
-  umBox.hidden = isSelf;
-
-  umUserId = uid;
-  umName.textContent = 'Profil';
-  umBody.textContent = 'Chargement…';
-
-  openUserModal();
 
   try {
     const url = `${BASE}/api_user_profile.php?user_id=${uid}`;
@@ -1164,7 +902,7 @@ chatMsgs.addEventListener('click', async (e) => {
     }
 
     const u = j.user;
-    hydrateUserModal(u);
+    hydrateUserModal(u);  // initialise la cible DM avec avatar/pseudo si ≠ soi
 
     umName.textContent = u.pseudo || 'Profil';
     umBody.innerHTML =
@@ -1174,6 +912,8 @@ chatMsgs.addEventListener('click', async (e) => {
            ${u.city ? `<div><strong>Ville :</strong> ${escapeHtml(u.city)}</div>` : ''}
            ${u.sex ? `<div><strong>Sexe :</strong> ${escapeHtml(u.sex)}</div>` : ''}
            ${u.height_cm ? `<div><strong>Taille :</strong> ${u.height_cm} cm</div>` : ''}
+
+
            ${u.postal_code ? `<div><strong>CP :</strong> ${escapeHtml(u.postal_code)}</div>` : ''}
            ${u.relationship_status ? `<div><strong>Statut :</strong> ${escapeHtml(u.relationship_status)}</div>` : ''}
            ${u.bio ? `<div style="margin-top:6px;white-space:pre-wrap">${escapeHtml(u.bio)}</div>` : ''}
@@ -1186,13 +926,13 @@ chatMsgs.addEventListener('click', async (e) => {
 
 // Clic sur un message -> insère @pseudo dans le champ de saisie
 (function() {
-  const chatMsgsLocal = document.getElementById('chatMsgs');
-  if (!chatMsgsLocal) return;
+  const chatMsgs = document.getElementById('chatMsgs');
+  if (!chatMsgs) return;
 
   const getInput = () =>
     document.querySelector('#chatForm textarea, #chatForm input[name="message"], #chatInput');
 
-  chatMsgsLocal.addEventListener('click', function(e) {
+  chatMsgs.addEventListener('click', function(e) {
     const bodyEl = e.target.closest('.msg-body');
     if (!bodyEl) return;
 
@@ -1206,6 +946,8 @@ chatMsgs.addEventListener('click', async (e) => {
     if (!input) return;
 
     const mention = '@' + pseudo + ' ';
+
+    // enlève une mention déjà en début si présente
     const cleaned = input.value.replace(/^@\S+\s+/, '');
     input.value = mention + cleaned;
 
@@ -1214,13 +956,10 @@ chatMsgs.addEventListener('click', async (e) => {
   });
 })();
 
+
+
+
 /* =============================================================================
  *                                   BOOT
  * =============================================================================*/
-// Rien d’autre : la liste est chargée au boot plus haut.
-</script>
-
-
-
-
-</body></html>
+ // Rien d’autre : la liste est chargée au boot plus haut.
