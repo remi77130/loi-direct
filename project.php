@@ -159,6 +159,9 @@ unset($_SESSION['comment_draft']);
 <!doctype html>
 <html lang="fr">
 <head>
+
+<meta name="robots" content="noindex, nofollow">
+
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title><?php echo $project ? htmlspecialchars($project['title'],ENT_QUOTES) : 'Projet introuvable'; ?> — Loi Direct</title>
 

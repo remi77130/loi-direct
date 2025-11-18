@@ -273,6 +273,8 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 <!doctype html>
 <html lang="fr">
 <head>
+
+
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tchat direct</title>
 <link rel="stylesheet" href="<?= APP_BASE ?>/styles/index.css">
@@ -301,7 +303,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 </span>
     <a href="<?= APP_BASE ?>/index.php" class="active">Récents</a>
     <a href="<?= APP_BASE ?>/index.php?mine=1">Mes post</a>
-    <a style="color: pink;font-weight:700;" href="<?= APP_BASE ?>/chat_rooms.php" target="_blank" rel="noopener">Rooms</a>
+    <a style="color: pink;font-weight:700;" href="<?= APP_BASE ?>/chat_rooms.php" rel="noopener">Rooms</a>
 
     <!-- ton formulaire de recherche -->
     <form action="<?= APP_BASE ?>/index.php" method="get" class="nav-search">

@@ -110,6 +110,8 @@ $totalPages = max(1, (int)ceil($count / $per));
 <!doctype html>
 <html lang="fr">
 <head>
+  <meta name="robots" content="noindex, nofollow">
+
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Profil — <?= htmlspecialchars($u['pseudo'],ENT_QUOTES) ?></title>
 <style>

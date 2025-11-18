@@ -9,24 +9,56 @@ require_login();
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
-$room_id = (int)($_GET['room_id'] ?? 0);
-if ($room_id<=0) { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'bad_room']); exit; }
-
+$room_id = isset($_GET['room_id']) ? (int)$_GET['room_id'] : 0;
 $ttl = 45; // secondes de fraîcheur
-$sql = "
-  SELECT
-    u.id,
-    u.pseudo,
-    u.avatar_url
-  FROM chat_presence p
-  JOIN users u ON u.id = p.user_id
-  WHERE p.room_id = ?
-    AND p.last_seen > (NOW() - INTERVAL ? SECOND)
-  GROUP BY u.id, u.pseudo, u.avatar_url
-  ORDER BY u.pseudo
-";
-$st = $mysqli->prepare($sql);
-$st->bind_param('ii', $room_id, $ttl);
+
+// Si room_id > 0 -> liste des actifs pour CE salon
+
+// s’il appelle juste chat_presence_list.php (ou room_id=0) → tu récupères tous les users actifs 
+// (toute table chat_presence confondue), 
+// donc tu peux remplir presenceInline même avant qu’un salon soit ouvert.
+if ($room_id > 0) {
+  $sql = "
+    SELECT
+      u.id,
+      u.pseudo,
+      u.avatar_url
+    FROM chat_presence p
+    JOIN users u ON u.id = p.user_id
+    WHERE p.room_id = ?
+      AND p.last_seen > (NOW() - INTERVAL ? SECOND)
+    GROUP BY u.id, u.pseudo, u.avatar_url
+    ORDER BY u.pseudo
+  ";
+  $st = $mysqli->prepare($sql);
+  if (!$st) {
+    http_response_code(500);
+    echo json_encode(['ok'=>false,'error'=>'db_prepare']);
+    exit;
+  }
+  $st->bind_param('ii', $room_id, $ttl);
+} else {
+  // Sinon -> liste globale des utilisateurs actifs (n'importe quel salon / room_id)
+  $sql = "
+    SELECT
+      u.id,
+      u.pseudo,
+      u.avatar_url
+    FROM chat_presence p
+    JOIN users u ON u.id = p.user_id
+    WHERE p.last_seen > (NOW() - INTERVAL ? SECOND)
+    GROUP BY u.id, u.pseudo, u.avatar_url
+    ORDER BY u.pseudo
+  ";
+  $st = $mysqli->prepare($sql);
+  if (!$st) {
+    http_response_code(500);
+    echo json_encode(['ok'=>false,'error'=>'db_prepare']);
+    exit;
+  }
+  $st->bind_param('i', $ttl);
+}
+
 $st->execute();
 $res = $st->get_result();
 $users = [];
@@ -37,7 +69,6 @@ while ($r = $res->fetch_assoc()) {
     'avatar_url' => $r['avatar_url'] ?? null,
   ];
 }
-
 $st->close();
 
 echo json_encode(['ok'=>true,'users'=>$users], JSON_UNESCAPED_UNICODE);

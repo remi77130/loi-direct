@@ -1,25 +1,29 @@
-
 <IfModule mod_negotiation.c>
   Options -Multiviews
 </IfModule>
 
-<IfModule mod_rewrite.c>RewriteEngine On
+<IfModule mod_rewrite.c>
+  RewriteEngine On
 
-# Forcer HTTPS uniquement sur le domaine tchat-direct.com
-RewriteCond %{HTTP_HOST} ^(www\.)?tchat-direct\.com$ [NC]
-RewriteCond %{HTTPS} off
-RewriteRule ^ https://tchat-direct.com%{REQUEST_URI} [L,R=301]
+  # 1) Toujours enlever le www (HTTP et HTTPS)
+  RewriteCond %{HTTP_HOST} ^www\.tchat-direct\.com$ [NC]
+  RewriteRule ^ https://tchat-direct.com%{REQUEST_URI} [L,R=301]
 
-# Ne pas réécrire si la cible est déjà un fichier ou un dossier
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
+  # 2) Forcer HTTPS sur le domaine nu (sans www)
+  RewriteCond %{HTTP_HOST} ^tchat-direct\.com$ [NC]
+  RewriteCond %{HTTPS} off
+  RewriteRule ^ https://tchat-direct.com%{REQUEST_URI} [L,R=301]
 
-# /p/123-titre -> project.php?id=123
-RewriteRule ^p/([0-9]+)-?([A-Za-z0-9-]*)$ project.php?id=$1 [QSA,L]
+  # 3) Ne pas réécrire si la cible est déjà un fichier ou un dossier
+  RewriteCond %{REQUEST_FILENAME} -f [OR]
+  RewriteCond %{REQUEST_FILENAME} -d
+  RewriteRule ^ - [L]
 
-# /tag/xxx -> index.php?tag=xxx
-RewriteRule ^tag/([A-Za-z0-9-]+)$ index.php?tag=$1 [QSA,L]
+  # 4) /p/123-titre -> project.php?id=123
+  RewriteRule ^p/([0-9]+)-?([A-Za-z0-9-]*)$ project.php?id=$1 [QSA,L]
+
+  # 5) /tag/xxx -> index.php?tag=xxx
+  RewriteRule ^tag/([A-Za-z0-9-]+)$ index.php?tag=$1 [QSA,L]
 
 </IfModule>
 

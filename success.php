@@ -10,6 +10,8 @@ $pseudo = $_SESSION['pseudo'] ?? 'inconnu';
 <!doctype html>
 <html lang="fr">
 <head>
+  <meta name="robots" content="noindex, nofollow">
+
   <meta charset="utf-8">
   <title>Bienvenue</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">

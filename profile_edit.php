@@ -158,6 +158,8 @@ if (!empty($_FILES['avatar']['name'])) {
 <!doctype html>
 <html lang="fr">
 <head>
+  <meta name="robots" content="noindex, nofollow">
+
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Éditer mon profil — Loi Direct</title>
 <style>

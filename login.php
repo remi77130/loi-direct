@@ -9,6 +9,9 @@ session_start();
 require __DIR__ . '/db.php';
 require __DIR__ . '/config.php'; // pour APP_BASE
 
+
+
+
 // === Configuration brute-force (ajuste si besoin) ===
 const IP_WINDOW_SECONDS = 15 * 60;  // fenêtre 15 min
 const IP_MAX_FAILS      = 10;       // seuil échecs
@@ -226,6 +229,8 @@ if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
 }
 
 ?>
+
+
 <!doctype html>
 <html lang="fr">
 <head>
@@ -234,23 +239,39 @@ if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
 
 <title>Tchat Direct – Tchat en ligne anonyme et gratuit</title>
 
-<link rel="icon" type="image/png" href="uploads/tchat_direct_favicon.png">
+<!-- Favicon principal -->
+<link rel="icon" href="/favicon.ico" sizes="any">
 
+<!-- Favicon PNG pour les navigateurs modernes -->
+<link rel="icon" type="image/png" sizes="32x32" href="/uploads/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/uploads/favicon-16x16.png">
+
+<!-- Icône pour iOS / mobile -->
+<link rel="apple-touch-icon" sizes="180x180" href="/uploads/apple-touch-icon.png">
+
+<!-- PWA / manifest -->
+<link rel="manifest" href="/uploads/site.webmanifest">
 
 <meta name="description" content="Tchat Direct est une plateforme de tchat en ligne anonyme et gratuit. Rejoignez des salons, créez vos propres rooms et discutez en direct.">
 <meta name="keywords" content="tchat direct, tchat en ligne, chat anonyme, salon de discussion">
+
+<!-- Canonical : si l’URL officielle est bien /login.php -->
 <link rel="canonical" href="https://tchat-direct.com/login.php">
+
+<!-- Indexation autorisée -->
 <meta name="robots" content="index,follow">
 
-<!-- Google Tag Manager -->
+<!-- jQuery : uniquement si tu l’utilises vraiment sur cette page -
+<script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>-->
+
+<!-- Google Analytics 4 -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-FHFM0ESDMP"></script>
 <script>
   window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+  gtag('config', 'G-FHFM0ESDMP');
 </script>
-<script async src="https://www.googletagmanager.com/gtm.js?id=GTM-WRBFLTW8"></script>
-<!-- End Google Tag Manager -->
-
-<script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>
-
 
 
 <style>

@@ -85,7 +85,7 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
           $_SESSION['pseudo']  = $pseudo;
           $_SESSION['flash_success'] = random_punchline($pseudo);
 
-          header('Location: '.rtrim(APP_BASE,'/').'/index.php', true, 303);
+          header('Location: '.rtrim(APP_BASE,'/').'/chat_rooms.php', true, 303);
           exit;
         } else {
           $errors[] = "Erreur serveur.";
@@ -95,16 +95,56 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
       }
     }
   }
-}
+} 
 ?>
+
 <!doctype html>
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <link rel="icon" type="image/png" href="uploads/tchat_direct_favicon.png">
-
-  <title>Inscription</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Inscription – Tchat Direct</title>
+
+  <!-- Favicon principal -->
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <!-- Favicon PNG pour les navigateurs modernes -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/uploads/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/uploads/favicon-16x16.png">
+
+  <!-- Icône pour iOS / mobile -->
+  <link rel="apple-touch-icon" sizes="180x180" href="/uploads/apple-touch-icon.png">
+
+  <!-- PWA / manifest -->
+  <link rel="manifest" href="/uploads/site.webmanifest">
+
+  <!-- SEO -->
+  <link rel="canonical" href="https://tchat-direct.com/register.php">
+  <meta name="description" content="Inscrivez-vous sur Tchat Direct pour rejoindre des salons de discussion anonymes et discuter en ligne gratuitement.">
+  <meta name="robots" content="index,follow">
+
+  <!-- jQuery UNIQUEMENT si tu en as besoin ici -
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>-->
+
+  <!-- Google Analytics 4 -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FHFM0ESDMP"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-FHFM0ESDMP');
+  </script>
+</head>
+
+
+
+
+
+
+
+
+
+
   <style>
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
     body { background:#0f172a; color:#e5e7eb; display:flex; min-height:100vh; align-items:center; justify-content:center; margin:0; }
@@ -203,6 +243,7 @@ body{
   <a href="register.php" class="logo-link">
     <img src="uploads/tchat_direct_logo.webp" alt="Tchat Direct logo" class="logo-img">
   </a>
+
 </header>
   <div class="card">
     <h1>Créer un compte</h1>
