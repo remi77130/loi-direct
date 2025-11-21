@@ -29,6 +29,7 @@ $sql = "
     r.id,
     r.name,
     r.is_private,
+    r.created_by,
     (SELECT MAX(created_at)
        FROM chat_messages cm
        WHERE cm.room_id = r.id) AS last_at,
@@ -58,6 +59,8 @@ if ($res) {
       'is_private'   => (int)$row['is_private'], // 0 ou 1
       'last_at'      => $row['last_at'] ? (string)$row['last_at'] : null,
       'active_count' => isset($row['active_count']) ? (int)$row['active_count'] : 0,
+      'created_by'   => isset($row['created_by']) ? (int)$row['created_by'] : 0,
+
     ];
   }
 }

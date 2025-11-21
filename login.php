@@ -240,7 +240,8 @@ if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
 <title>Tchat Direct – Tchat en ligne anonyme et gratuit</title>
 
 <!-- Favicon principal -->
-<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+
 
 <!-- Favicon PNG pour les navigateurs modernes -->
 <link rel="icon" type="image/png" sizes="32x32" href="/uploads/favicon-32x32.png">

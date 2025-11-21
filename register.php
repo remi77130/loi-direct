@@ -107,7 +107,7 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
   <title>Inscription – Tchat Direct</title>
 
   <!-- Favicon principal -->
-  <link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="icon" href="favicon.ico" type="image/x-icon">
   <!-- Favicon PNG pour les navigateurs modernes -->
   <link rel="icon" type="image/png" sizes="32x32" href="/uploads/favicon-32x32.png">
   <link rel="icon" type="image/png" sizes="16x16" href="/uploads/favicon-16x16.png">
