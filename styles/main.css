@@ -1,0 +1,10 @@
+@font-face {
+  font-family: 'TchatDirect';
+  src: url('/styles/fonts/techat_direct_font_roboto.ttf') format('truetype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+body {
+  font-family: 'TchatDirect', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}

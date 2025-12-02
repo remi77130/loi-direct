@@ -7,6 +7,12 @@ require __DIR__ . '/db.php';
 require __DIR__ . '/config.php'; // APP_BASE, helpers…
 
 
+// IMPORTANT : NE PAS mettre require_login() ici,
+// register.php doit rester accessible à tous (public).
+
+// --- 1) Récupérer les 10 dernières rooms publiques (is_private = 0) ---
+
+
 /* INFO FICHIER 
 
 Lecture de $pseudo et validations serveur complètes.
@@ -15,7 +21,15 @@ Hash du mot de passe toujours stocké (password_hash).
 Gestion d’erreurs prepare/execute avec error_log + message générique.
 Redirection sûre via APP_BASE.
 
-CSRF token */
+
+*/
+
+
+
+
+
+
+
 if (empty($_SESSION['csrf'])) {
   $_SESSION['csrf'] = bin2hex(random_bytes(16));
 }
@@ -104,6 +118,23 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Tchat-Direct",
+  "url": "https://tchat-direct.com/",
+  "description": "Tchat-Direct est un site de tchat en ligne avec salons publics anonymes, messages instantanés, images et réactions."
+}
+</script>
+
+
+<meta property="og:title" content="Room guitare – Tchat Direct">
+<meta property="og:description" content="Rejoins tchat direct pour discuter en ligne dans des salons publics anonymes. Partage tes passions, échange avec d'autres et profite d'une expérience de tchat simple et gratuite.">
+<meta property="og:url" content="https://tchat-direct.com">
+<meta property="og:type" content="website">
+
+
   <title>Inscription – Tchat Direct</title>
 
   <!-- Favicon principal -->
@@ -116,11 +147,13 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
   <link rel="apple-touch-icon" sizes="180x180" href="/uploads/apple-touch-icon.png">
 
   <!-- PWA / manifest -->
-  <link rel="manifest" href="/uploads/site.webmanifest">
+  <link rel="manifest" href="site.webmanifest">
 
   <!-- SEO -->
   <link rel="canonical" href="https://tchat-direct.com/register.php">
   <meta name="description" content="Inscrivez-vous sur Tchat Direct pour rejoindre des salons de discussion anonymes et discuter en ligne gratuitement.">
+  <meta name="keywords" content="tchat direct, tchat en ligne, chat anonyme, coco chat, direct tchat">
+
   <meta name="robots" content="index,follow">
 
   <!-- jQuery UNIQUEMENT si tu en as besoin ici -
@@ -134,31 +167,29 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
     gtag('js', new Date());
     gtag('config', 'G-FHFM0ESDMP');
   </script>
-</head>
 
 
 
 
+<style>
 
-
-
-
-
-
-  <style>
+  
     :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    body { background:#0f172a; color:#e5e7eb; display:flex; min-height:100vh; align-items:center; justify-content:center; margin:0; }
     .card { background:#111827;margin:5px; padding:24px; border-radius:16px; width:90%; max-width:420px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
     h1 { margin:0 0 16px; font-size:24px; }
     label { display:block; font-size:17px;     font-weight: 500; margin-bottom:12px; color:#cbd5e1; }
     input { width:90%; padding:12px 14px; border-radius:10px; border:1px solid #334155; background:#0b1220; color:#e5e7eb; outline:none; }
     .hint { font-size:12px; color:#94a3b8; margin-top:6px; }
+
     .status { font-size:12px; margin-top:6px; }
     .ok { color:#34d399; } .ko { color:#f87171; }
     .btn { width:100%; margin-top:16px; padding:12px; border:none; border-radius:10px; background:#2563eb; color:white; font-weight:600; cursor:pointer; }
     .btn:disabled { opacity:.6; cursor:not-allowed; }
     .errors { background:#7f1d1d; color:#fecaca; padding:10px; border-radius:8px; margin-bottom:12px; }
-    .footer { margin-top:14px; font-size:12px; color:#94a3b8; text-align:center; }
+    .footer_link_login { margin-top:14px; font-size:20px; text-align:center; }
+    .footer_link_login a{
+      text-decoration:underline;
+    }
     a { color:#93c5fd; text-decoration: none; }
 
     .pass-wrap { position:relative; }
@@ -178,6 +209,9 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
 .toggle-pass:focus { outline:2px solid rgba(147,197,253,.25); }
 
 
+.container_text_login_01 {
+margin-top: 25px; width: 90%;
+}
 .site-header{
   position:absolute;
   top:0;
@@ -194,34 +228,29 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
   height:150px;
   display:block;
 }
+
+
 body{
   background:#0f172a;
   color:#e5e7eb;
+  margin:0;
+  min-height:100vh;
+}
+
+/* C’est main qui gère la mise en page */
+main#main-content{
   display:flex;
   flex-direction:column;
-  min-height:100vh;
-  align-items:center;
-  justify-content:center;
-  margin:0;
-  padding-top:60px; /* pour ne pas que le contenu passe sous le header */
+  align-items:center;   /* centre horizontalement la card */
+  padding-top:60px;     /* pour ne pas passer sous le header */
 }
 
 
+  h3
+  {
+        font-size: 1.5rem;
 
-
-  </style>
-</head>
-<body>
-
-
-
-<!-- Bannière version Bêta -->
-<div class="banner" id="betaBanner">
-  🚧 Ce site est actuellement en version <strong>Bêta</strong>. Certaines fonctionnalités peuvent être instables. Merci de na pas partager.
-</div>
-</div>
-
-<style>
+  }
 #betaBanner {
   margin-top: 100px;
   background: linear-gradient(90deg, #1e293b, #0f172a);
@@ -235,18 +264,173 @@ body{
 #betaBanner strong {
   color: #fbbf24;              /* accent sur le mot "Bêta" */
 }
+
+.public-room
+{
+    padding: 5px;
+    margin-bottom: 20px;
+    border-bottom: 3px solid #000000;}
+
+
+
+.public-rooms {
+  margin: 2rem 0;
+  padding: 1rem 1.5rem;
+  background: #0f172a;
+  color: #e5e7eb;
+  border-radius: 10px;
+}
+
+.public-rooms h1 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  font-size: 1.6rem;
+}
+
+.public-rooms p {
+  width: 90%;
+}
+
+.public-rooms {
+  width: 90%;
+  max-width: 420px;   /* même largeur max que .card */
+  margin: 2rem 0;
+  padding: 1rem 1.5rem;
+  background: #0f172a;
+  color: #e5e7eb;
+  border-radius: 10px;
+}
+
+.public-room__title {
+  margin: 0 0 0.5rem;
+}
+
+.public-room__messages {
+  max-height: 260px;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+
+.public-room__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.public-room__item {
+  padding: 0.4rem 0;
+  border-bottom: 1px dashed #1f2937;
+}
+
+.public-room__meta {
+  font-size: 0.8rem;
+  color: #9ca3af;
+  margin-bottom: 0.15rem;
+}
+
+.public-room__author {
+  font-weight: 600;
+}
+
+.public-room__sep {
+  margin: 0 0.25rem;
+}
+
+.public-room__body {
+  font-size: 0.9rem;
+  line-height: 1.4;
+   word-wrap: break-word;      /* casse les mots trop longs */
+  overflow-wrap: anywhere;    /* force la coupure si besoin */
+}
+
+.public-room__cta {
+  margin-top: 0.7rem;
+}
+
+.btn-primary {
+
+  display: inline-block;
+  padding: 0.45rem 0.9rem;
+  border-radius: 999px;
+  text-decoration: none;
+  border: 1px solid navajowhite;
+  color: white;
+}
+
+.btn-primary:hover {
+  border-color: #93c5fd;
+}
+
+
+
+.public-room__likes {
+  margin-left: 0.5rem;
+  font-size: 0.8rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: #111827;
+  color: #fbbf24;
+}
+
+.public-room__image-wrap {
+  margin: 3px 0px 0px 
+}
+
+.public-room__image {
+  max-width: 20%;
+  height: auto;
+  border-radius: 8px;
+  display: block;
+}
+
+
 </style>
 
 
 
-<header class="site-header">
+
+
+</head>
+
+
+<body>
+
+
+<main id="main-content">
+
+
+
+
+
+<!-- Bannière version Bêta -->
+<div class="banner" id="betaBanner">
+  🚧 Ce site est actuellement en version <strong>Bêta</strong>. Certaines fonctionnalités peuvent être instables. Merci de na pas partager.
+</div>
+
+ <h1>Tchat direct</h1>
+
+
+
+<header  id="header"  class="site-header">
   <a href="register.php" class="logo-link">
     <img src="uploads/tchat_direct_logo.webp" alt="Tchat Direct logo" class="logo-img">
   </a>
 
 </header>
-  <div class="card">
-    <h1>Créer un compte</h1>
+
+
+
+<div class="container_text_login_01">
+<p class="text_login_01">  Interface simple, accès rapide, salons publics et privés, discussions anonymes :
+      Tchat Direct vise l’efficacité sans inscription lourde. Tu te connectes, tu choisis un salon, tu échanges.
+    </p>
+</div>
+
+
+
+  <div id="register-form" class="card">
+   
+    <h2>Créer un compte</h2>
 
     <?php if ($errors): ?>
       <div class="errors">
@@ -254,7 +438,7 @@ body{
       </div>
     <?php endif; ?>
 
-    <form method="post" autocomplete="off" novalidate>
+    <form  method="post" autocomplete="off" novalidate>
       <label for="pseudo">Pseudo
 </label>
       <input type="text" id="pseudo" name="pseudo" minlength="3" maxlength="20"
@@ -282,8 +466,20 @@ body{
       <button id="submitBtn" class="btn" type="submit">S’inscrire</button>
     </form>
 
-    <div class="footer">Déjà inscrit ? <a href="login.php">Connexion</a></div>
+    <div class="footer_link_login">Déjà inscrit ? <a href="login.php"><span style="    font-weight: 600;
+    text-decoration: underline;
+    cursor: pointer; "></span> Connexion</a></div>
   </div>
+
+
+
+
+
+
+<?php include __DIR__ . '/public_rooms_snippet.php'; ?>
+
+
+    </main>
 
 <script>
 // Vérif dispo du pseudo (comme avant)
@@ -307,10 +503,7 @@ $pseudo.addEventListener('input', () => {
     } catch { $status.textContent = 'Erreur de vérification'; $status.className='status ko'; }
   }, 250);
 });
-</script>
 
-
-<script>
 document.querySelectorAll('.toggle-pass').forEach(btn=>{
   btn.addEventListener('click', ()=> {
     const targetId = btn.getAttribute('data-target');
@@ -329,7 +522,59 @@ document.querySelectorAll('.toggle-pass').forEach(btn=>{
     }
   });
 });
+
+
+
+
+
+(function () {
+  const REFRESH_INTERVAL = 10000; // 10 secondes
+
+  async function refreshPublicRooms() {
+    // On ne fait rien si la section n'existe pas (sécurité)
+    const oldSection = document.querySelector('.public-rooms');
+    if (!oldSection) return;
+
+    try {
+      const res = await fetch('public_rooms_snippet.php', {
+        cache: 'no-store',
+        credentials: 'same-origin'
+      });
+      if (!res.ok) {
+        return;
+      }
+
+      const html = await res.text();
+
+      // On parse le HTML reçu pour récupérer la nouvelle <section>
+      const wrapper = document.createElement('div');
+      wrapper.innerHTML = html.trim();
+
+      const newSection = wrapper.querySelector('.public-rooms');
+      if (!newSection) return;
+
+      // Remplacement propre
+      oldSection.replaceWith(newSection);
+    } catch (e) {
+      console.error('refreshPublicRooms error', e);
+    }
+  }
+
+  // Premier appel (optionnel, au cas où tu veux forcer un refresh direct)
+  // refreshPublicRooms();
+
+  // Rafraîchissement toutes les 10 secondes
+  setInterval(refreshPublicRooms, REFRESH_INTERVAL);
+})();
 </script>
+
+
+
+
+
+
+
+
 
 </body>
 </html>
