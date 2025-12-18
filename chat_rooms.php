@@ -11,777 +11,28 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 
 <meta name="robots" content="noindex, nofollow">
-
-<title>Salons de discussion</title>
-<style>
-:root{--bg:#0f172a;--card:#111827;--line:#334155;--txt:#e5e7eb;--mut:#94a3b8;--brand:#2563eb;}
-body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-.wrap{max-width:900px;margin:24px auto;padding:0 16px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
-.btn{background: var(--brand);
-    color: #fff;
-    border: none;
-    border-radius: 100px;
-    font-weight: 700;
-    padding: 9px 13px;
-    cursor: pointer;
-    margin: 5px;}
-
-
-.row{display:flex;align-items:center;justify-content:space-between;padding:10px;border:1px solid var(--line);border-radius:12px;margin:8px 0}
-.mut{color:var(--mut)}
-.rooms{margin-top:10px}
-
-
-/* Liste des salons */
-.rooms{
-  margin-top: 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-/* Carte de salon */
-.row.room{
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 10px 12px;
-  border-radius: 12px;
-  background: #020617;
-  border: 1px solid rgba(148,163,184,.35);
-  box-shadow: 0 4px 10px rgba(0,0,0,.25);
-  transition: background .15s, border-color .15s, transform .08s;
-}
-
-.row.room > div:first-child strong{
-  font-size: 15px;
-}
-
-.row.room > div:last-child{
-  font-size: 12px;
-  color: var(--mut);
-  margin-top: 2px;
-}
-
-.row.room:hover{
-  background: #111827;
-  border-color: rgba(129,140,248,.9);
-  transform: translateY(-1px);
-}
-
-.row.room:focus-visible{
-  outline: 2px solid var(--brand);
-  outline-offset: 2px;
-}
-
-/* Desktop : nom et date sur la même ligne */
-@media (min-width: 640px){
-  .row.room{
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
-}
-
-
-/* Formulaire de création de salon */
-#newRoom{
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  align-items: center;
-  margin-top: 10px;
-}
-
-#newRoom input[name="name"]{
-  flex: 1 1 180px;
-  min-width: 0;
-}
-
-#newRoom .btn{
-  flex: 0 0 auto;
-}
-
-#roomStatus{
-  font-size: 12px;
-  color: var(--mut);
-}
-
-/* Mobile : tout en colonne, bouton plein largeur */
-@media (max-width: 540px){
-  #newRoom{
-    flex-direction: column;
-    align-items: stretch;
-  }
-  #newRoom input[name="name"],
-  #newRoom .btn{
-    width: 100%;
-  }
-}
-
-/* Liste des users en ligne sous les salons */
-#presenceInline{
-  margin-top: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  font-size: 13px;
-}
-
-/* .activeRow existe déjà, on complète juste un peu */
-.activeRow{
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 8px;
-  border-radius: 8px;
-  background: rgba(15,23,42,.7);
-}
-
-.activeRow.is-me{
-  outline: 2px solid var(--brand);
-  background: rgba(37,99,235,.12);
-}
-
-
-/* Avatar dans les messages */
-.msg-avatar{
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  object-fit: cover;
-  flex-shrink: 0;
-  display: block;
-}
-
-/* Contenu texte à côté */
-.msg-content{
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.active-avatar{
-  width:24px;
-  height:24px;
-  border-radius:50%;
-  object-fit:cover;
-  flex-shrink:0;
-}
-
-
-
-
-/* DM header avec avatar destinataire */
-.dm-user{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  margin-bottom:6px;
-}
-.dm-avatar{
-  width:32px;
-  height:32px;
-  border-radius:50%;
-  object-fit:cover;
-  flex-shrink:0;
-}
-.dm-name{
-  font-size:14px;
-  color:var(--txt);
-  font-weight:500;
-}
-
-
-
-
-.active-name{
-  font-size:14px;
-  color:#e5e7eb;
-}
-
-.meTag { font-size: .75rem; padding: 2px 6px; border: 1px solid var(--line); border-radius: 999px; margin-left: 6px; }
-
-
-/* --- Modal principal --- */
-#chatModal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;}
-#chatBox{background:var(--card);border:1px solid var(--line);border-radius:16px;width:min(900px,95vw);height:min(640px,90vh);min-width: 100%;
-    min-height: 100%;
-  display:flex;flex-direction:column;position:relative}
-
-
-/* Header du modal de chat */
-/* Header du modal de chat */
-#chatHead{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:8px;
-  padding:10px 14px;
-  border-bottom:1px solid var(--line);
-  background:var(--card);
-}
-
-/* Zone titre + bouton retour */
-.chatHead-main{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  flex:1;
-  min-width:0; /* pour que le titre puisse se réduire proprement */
-}
-
-/* Titre du salon */
-#roomTitle{
-  font-size:15px;
-  font-weight:600;
-  display:block;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis; /* coupe le titre trop long avec "..." */
-}
-
-/* Zone boutons à droite */
-.chatHead-actions{
-  display:flex;
-  flex-wrap:wrap;
-  align-items:center;
-  gap:6px;
-}
-
-/* Bouton "← Salons" */
-.btn_retour{
-  display:inline-flex;
-  align-items:center;
-  gap:4px;
-  padding:4px 10px;
-  border-radius:999px;
-  border:1px solid var(--line);
-  font-size:13px;
-  font-weight:600;
-}
-
-
-
-
-/* Variantes de boutons dans le header */
-.btn-ghost{
-  background:transparent;
-  border-color:rgba(148,163,184,.5);
-  padding:6px 10px;
-  font-size:13px;
-}
-
-.btn-ghost:hover{
-  background:rgba(15,23,42,.9);
-}
-
-.btn-danger{
-  background:#b91c1c;
-  border-color:#b91c1c;
-}
-
-/* Bouton croix compact */
-.btn-icon{
-  padding:4px 8px;
-  min-width:auto;
-  border-radius:999px;
-}
-
-
-
-
-#chatMsgs{flex:1;overflow:auto;padding:12px 14px;}
-#chatForm{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line)}
-#chatForm input[name="body"]{flex:1;min-height:46px;max-height:160px;background:#0b1220;color:var(--txt);border:1px solid var(--line);border-radius:10px;padding:10px}
-
-/* --- Messages --- */
-/* --- Messages (bulle moderne gauche/droite) --- */
-
-/* Liste des messages = pile verticale */
-#chatMsgs{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-}
-
-/* Bulle générique */
-.msg{
-  display:flex;
-  align-items:flex-start;
-  gap:8px;
-  max-width:640px;
-  border-radius:14px;
-  padding:8px 10px;
-  margin:4px 0;
-  overflow-wrap:break-word;
-  background:#020617;              /* fond neutre */
-  border:1px solid var(--line);
-  overflow-wrap: anywhere; 
-
-}
-
-/* Messages des AUTRES (par défaut) */
-.msg--other{
-  margin-right:auto;               /* collé à gauche */
-}
-
-/* Messages de MOI */
-.msg--me{
-  margin-left:auto;                /* collé à droite */
-  flex-direction:row-reverse;      /* avatar à droite */
-  background:rgba(37,99,235,.15);  /* léger bleu */
-  border-color:#2563eb;
-}
-
-/* Contenu texte à droite de l’avatar */
-.msg-content{
-  display:flex;
-  flex-direction:column;
-  gap:2px;
-  max-width:100%;
-}
-
-/* Métadonnées (pseudo + date) */
-.msg .meta{
-  font-size:12px;
-  color:var(--mut);
-  margin-bottom:2px;
-}
-
-/* Aligner le texte côté droit pour mes messages */
-.msg--me .msg-content{
-  align-items:flex-end;
-}
-.msg--me .meta,
-.msg--me .msg-body{
-  text-align:right;
-}
-
-/* Corps du message */
-.msg-body{
-  white-space:pre-wrap;
-}
-.msg-body > span{
-  font-weight:500;
-  letter-spacing:0.5px;
-}
-
-/* Mentions déjà gérées par ta classe .mention */
-.meta{ color:var(--mut); }  /* garde ce que tu avais */
-
-
-
-
-
-.msg-footer{
-  margin-top: 6px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-}
-
-.msg-likeBtn{
-  border: none;
-  background: transparent;
-  color: var(--mut);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0;
-}
-
-.msg-likeBtn.is-liked{
-  color: #f97316; /* ou autre couleur pour un like actif */
-}
-
-.msg-likeCount{
-  min-width: 1.4em;
-  text-align: left;
-}
-
-
-
-
-/* --- Bouton bas --- */
-#toBottom{position:absolute;right:18px;bottom:82px;display:none;border:1px solid var(--line);background:#111827;color:var(--txt);border-radius:999px;padding:6px 10px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.25)}
-
-/* --- Image des messages --- */
-.chat-img{max-width:min(55%,420px);height:auto;border-radius:8px;cursor:zoom-in;display:block}
-
-/* --- Effet flou sur images non vues --- */
-.imageVeil{position:relative;width:auto;max-width:min(55%,420px);border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer;background-size:cover;background-position:center}
-.imageVeil span{color:var(--mut);font-size:14px;background:#111827;padding:8px 10px;border-radius:999px;border:1px solid var(--line)}
-.imageVeil--blur::after{content:"";position:absolute;inset:0;backdrop-filter:blur(14px);background:rgba(0,0,0,.35);border-radius:8px}
-
-/* --- Modal image --- */
-#imgModal{position:fixed;inset:0;background:rgb(0 0 0 / 65%);display:flex;align-items:center;justify-content:center;z-index:70}
-#imgModal[hidden]{display:none}
-.imgModal__box{max-width:55vw;max-height:40vh}
-#imgModalImg{max-width:85vw;max-height:65vh;border-radius:12px;display:block}
-
-
-#lockModal{position:fixed;inset:0;background:rgb(0 0 0 / 65%);display:flex;align-items:center;justify-content:center;z-index:80}
-#lockModal[hidden]{display:none}
-.userModal__box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;width:min(520px,92vw)}
-.userActions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
-
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:90}
-.modal-overlay[hidden]{display:none}
-.modal-box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;width:min(520px,92vw)}
-.btn[disabled],
-.btn[aria-disabled="true"]{
-  opacity:.5;
-  cursor:not-allowed;
-  pointer-events:none;
-}
-
-.mention {
-  color: #D052F2;      /* bleu clair */
-  font-weight: 600;    /* optionnel : plus visible */
-}
-
-
-/* On s'assure que #activeModal > #chatModal.*/
-.modal { position: fixed; inset: 0; }
-#chatModal   { z-index: 1002; } /* au-dessus de modal.behind */
-#userModal   { z-index: 1003; }   /* au-dessus du chatModal */
-#activeModal { z-index: 1004; }   /* au-dessus du userModal */
-.modal.behind { z-index: 800; pointer-events: none; } /* passe visuellement derrière */
-
-
-
-
-/* ===== Mobile ===== */
-@media (max-width:640px){
-  .wrap{
-    max-width:100%;
-    padding:0 8px;
-  }
-
-  .card{
-    border-radius:0;
-    border-left:0;
-    border-right:0;
-  }
-
-  #chatModal{
-    align-items:stretch;
-    justify-content:stretch;
-  }
-
-  #chatBox{
-    border-radius:0;
-    width:100vw;
-    height:100dvh;
-    max-width:100vw;
-    max-height:100dvh;
-  }
-
-  /* Header compact sur mobile */
-  #chatHead{
-    padding:8px 10px;
-    gap:6px;
-    flex-wrap:wrap;
-  }
-
-  #roomTitle{
-    font-size:14px;
-  }
-
-  .chatHead-actions{
-    gap:4px;
-  }
-
-  .chatHead-actions .btn,
-  .chatHead-actions .btn-ghost,
-  .chatHead-actions .btn-danger{
-    font-size:12px;
-    padding:4px 6px;
-  }
-
-  .btn_retour{
-    padding:4px 8px;
-    font-size:12px;
-  }
-
-  #chatMsgs{
-    padding:10px;
-  }
-
-  #chatForm{
-    padding:10px;
-    gap:8px;
-  }
-
-  #chatForm input[name="body"]{
-    min-height:48px;
-  }
-
-  .msg{
-    padding:10px;
-    margin:10px 0;
-  }
-
-  .row{
-    flex-direction:column;
-    align-items:flex-start;
-    gap:6px;
-    padding:10px;
-  }
-}
-
-
-
-/* Barre "X est en train d'écrire…" */
-.typingbar{
-  font-size: 12px;
-  color: var(--mut);
-  padding: 2px 16px 6px;
-  min-height: 14px;
-}
-
-.typingbar[hidden]{
-  display:none;
-}
-
-
-
-
-
-
-  .chat-img,.imageVeil{
-        max-width: 50%;
-        margin-top: 8px;
-        border: 0.5px solid #66339985;
-        box-shadow: 5px -2px 5px #0000008c; }
-
-  #toBottom{right:10px;bottom:86px;padding:6px 10px}
-  #imgModal{align-items:center;justify-content:center}
-  .imgModal__box{max-width:96vw;max-height:90dvh}
-  #imgModalImg{max-width:96vw;max-height:90dvh}
-/* Bandeau "X est en train d'écrire..." */
-.typing-indicator{
-  display:none;
-  padding:4px 12px 6px;
-  font-size:12px;
-  color:var(--muted);
-  font-style:italic;
-}
-
-/* Version mobile (tu peux l’inclure dans ton @media max-width:640px si tu veux) */
-@media (max-width:640px){
-  .typing-indicator{
-    padding:4px 10px;
-    font-size:11px;
-  }
-}
-
-
-/* ===== Très petits écrans ===== */
-@media (max-width:360px){
-  #chatHead h3{font-size:15px}
-  .btn{padding:8px 8px}
-}
-
-
-/* Form */
-/* Bas du modal : formulaire de message */
-.container_chatForm{
-  padding:0 14px 12px;
-  border-top:1px solid var(--line);
-}
-
-#chatForm{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  width:90%;
-  margin:auto;
-}
-
-/* Ligne texte */
-.chatForm-row{
-  width:100%;
-}
-
-#chatInput{
-  width:100%;
-  border-radius:999px;
-  border:1px solid rgba(148,163,184,.6);
-  background:#020617;
-  color:#e5e7eb;
-  padding:9px 12px;
-  font-size:14px;
-  outline:none;
-}
-
-#chatInput::placeholder{
-  color:#64748b;
-}
-
-#chatInput:focus{
-  border-color:#60a5fa;
-  box-shadow:0 0 0 1px rgba(37,99,235,.4);
-}
-
-/* Barre d’actions : image, couleur, envoyer */
-.chatForm-toolbar{
-  display:flex;
-  align-items:center;
-  gap:8px;
-}
-
-/* Boutons icône (Image, Couleur) */
-.btn-icon{
-  display:inline-flex;
-  align-items:center;
-  gap:4px;
-  padding:6px 10px;
-  border-radius:999px;
-  border:1px solid rgba(148,163,184,.5);
-  background:transparent;
-  color:#e5e7eb;
-  font-size:13px;
-  cursor:pointer;
-}
-
-.btn-icon-label{
-  font-size:12px;
-}
-
-/* Color picker intégré dans le bouton */
-.btn-color input[type="color"]{
-  width:22px;
-  height:22px;
-  padding:0;
-  border:none;
-  background:transparent;
-  cursor:pointer;
-}
-
-/* Bouton envoyer */
-.btn-send{
-  margin-left:auto; /* pousse le bouton à droite */
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-}
-
-.btn-send-icon{
-  font-size:12px;
-}
-
-/* Mobile : toolbar en wrap + plein largeur si besoin */
-@media (max-width:640px){
-  .chatForm-toolbar{
-    flex-wrap:wrap;
-    justify-content:flex-start;
-  }
-
-  .btn-send{
-    width:auto;
-  }
-}
-
-
-/* Mobile */
-@media (max-width:640px){
-  #chatForm{gap:8px}
-  #chatForm input[name="body"]{flex:1 1 100%}
-  #chatForm input[type="file"]{flex:1 1 calc(60% - 8px)}
-  #chatForm button[type="submit"]{flex:1 1 calc(40% - 8px)}
-}
-
-/* --- Overlay général --- */
-.overlay-dialog {
-  display: none;                /* caché par défaut */
-  position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.55);
-  z-index: 2000;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;                /* évite la coupure en haut/bas */
-  box-sizing: border-box;
-}
-
-/* Quand la modale est active */
-.overlay-dialog.is-active {
-  display: flex;
-  animation: overlayFade 0.25s ease-out forwards;
-}
-
-/* Variante "info" (si tu veux custom plus tard) */
-.overlay-dialog--info {}
-
-/* --- Contenu de la modale --- */
-.overlay-dialog__box {
-  background: #fff;
-  color: #000;
-  padding: 22px 26px;
-  border-radius: 10px;
-  max-width: 420px;      /* limite max sur grand écran */
-  width: 100%;           /* prend toute la largeur dispo dans le padding */
-  max-height: 90vh;      /* jamais plus haut que l’écran */
-  overflow-y: auto;      /* scroll interne si trop de texte */
-  position: relative;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
-
-  opacity: 0;
-  transform: translateY(10px);
-}
-
-
-.overlay-dialog__box li {
-  font-size:20px;
-}
-/* Anim sur la boîte quand la modale est active */
-.overlay-dialog.is-active .overlay-dialog__box {
-  animation: modalPop 0.25s ease-out 0.05s forwards;
-}
-
-/* --- Croix --- */
-.overlay-dialog__close {
-  position: absolute;
-  top: 8px;
-  right: 10px;
-  background: transparent;
-  border: none;
-  font-size: 24px;
-  cursor: pointer;
-}
-
-/* --- Animations --- */
-@keyframes overlayFade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
-}
-
-@keyframes modalPop {
-  from {
-    opacity: 0;
-    transform: translateY(10px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-
-
-</style>
-
+<link rel="stylesheet" href="<?= APP_BASE ?>/styles/index.css"><title>Salons de discussion</title>
+<link rel="stylesheet" href="<?= APP_BASE ?>/styles/chat_rooms.css">
   <meta name="robots" content="noindex, nofollow">
 
 
 </head>
 
 <body>
+
+
+
+<header class="site-header">
+  <?php include __DIR__ . '/header.php'; ?>
+
+
+</header>
+
+
+
+
+
+
 
 <!-- Modale d'information système -->
 <div id="systemNotice" class="overlay-dialog overlay-dialog--info">
@@ -878,19 +129,15 @@ chk.addEventListener('change', (e)=>{
 
 
 
-
-
-    
-
-
-
-
     <div id="umDMBox" hidden style="margin-top:10px">
  <img id="dmAvatar" class="dm-avatar" src="" alt="">  
+     <span id="dmName" class="dm-name"></span>
+
 
      <div id="dmUser" class="dm-user">
        
       </div>
+
       <form id="dmSend" method="post" enctype="multipart/form-data" autocomplete="off">
         <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'] ?? '', ENT_QUOTES) ?>">
         <input type="hidden" name="recipient_id" id="dmRecipient">
@@ -898,7 +145,10 @@ chk.addEventListener('change', (e)=>{
         <input type="file" name="image" accept="image/*">
         <button type="submit" id="dmBtn">Envoyer</button>
       </form>
+
       <div id="dmHint" class="muted" style="margin-top:6px"></div>
+      <div id="dmTyping" class="mut" style="margin-top:4px;font-size:12px;display:none"></div>
+
     </div>
   </div>
 </div>
@@ -1124,6 +374,8 @@ const dmRecipient  = document.getElementById('dmRecipient');
 const dmBody       = document.getElementById('dmBody');
 const dmBtn        = document.getElementById('dmBtn');
 const dmHint       = document.getElementById('dmHint');
+const dmTyping     = document.getElementById('dmTyping');
+
 
 // Modale image (optionnelle)
 const imgModal    = document.getElementById('imgModal');
@@ -1140,22 +392,12 @@ let currentRoomName  = ''; // Nom du salon courant (pour private/public)
 let currentRoomId = 0;     // si ce n’est pas déjà déclaré
 let lastTypingSent = 0;   // Qui écrit
 let typingInterval = null; // timer pour polling des gens qui écrivent
-
+let dmTypingTimer  = null; 
+let lastDmTypingSent = 0;
 
 
 
 /* === Helpers =============================================================== */
-
-
-
-
-
-
-
-
-
-
-
 
 
 // Soumission du formulaire "Salon protégé" (mot de passe)
@@ -1284,7 +526,7 @@ roomDeleteBtn?.addEventListener('click', async () => {
   }
 });
 
-
+/////////////// TYPING ////////////
 
 // Met à jour le texte "X est en train d'écrire..."
 function updateTypingIndicator(users){
@@ -1295,6 +537,7 @@ function updateTypingIndicator(users){
     typingIndicator.style.display = 'none';
     return;
   }
+  
 
   // On récupère juste les pseudos
   const pseudos = users.map(u => u.pseudo || '').filter(Boolean);
@@ -1365,7 +608,7 @@ typingInterval = setInterval(() => {
 
 
 
-const chatInput = document.getElementById('chatInput');
+const chatInput = document.getElementById('chatInput'); 
 
 // Envoie un ping "je suis en train d'écrire"
 function sendTypingPing(){
@@ -1392,6 +635,89 @@ function sendTypingPing(){
 if (chatInput){
   chatInput.addEventListener('input', sendTypingPing);
 }
+
+
+
+// ------- Typing DM -------
+
+function updateDmTypingIndicator(users){
+  if (!dmTyping) return;
+
+  if (!users || !users.length){
+    dmTyping.style.display = 'none';
+    dmTyping.textContent = '';
+    return;
+  }
+
+  const u = users[0]; // il n'y a qu'une personne en face dans une DM
+  const name = u.pseudo || 'L\'utilisateur';
+  dmTyping.textContent = `${name} est en train d’écrire…`;
+  dmTyping.style.display = 'block';
+}
+
+function stopDmTypingWatch(){
+  if (dmTypingTimer){
+    clearInterval(dmTypingTimer);
+    dmTypingTimer = null;
+  }
+  updateDmTypingIndicator([]);
+}
+
+function startDmTypingWatch(){
+  stopDmTypingWatch();
+  if (!dmTarget || !dmTyping) return;
+
+  dmTypingTimer = setInterval(() => {
+    fetch(`${BASE}/chat_dm_typing_list.php?peer_id=` + encodeURIComponent(dmTarget), {
+      method: 'GET',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json' }
+    })
+    .then(r => r.ok ? r.json() : Promise.reject())
+    .then(data => {
+      if (!data || !data.ok) {
+        updateDmTypingIndicator([]);
+        return;
+      }
+      updateDmTypingIndicator(data.users || []);
+    })
+    .catch(() => {
+      updateDmTypingIndicator([]);
+    });
+  }, 2000);
+}
+
+function sendDmTypingPing(){
+  if (!dmTarget || !dmBody) return;
+
+  const now = Date.now();
+  // 1 ping max toutes les 3 secondes
+  if (now - lastDmTypingSent < 3000) return;
+  lastDmTypingSent = now;
+
+  const fd = new FormData();
+  fd.append('recipient_id', String(dmTarget));
+  fd.append('csrf', CSRF);
+
+  fetch(`${BASE}/chat_dm_typing.php`, {
+    method: 'POST',
+    body: fd,
+    credentials: 'same-origin'
+  }).catch(() => {});
+}
+
+
+if (dmBody){
+  dmBody.addEventListener('input', sendDmTypingPing);
+}
+
+
+
+
+
+
+
+
 
 
 // Échappe le HTML (sécurité XSS)
@@ -2229,6 +1555,8 @@ function hydrateUserModal(user){
     dmRecipient.value = '';
     dmBody.value = '';
     dmHint.textContent = '';
+        stopDmTypingWatch();
+
     return;
   }
 
@@ -2239,6 +1567,8 @@ function hydrateUserModal(user){
     dmRecipient.value = '';
     dmBody.value = '';
     dmHint.textContent = '';
+        stopDmTypingWatch();
+
     return;
   }
 
@@ -2259,6 +1589,9 @@ function hydrateUserModal(user){
   dmRecipient.value = String(dmTarget);
   dmBody.value = '';
   dmHint.textContent = `Message privé à ${name}`;
+
+    startDmTypingWatch();
+
 }
 
 // Envoi DM
@@ -2287,6 +1620,10 @@ if (imgInput) imgInput.value = '';    dmHint.textContent = 'Message envoyé.';
   }finally{
     dmBtn.disabled = false;
   }
+
+    // on démarre la surveillance "typing DM" pour cette cible
+  startDmTypingWatch();
+
 });
 
 // Ouvre/ferme la fiche utilisateur
@@ -2305,6 +1642,8 @@ function closeUserModal(){
   dmTarget = null;
   dmRecipient.value = '';
   umBox.hidden = true;
+  stopDmTypingWatch();
+
 }
 umClose?.addEventListener('click', closeUserModal);
 userModal?.addEventListener('click', e => { if (e.target === userModal) closeUserModal(); });
@@ -2461,7 +1800,14 @@ document.addEventListener('keydown', (e) => {
 });
 
 
+// MENU MOBILE
 
+  const btn = document.querySelector('.nav-toggle');
+  const nav = document.getElementById('primary-nav');
+  btn.addEventListener('click', ()=>{
+    const open = nav.classList.toggle('is-open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
 
 
 

@@ -102,61 +102,60 @@ if (!empty($msgs)) {
     }
 }
 // JSON-LD complet pour une room publique
+// JSON-LD complet pour une room publique
 $ld = [
-    '@context'  => 'https://schema.org',
-    '@type'     => 'DiscussionForumPosting',
-    'headline'  => 'Salon public - '.$roomName,
-    'name'      => $roomName,
-    'url'       => $canonicalUrl,
-    'publisher' => [
-        '@type' => 'Organization',
-        'name'  => 'Tchat-Direct',
-    ],
+  '@context'  => 'https://schema.org',
+  '@type'     => 'DiscussionForumPosting',
+  'headline'  => 'Salon public - '.$roomName,
+  'name'      => $roomName,
+  'url'       => $canonicalUrl,
+  'publisher' => [
+      '@type' => 'Organization',
+      'name'  => 'Tchat-Direct',
+  ],
 ];
 
-// Si au moins un message existe, on complète avec les champs obligatoires
+// Init SAFE (évite les warnings)
+$firstDate = '';
+$lastDate  = '';
+
 if (!empty($msgs)) {
-    $first       = $msgs[0];
-    $firstAuthor = $first['pseudo'] ?: 'Anonyme';
-    $firstBody   = strip_tags($first['body'] ?? '');
-    $firstBody   = preg_replace('/\s+/', ' ', $firstBody);
-    $firstBody   = mb_substr($firstBody, 0, 300);
-    $firstDate   = $first['created_at'] ?? '';
+  // Premier message
+  $first = $msgs[0];
+  $firstAuthor = $first['pseudo'] ?: 'Anonyme';
+  $firstBody   = strip_tags($first['body'] ?? '');
+  $firstBody   = preg_replace('/\s+/', ' ', $firstBody);
+  $firstBody   = mb_substr($firstBody, 0, 300);
+  $firstDate   = $first['created_at'] ?? '';
 
-    // author
-    $ld['author'] = [
-        '@type' => 'Person',
-        'name'  => $firstAuthor,
-    ];
+  // Dernier message = dernière activité
+  $last = end($msgs);
+  $lastDate = $last['created_at'] ?? '';
 
-    // datePublished
-    if ($firstDate !== '') {
-        $ld['datePublished'] = $firstDate;
-    }
+  // author
+  $ld['author'] = [
+    '@type' => 'Person',
+    'name'  => $firstAuthor,
+  ];
 
-    // text + description
-    if ($firstBody !== '') {
-        $ld['text']        = $firstBody;
-        $ld['description'] = $firstBody;
-    }
+  // text + description
+  if ($firstBody !== '') {
+    $ld['text']        = $firstBody;
+    $ld['description'] = $firstBody;
+  }
 
-    // dateModified = dernière activité
-    if ($lastDate !== '') {
-        $ld['dateModified'] = $lastDate;
-    }
+  // Dates en ISO 8601
+  if ($firstDate !== '') {
+    $ld['datePublished'] = date('c', strtotime($firstDate));
+  }
+  if ($lastDate !== '') {
+    $ld['dateModified'] = date('c', strtotime($lastDate));
+  }
 }
-
-if ($firstDate !== '') {
-    $ld['datePublished'] = date('c', strtotime($firstDate)); // ISO 8601
-}
-
-?>
-<!doctype html>
-<html lang="fr">
-<head>
 
 
 ?>
+
 <!doctype html>
 <html lang="fr">
 <head>

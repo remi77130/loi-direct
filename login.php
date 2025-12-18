@@ -251,12 +251,12 @@ if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
   "description": "Tchat-Direct est un site de tchat en ligne avec salons publics anonymes, messages instantanés, images et réactions."
 }
 </script>
-<meta property="og:title" content="Room guitare – Tchat Direct">
-<meta property="og:description" content="Rejoins tchat direct pour discuter en ligne dans des salons publics anonymes. Partage tes passions, échange avec d'autres et profite d'une expérience de tchat simple et gratuite.">
+<meta property="og:title" content="Tchat Direct – Chat Anonyme Gratuit, Salons Publics & Privés en Direct">
+<meta property="og:description" content="Rejoins tchat direct pour discuter en ligne. tchatche gratuit.">
 <meta property="og:url" content="https://tchat-direct.com">
 <meta property="og:type" content="website">
 
-<title>Tchat Direct – Tchat en ligne anonyme et gratuit</title>
+<title>Tchat Direct – Chat Anonyme Gratuit, Salons Publics & Privés en Direct</title>
 
 <!-- Favicon principal -->
 <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -271,6 +271,8 @@ if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
 
   <!-- PWA / manifest -->
   <link rel="manifest" href="site.webmanifest">
+
+<link rel="stylesheet" href="<?= APP_BASE ?>/styles/login.css">
 
 <meta name="description" content="Tchat Direct est une plateforme de tchat en ligne anonyme et gratuit. Rejoignez des salons, créez vos propres rooms et discutez en direct.">
 <meta name="keywords" content="tchat direct, tchat en ligne, chat anonyme, coco chat, direct tchat">
@@ -292,236 +294,24 @@ if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
   gtag('js', new Date());
   gtag('config', 'G-FHFM0ESDMP');
 </script>
-
-
-<style>
-
-
-.public-room
-{
-    padding: 5px;
-    margin-bottom: 20px;
-    border-bottom: 3px solid #000000;}
-
-
-.public-rooms {
-  margin: 2rem 0;
-  padding: 1rem 1.5rem;
-  background: #0f172a;
-  color: #e5e7eb;
-  border-radius: 10px;
-}
-
-.public-rooms h1 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
-  font-size: 1.6rem;
-}
-
-.public-rooms p {
-  margin-top: 0;
-  margin-bottom: 1.2rem;
-}
-
-.public-rooms {
-  width: 90%;
-  max-width: 420px;   /* même largeur max que .card */
-  margin: 2rem 0;
-  padding: 1rem 1.5rem;
-  background: #0f172a;
-  color: #e5e7eb;
-  border-radius: 10px;
-}
-
-.public-room__title {
-  margin: 0 0 0.5rem;
-  font-size: 1.2rem;
-}
-
-.public-room__messages {
-  max-height: 260px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.public-room__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.public-room__item {
-  padding: 0.4rem 0;
-  border-bottom: 1px dashed #1f2937;
-}
-
-.public-room__meta {
-  font-size: 0.8rem;
-  color: #9ca3af;
-  margin-bottom: 0.15rem;
-}
-
-.public-room__author {
-  font-weight: 600;
-}
-
-.public-room__sep {
-  margin: 0 0.25rem;
-}
-
-.public-room__body {
-  font-size: 0.9rem;
-  line-height: 1.4;
-      word-wrap: break-word;
-    overflow-wrap: anywhere;
-}
-
-.public-room__cta {
-  margin-top: 0.7rem;
-}
-
-
-.btn-primary {
-
-  display: inline-block;
-  padding: 0.45rem 0.9rem;
-  border-radius: 999px;
-  text-decoration: none;
-  border: 1px solid navajowhite;
-  color: white;
-}
-
-.btn-primary:hover {
-  border-color: #93c5fd;
-}
-
-.public-room__likes {
-  margin-left: 0.5rem;
-  font-size: 0.8rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 999px;
-  background: #111827;
-  color: #fbbf24;
-}
-
-.public-room__image-wrap {
-  margin: 3px 0px 0px 
-}
-
-.public-room__image {
-  max-width: 20%;
-  height: auto;
-  border-radius: 8px;
-  display: block;
-}
-
-
-
-
-/* styles identiques à ton UI */
-:root{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-
-
-.site-header{
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  padding:12px 20px;
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  background:transparent;
-  z-index:5;
-}
-.logo-img{
-  height:150px;
-  display:block;
-}
-body{
-  background:#0f172a;
-  color:#e5e7eb;
-  margin:0;
-  min-height:100vh;
-}
-
-/* C’est main qui gère la mise en page */
-main#main-content{
-  display:flex;
-  flex-direction:column;
-  align-items:center;   /* centre horizontalement la card */
-  padding-top:60px;     /* pour ne pas passer sous le header */
-}
-
-
-.card{background:#111827;padding:24px;margin:5px;border-radius:16px;width:90%;max-width:420px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
-h1{margin:0 0 16px;font-size:24px}
-label{display:block;font-size:17px;font-weight: 500;margin-bottom:8px;color:#cbd5e1}
-input{width:90%;padding:12px 14px;border-radius:10px;border:1px solid #334155;background:#0b1220;color:#e5e7eb}
-.btn{width:100%;margin-top:16px;padding:12px;border:none;border-radius:10px;background:#2563eb;color:#fff;font-weight:600;cursor:pointer}
-.btn[disabled]{opacity:.6;cursor:not-allowed}
-.errors{background:#7f1d1d;color:#fecaca;padding:10px;border-radius:8px;margin-bottom:12px}
-a{color:#93c5fd;text-decoration:none}
-.container_text_login_01 {
-margin-top: 25px; width: 90%;
-}
-
-.fonnter_link_register{ 
-margin-top:12px;
-font-size:20px;
-color:#94a3b8"
-
-}
-
-.fonnter_link_register a
-{
-  text-decoration: underline;
-}
-
-
-.pass-wrap { position:relative; }
-.toggle-pass {
-  position:absolute;
-  right:10px;
-  top:50%;
-  transform:translateY(-50%);
-  background:transparent;
-  border:none;
-  color:#93c5fd;
-  cursor:pointer;
-  font-weight:600;
-  padding:6px;
-  border-radius:6px;
-}
-.toggle-pass:focus { outline:2px solid rgba(147,197,253,.25); }
-
-
-#betaBanner {
-  margin-top: 100px;
-  background: linear-gradient(90deg, #1e293b, #0f172a);
-  color: #facc15;              /* jaune doré bien visible */
-  text-align: center;
-  padding: 10px 16px;
-  font-size: 14px;
-  border-bottom: 1px solid #334155;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
-#betaBanner strong {
-  color: #fbbf24;              /* accent sur le mot "Bêta" */
-}
-
-
-
-</style>
 </head>
 
 
 
 
-<body>
+<body class="neo">
 
 
 <main id="main-content">
+
+
+
+<header  id="header"  class="site-header">
+  <a href="register.php" class="logo-link">
+<img src="<?= APP_BASE ?>/uploads/tchat_direct_logo.webp" alt="Tchat Direct logo" class="logo-img">
+  </a> <p class="logo-note">Le logo </p>
+
+</header>
 
 
 
@@ -539,19 +329,18 @@ color:#94a3b8"
           height="0" width="0" style="display:none;visibility:hidden"></iframe>
 </noscript>
 
- <h1>Tchat direct</h1>
 
 
 
-<header  id="header"  class="site-header">
-  <a href="register.php" class="logo-link">
-    <img src="uploads/tchat_direct_logo.webp" alt="Tchat Direct logo" class="logo-img">
-  </a>
 
-</header>
+
+ <h1>Tchat direct - Se connecter </h1>
+
+
 
 <div class="container_text_login_01">
-<p class="text_login_01">  Interface simple, accès rapide, salons publics et privés, discussions anonymes :
+  <h2>Chat sans inscription</h2>
+<p class="text_login_01">  Interface simple, accès rapide, salons publics et privés, discussions anonymes.
       Tchat Direct vise l’efficacité sans inscription lourde. Tu te connectes, tu choisis un salon, tu échanges.
     </p>
 </div>
@@ -602,67 +391,7 @@ color:#94a3b8"
 
 
 
-<script>
-document.querySelectorAll('.toggle-pass').forEach(btn=>{
-  btn.addEventListener('click', ()=> {
-    const targetId = btn.getAttribute('data-target');
-    const input = document.getElementById(targetId);
-    if (!input) return;
-    if (input.type === 'password') {
-      input.type = 'text';
-      btn.textContent = 'Cacher';
-      btn.setAttribute('aria-pressed','true');
-      // Optionnel: éviter que le champ reste visible trop longtemps
-      // setTimeout(()=>{ input.type='password'; btn.textContent='Voir'; btn.setAttribute('aria-pressed','false'); }, 30000);
-    } else {
-      input.type = 'password';
-      btn.textContent = 'Voir';
-      btn.setAttribute('aria-pressed','false');
-    }
-  });
-});
-
-(function () {
-  const REFRESH_INTERVAL = 10000; // 10 secondes
-
-  async function refreshPublicRooms() {
-    // On ne fait rien si la section n'existe pas (sécurité)
-    const oldSection = document.querySelector('.public-rooms');
-    if (!oldSection) return;
-
-    try {
-      const res = await fetch('public_rooms_snippet.php', {
-        cache: 'no-store',
-        credentials: 'same-origin'
-      });
-      if (!res.ok) {
-        return;
-      }
-
-      const html = await res.text();
-
-      // On parse le HTML reçu pour récupérer la nouvelle <section>
-      const wrapper = document.createElement('div');
-      wrapper.innerHTML = html.trim();
-
-      const newSection = wrapper.querySelector('.public-rooms');
-      if (!newSection) return;
-
-      // Remplacement propre
-      oldSection.replaceWith(newSection);
-    } catch (e) {
-      console.error('refreshPublicRooms error', e);
-    }
-  }
-
-  // Premier appel (optionnel, au cas où tu veux forcer un refresh direct)
-  // refreshPublicRooms();
-
-  // Rafraîchissement toutes les 10 secondes
-  setInterval(refreshPublicRooms, REFRESH_INTERVAL);
-})();
-</script>
-
+<script src="<?= APP_BASE ?>/script/login.js" defer></script>
 
 </body>
 </html>

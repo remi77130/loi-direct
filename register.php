@@ -48,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pass2   = (string)($_POST['password_confirm'] ?? '');
 
    // pseudo déjà trim()
-if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
+if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
     $errors[] = "Le pseudo doit faire 3 à 20 caractères (lettres avec accents, chiffres, . _ -, Pas despace).";
 }
 
@@ -124,18 +124,18 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
   "@type": "WebSite",
   "name": "Tchat-Direct",
   "url": "https://tchat-direct.com/",
-  "description": "Tchat-Direct est un site de tchat en ligne avec salons publics anonymes, messages instantanés, images et réactions."
+  "description": "Tchat-Direct est un site de tchat en ligne. Rejoins tchat direct pour discuter en ligne. tchatche gratuit."
 }
 </script>
 
 
-<meta property="og:title" content="Room guitare – Tchat Direct">
-<meta property="og:description" content="Rejoins tchat direct pour discuter en ligne dans des salons publics anonymes. Partage tes passions, échange avec d'autres et profite d'une expérience de tchat simple et gratuite.">
-<meta property="og:url" content="https://tchat-direct.com">
+<meta property="og:title" content="Tchat Direct – Chat Anonyme Gratuit, Salons Publics & Privés en Direct">
+<meta property="og:description" content="Rejoins tchat direct pour discuter en ligne. tchatche gratuit.">
+<meta property="og:url" content="https://tchat-direct.com/register.php">
 <meta property="og:type" content="website">
 
 
-  <title>Inscription – Tchat Direct</title>
+  <title>Tchat Direct – Chat Anonyme Gratuit, Salons Publics & Privés en Direct</title>
 
   <!-- Favicon principal -->
 <link rel="icon" href="favicon.ico" type="image/x-icon">
@@ -151,6 +151,10 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
 
   <!-- SEO -->
   <link rel="canonical" href="https://tchat-direct.com/register.php">
+
+<link rel="stylesheet" href="<?= APP_BASE ?>/styles/seo.css">
+<link rel="stylesheet" href="<?= APP_BASE ?>/styles/register.css">
+
   <meta name="description" content="Inscrivez-vous sur Tchat Direct pour rejoindre des salons de discussion anonymes et discuter en ligne gratuitement.">
   <meta name="keywords" content="tchat direct, tchat en ligne, chat anonyme, coco chat, direct tchat">
 
@@ -171,233 +175,27 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,30}$/u', $pseudo)) {
 
 
 
-<style>
-
-  
-    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    .card { background:#111827;margin:5px; padding:24px; border-radius:16px; width:90%; max-width:420px; box-shadow: 0 10px 30px rgba(0,0,0,.35); }
-    h1 { margin:0 0 16px; font-size:24px; }
-    label { display:block; font-size:17px;     font-weight: 500; margin-bottom:12px; color:#cbd5e1; }
-    input { width:90%; padding:12px 14px; border-radius:10px; border:1px solid #334155; background:#0b1220; color:#e5e7eb; outline:none; }
-    .hint { font-size:12px; color:#94a3b8; margin-top:6px; }
-
-    .status { font-size:12px; margin-top:6px; }
-    .ok { color:#34d399; } .ko { color:#f87171; }
-    .btn { width:100%; margin-top:16px; padding:12px; border:none; border-radius:10px; background:#2563eb; color:white; font-weight:600; cursor:pointer; }
-    .btn:disabled { opacity:.6; cursor:not-allowed; }
-    .errors { background:#7f1d1d; color:#fecaca; padding:10px; border-radius:8px; margin-bottom:12px; }
-    .footer_link_login { margin-top:14px; font-size:20px; text-align:center; }
-    .footer_link_login a{
-      text-decoration:underline;
-    }
-    a { color:#93c5fd; text-decoration: none; }
-
-    .pass-wrap { position:relative; }
-.toggle-pass {
-  position:absolute;
-  right:10px;
-  top:50%;
-  transform:translateY(-50%);
-  background:transparent;
-  border:none;
-  color:#93c5fd;
-  cursor:pointer;
-  font-weight:600;
-  padding:6px;
-  border-radius:6px;
-}
-.toggle-pass:focus { outline:2px solid rgba(147,197,253,.25); }
-
-
-.container_text_login_01 {
-margin-top: 25px; width: 90%;
-}
-.site-header{
-  position:absolute;
-  top:0;
-  left:0;
-  width:100%;
-  padding:12px 20px;
-  display:flex;
-  align-items:center;
-  justify-content:flex-start;
-  background:transparent;
-  z-index:5;
-}
-.logo-img{
-  height:150px;
-  display:block;
-}
-
-
-body{
-  background:#0f172a;
-  color:#e5e7eb;
-  margin:0;
-  min-height:100vh;
-}
-
-/* C’est main qui gère la mise en page */
-main#main-content{
-  display:flex;
-  flex-direction:column;
-  align-items:center;   /* centre horizontalement la card */
-  padding-top:60px;     /* pour ne pas passer sous le header */
-}
-
-
-  h3
-  {
-        font-size: 1.5rem;
-
-  }
-#betaBanner {
-  margin-top: 100px;
-  background: linear-gradient(90deg, #1e293b, #0f172a);
-  color: #facc15;              /* jaune doré bien visible */
-  text-align: center;
-  padding: 10px 16px;
-  font-size: 14px;
-  border-bottom: 1px solid #334155;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-}
-#betaBanner strong {
-  color: #fbbf24;              /* accent sur le mot "Bêta" */
-}
-
-.public-room
-{
-    padding: 5px;
-    margin-bottom: 20px;
-    border-bottom: 3px solid #000000;}
-
-
-
-.public-rooms {
-  margin: 2rem 0;
-  padding: 1rem 1.5rem;
-  background: #0f172a;
-  color: #e5e7eb;
-  border-radius: 10px;
-}
-
-.public-rooms h1 {
-  margin-top: 0;
-  margin-bottom: 0.5rem;
-  font-size: 1.6rem;
-}
-
-.public-rooms p {
-  width: 90%;
-}
-
-.public-rooms {
-  width: 90%;
-  max-width: 420px;   /* même largeur max que .card */
-  margin: 2rem 0;
-  padding: 1rem 1.5rem;
-  background: #0f172a;
-  color: #e5e7eb;
-  border-radius: 10px;
-}
-
-.public-room__title {
-  margin: 0 0 0.5rem;
-}
-
-.public-room__messages {
-  max-height: 260px;
-  overflow-y: auto;
-  padding-right: 4px;
-}
-
-.public-room__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-
-.public-room__item {
-  padding: 0.4rem 0;
-  border-bottom: 1px dashed #1f2937;
-}
-
-.public-room__meta {
-  font-size: 0.8rem;
-  color: #9ca3af;
-  margin-bottom: 0.15rem;
-}
-
-.public-room__author {
-  font-weight: 600;
-}
-
-.public-room__sep {
-  margin: 0 0.25rem;
-}
-
-.public-room__body {
-  font-size: 0.9rem;
-  line-height: 1.4;
-   word-wrap: break-word;      /* casse les mots trop longs */
-  overflow-wrap: anywhere;    /* force la coupure si besoin */
-}
-
-.public-room__cta {
-  margin-top: 0.7rem;
-}
-
-.btn-primary {
-
-  display: inline-block;
-  padding: 0.45rem 0.9rem;
-  border-radius: 999px;
-  text-decoration: none;
-  border: 1px solid navajowhite;
-  color: white;
-}
-
-.btn-primary:hover {
-  border-color: #93c5fd;
-}
-
-
-
-.public-room__likes {
-  margin-left: 0.5rem;
-  font-size: 0.8rem;
-  padding: 0.1rem 0.4rem;
-  border-radius: 999px;
-  background: #111827;
-  color: #fbbf24;
-}
-
-.public-room__image-wrap {
-  margin: 3px 0px 0px 
-}
-
-.public-room__image {
-  max-width: 20%;
-  height: auto;
-  border-radius: 8px;
-  display: block;
-}
-
-
-</style>
-
 
 
 
 
 </head>
 
+<body class="neo">
 
-<body>
+
+
+
+<header  id="header"  class="site-header">
+  <a href="register.php" class="logo-link">
+<img src="<?= APP_BASE ?>/uploads/tchat_direct_logo.webp">
+  </a> <p class="logo-note">Le logo </p>
+
+</header>
+
 
 
 <main id="main-content">
-
 
 
 
@@ -407,21 +205,15 @@ main#main-content{
   🚧 Ce site est actuellement en version <strong>Bêta</strong>. Certaines fonctionnalités peuvent être instables. Merci de na pas partager.
 </div>
 
- <h1>Tchat direct</h1>
+ <h1>Tchat direct - Inscription</h1>
 
 
-
-<header  id="header"  class="site-header">
-  <a href="register.php" class="logo-link">
-    <img src="uploads/tchat_direct_logo.webp" alt="Tchat Direct logo" class="logo-img">
-  </a>
-
-</header>
 
 
 
 <div class="container_text_login_01">
-<p class="text_login_01">  Interface simple, accès rapide, salons publics et privés, discussions anonymes :
+  <h2>Chat sans inscription</h2>
+<p class="text_login_01">  Interface simple, accès rapide, salons publics et privés, discussions anonymes.
       Tchat Direct vise l’efficacité sans inscription lourde. Tu te connectes, tu choisis un salon, tu échanges.
     </p>
 </div>
@@ -466,9 +258,9 @@ main#main-content{
       <button id="submitBtn" class="btn" type="submit">S’inscrire</button>
     </form>
 
-    <div class="footer_link_login">Déjà inscrit ? <a href="login.php"><span style="    font-weight: 600;
-    text-decoration: underline;
-    cursor: pointer; "></span> Connexion</a></div>
+    <div class="footer_link_login">Déjà inscrit ? 
+      <a href="login.php"><span style="font-weight:600;text-decoration:underline;cursor:pointer;">Connexion</span></a>
+</div>
   </div>
 
 
@@ -478,100 +270,411 @@ main#main-content{
 
 <?php include __DIR__ . '/public_rooms_snippet.php'; ?>
 
+<!-- SEO – Bloc inscription Tchat Direct -->
+<section class="seo-section" id="seo-register-intro">
+  <h2>S’inscrire sur un site de tchat gratuit et anonyme</h2>
+  <p>
+    Tchat Direct est un <strong>site de tchat gratuit</strong> penser pour les échanges en temps réel, sans inscription compliquée ni démarches interminables. 
+    L’inscription sert uniquement à crée ton pseudo et sécuriser l’accès à tes salons, tout en restant anonyme : aucun nom réel, aucune pièce d’identité, aucune donnée sensible n’est demandée.
+  </p>
+  <p>
+    Une fois inscrit, tu accèdes à un <strong>tchat en ligne gratuit</strong> avec des salons publics, des rooms privées protégées par mot de passe et des discussions instantanées depuis mobile, tablette ou ordinateur.
+    L’objectif est simple&nbsp;: proposer une alternative moderne aux tchats anonymes classiques, dans un environnement clair, stable et facile à prendre en main.
+  </p>
+  <div class="seo-box seo-box--highlight">
+    <strong>En résumé :</strong> tu crées un pseudo, tu définis un mot de passe, et tu peux ensuite rejoindre ou créer des salons de discussion en ligne, publics ou privés, en quelques secondes.
+  </div>
+</section>
+
+<section class="seo-section" id="seo-register-avantages">
+  <h2>Pourquoi créer un compte sur Tchat Direct&nbsp;?</h2>
+  <div class="seo-grid">
+    <div class="seo-grid__item">
+      <div class="seo-grid__item-title">Tchat gratuit et anonyme</div>
+      <p>
+        L’accès au site est <strong>100&nbsp;% gratuit</strong> et anonyme. Le compte sert uniquement à te connecter et à retrouver tes salons.
+        Tu peux discuter sans exposer ta vie privée, sous le pseudo de ton choix, dans des salons publics ou privés.
+      </p>
+    </div>
+    <div class="seo-grid__item">
+      <div class="seo-grid__item-title">Salons publics et rooms privées</div>
+      <p>
+        Tu peux rejoindre des <strong>salons publics</strong> déjà actifs ou créer ta <strong>room privée sécurisée par mot de passe</strong>.
+        C’est idéal pour discuter en petit groupe, organiser des échanges ciblés ou filtrer qui peut entrer dans ton salon.
+      </p>
+    </div>
+    <div class="seo-grid__item">
+      <div class="seo-grid__item-title">Rencontres et échanges sans inscription lourde</div>
+      <p>
+        De nombreuses personnes cherchent un <strong>tchat direct sans inscription lourde</strong>, pour échanger, sympathiser ou flirter en ligne.
+        Tchat Direct simplifie l’entrée&nbsp;: un pseudo, un mot de passe, et tu peux lancer la discussion.
+      </p>
+    </div>
+  </div>
+  <p>
+    Que tu cherches un <strong>tchat mobile gratuit</strong>, un espace pour discuter en soirée, ou une manière de faire des rencontres anonymes en ligne, 
+    le fait de créer un compte te donne un accès stable à un environnement pensé pour la discussion instantanée.
+  </p>
+</section>
+
+<section class="seo-section" id="seo-register-salons">
+  <h2>Salons publics, rooms privées et URL dédiée à chaque tchat</h2>
+  <p>
+    Sur Tchat Direct, chaque <strong>salon public</strong> dispose de sa propre URL, ce qui permet de partager facilement un espace précis avec tes contacts.
+    Pour les discussions plus ciblées, tu peux créer une <strong>room privée gratuite</strong>, protégée par mot de passe.
+  </p>
+  <div class="seo-box">
+    <strong>Créer un salon public ou privé, étape par étape :</strong>
+    <ol>
+      <li>Tu t’inscris en choisissant un pseudo et un mot de passe.</li>
+      <li>Tu te connectes à ton compte depuis la page de connexion.</li>
+      <li>Tu crées un salon public ou privé selon ton besoin.</li>
+      <li>Tu définis un mot de passe si tu veux un <strong>salon privé sécurisé</strong>.</li>
+      <li>Tu partages l’URL du salon avec les personnes que tu souhaites inviter.</li>
+    </ol>
+  </div>
+  <p>
+    Cette logique de <strong>tchat en ligne gratuit avec URL dédiée</strong> permet d’organiser des discussions thématiques, des groupes récurrents ou des espaces réservés à un petit cercle,
+    tout en gardant un fonctionnement simple pour les utilisateurs.
+  </p>
+</section>
+
+<section class="seo-section" id="seo-register-adulte">
+  <h2>Tchat adulte soft et rencontres anonymes sans inscription lourde</h2>
+  <p>
+    Sur Internet, beaucoup d’utilisateurs saisissent des requêtes comme <em>tchat gratuit sans inscription</em>, <em>rencontre tchat gratuit</em> ou encore 
+    des expressions liées à un <em>tchat adulte soft</em>. L’idée est souvent la même&nbsp;: trouver un espace de discussion anonyme, rapide d’accès, 
+    sans devoir remplir de formulaires interminables.
+  </p>
+  <p>
+    Tchat Direct se positionne comme une <strong>alternative neutre et moderne</strong> à ces usages&nbsp;: 
+    tu peux discuter, sympathiser, flirter de façon soft et respectueuse, en gardant le contrôle sur ton anonymat.
+    Les rooms privées avec mot de passe permettent de filtrer qui entre, et les salons publics servent de point de départ pour rencontrer de nouvelles personnes.
+  </p>
+  <p>
+    Certaines recherches populaires montrent l’intérêt des internautes pour les échanges plus intimes en ligne (du type «&nbsp;chat sexuel sans inscription&nbsp;» ou «&nbsp;tchat sexe sans inscription&nbsp;»).
+    Tchat Direct reste centré sur la <strong>discussion</strong> et la <strong>modération</strong>, en offrant un cadre sobre, anonyme et clairement séparé des contenus explicites.
+  </p>
+</section>
+
+<section class="seo-section" id="seo-register-comparatif">
+  <h2>Tchat Direct, une alternative moderne aux tchats anonymes classiques</h2>
+  <p>
+    Pendant longtemps, les internautes se sont tournés vers des plateformes de tchat anonymes très connues, 
+    comme certains services historiques 
+    de discussion en ligne (<span>coco gg
+    </span>...)
+    Tchat Direct propose une approche plus récente&nbsp;: interface adaptée au mobile, rooms publiques et privées, URL dédiée par salon, et inscription rapide.
+  </p>
+  <div class="seo-table-wrapper">
+    <table class="seo-table" aria-label="Comparatif entre différents types de tchats en ligne">
+      <thead>
+        <tr>
+          <th>Plateforme</th>
+          <th>Accès</th>
+          <th>Anonymat</th>
+          <th>Salons privés</th>
+          <th>URL dédiée par salon</th>
+          <th>Ecrire des posts</th>
+          <th>Commenter/liker les posts</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Tchat Direct</td>
+          <td>Gratuit, compte simple</td>
+          <td>Pseudo uniquement</td>
+          <td>Oui, avec mot de passe</td>
+          <td>Oui</td>
+          <td>Oui</td>
+          <td>Oui</td>
+
+        </tr>
+        <tr>
+          <td>Plateformes type Coco / Coconut</td>
+          <td>Gratuit, accès variable</td>
+          <td>Souvent anonyme</td>
+          <td>Présents ou non selon le service</td>
+          <td>Généralement non dédié par salon</td>
+           <td>Non</td>
+          <td>Non</td>
+        </tr>
+        <tr>
+          <td>Tchats généralistes anciens</td>
+          <td>Accès libre</td>
+          <td>Bourré de pub</td>
+          <td>Variable</td>
+          <td>Parfois limité ou inexistant</td>
+           <td>Non</td>
+          <td>Non</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Sans chercher à remplacer qui que ce soit, Tchat Direct se présente simplement comme un <strong>tchat en ligne gratuit</strong> 
+    qui reprend les points forts des tchats anonymes historiques, tout en ajoutant une expérience plus structurée pour les rooms et la gestion des salons.
+  </p>
+</section>
+
+<section class="seo-section" id="seo-register-faq">
+  <h2>FAQ – Inscription et tchat gratuit</h2>
+  <div class="seo-faq">
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Pourquoi dois-je m’inscrire si le tchat est gratuit&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          L’inscription sur un <span>tchat anonyme gratuit</span> sert uniquement à créer ton pseudo et ton mot de passe. 
+          Elle permet de sécuriser l’accès à ton compte et à tes salons, sans demander d’informations personnelles.
+          Le tchat reste gratuit, et tu peux rester anonyme.
+        </div>
+      </div>
+    </div>
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Est-ce que Tchat Direct est vraiment un tchat gratuit sans inscription lourde&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Oui. L’inscription est réduite au strict minimum&nbsp;: un pseudo et un mot de passe. 
+          Aucun long formulaire, aucun numéro de téléphone, aucune carte bancaire n’est demandée pour accéder aux salons de discussion.
+        </div>
+      </div>
+    </div>
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Mon tchat est-il anonyme une fois inscrit&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Oui. Tu échanges sous un pseudo. Tu peux choisir un identifiant qui ne permet pas de te reconnaître dans la vie réelle.
+          L’objectif est de proposer un <strong>tchat anonyme gratuit</strong>, tout en gardant des règles de respect et de modération.
+        </div>
+      </div>
+    </div>
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Puis-je créer un salon privé avec mot de passe&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Oui. Après inscription et connexion, tu peux créer des rooms privées protégées par mot de passe.
+          Seules les personnes à qui tu communiques ce mot de passe pourront rejoindre le salon.
+        </div>
+      </div>
+    </div>
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Comment fonctionne la rencontre tchat gratuit sur Tchat Direct&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Tu peux rejoindre des salons publics thématiques ou créer ton propre espace de discussion.
+          La rencontre se fait par le dialogue, sans algorithme de matching, dans un cadre anonyme et sobre, 
+          centré sur l’échange par messages.
+        </div>
+      </div>
+    </div>
+
+
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>        Un tchat adulte sans inscription, est-ce que c’est vraiment rare ?&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+      Non, il existe plusieurs plateformes de <span>tchatche en ligne</span>.
+      Cependant, les <span>tchats adultes</span> sans inscription restent peu nombreux, car beaucoup de sites 
+      imposent une <span>création de compte</span> ou des étapes compliquées. Un service de Tchat Coquin fait partie 
+      des exceptions : accès direct, anonyme, rapide, idéal pour des échanges légers et des rencontres occasionnelles. 
+      La majorité des autres chats en ligne ne proposent pas une expérience aussi simple 
+      et immédiate (comfirmation de mail avant de pouvoir écrire ou demande un abonnement )parfois demande même les deux (abonnement et email...)
+
+        </div>
+      </div>
+    </div>
+
+
+
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Y a-t-il une application mobile ou un tchat mobile gratuit&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Le site est conçu pour fonctionner sur mobile, directement dans ton navigateur. 
+          Tu peux donc utiliser Tchat Direct comme un <strong>tchat mobile gratuit</strong> sans installer d’application.
+        </div>
+      </div>
+    </div>
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Quelle est la différence avec les anciens tchats anonymes connus&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Tchat Direct reprend l’idée du tchat en ligne anonyme, mais avec une interface plus récente&nbsp;: 
+          meilleure lisibilité, gestion des rooms publiques et privées, URL dédiée par salon, et inscription simplifiée.
+        </div>
+      </div>
+    </div>
+
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Comment supprimer mon compte si je ne souhaite plus utiliser le tchat&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Tu peux contacter l’administrateur du site ou utiliser les options prévues (lorsqu’elles sont disponibles) 
+          pour demander la suppression de ton compte. L’objectif est de te laisser le choix d’utiliser le service ou non, sans contrainte.
+        </div>
+      </div>
+    </div>
+
+
+      <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Est-ce que Tchat Direct convient aussi à une utilisation plus sérieuse (amitié, échanges de groupe)&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Oui. Les rooms privées et les salons publics thématiques permettent aussi de créer des espaces orientés amitié, 
+          discussions de groupe, entraide ou simple échange quotidien, sans forcément chercher la rencontre.
+        </div>
+      </div>
+    </div>
+
+
+
+  </div>
+</section>
+
+
+
+
+
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Pourquoi dois-je m’inscrire si le tchat est gratuit ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "L’inscription sert à créer ton pseudo et ton mot de passe pour sécuriser l’accès à ton compte et à tes salons. Le tchat reste gratuit et anonyme."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Est-ce que Tchat Direct est vraiment un tchat gratuit sans inscription lourde ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui, l’inscription est réduite au strict minimum : un pseudo et un mot de passe, sans formulaire complexe ni données sensibles."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Mon tchat est-il anonyme une fois inscrit ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui, tu échanges sous un pseudo de ton choix, sans obligation de dévoiler ton identité réelle."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Puis-je créer un salon privé avec mot de passe ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui, tu peux créer des rooms privées protégées par mot de passe pour contrôler qui peut rejoindre la discussion."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Comment fonctionne la rencontre tchat gratuit sur Tchat Direct ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "La rencontre se fait par le dialogue dans des salons publics ou privés, sans algorithme de matching, dans un cadre anonyme et sobre."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Y a-t-il un tchat mobile gratuit sur Tchat Direct ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Le site est accessible directement depuis ton navigateur mobile, ce qui en fait un tchat mobile gratuit sans application à installer."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Quelle est la différence avec les anciens tchats anonymes ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Tchat Direct propose une interface plus récente, des rooms publiques et privées, et une URL dédiée pour chaque salon."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Les salons sont-ils modérés ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Des règles de respect et de légalité s’appliquent pour maintenir un environnement de discussion convivial."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Puis-je utiliser Tchat Direct pour des échanges sérieux ou amicaux ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Oui, les rooms permettent aussi d’organiser des échanges amicaux, de groupe ou d’entraide."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Comment supprimer mon compte Tchat Direct ?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Tu peux demander la suppression de ton compte en contactant l’administrateur ou via les options prévues quand elles sont disponibles."
+      }
+    }
+  ]
+}
+</script>
 
     </main>
 
+
+
 <script>
-// Vérif dispo du pseudo (comme avant)
-const $pseudo  = document.getElementById('pseudo');
-const $status  = document.getElementById('status');
-let t = null;
-$pseudo.addEventListener('input', () => {
-  const v = $pseudo.value.trim();
-  $status.textContent = '';
-  if (!/^[\p{L}0-9_.-]{3,30}$/u.test(v)) {
-    $status.textContent = 'Format invalide.'; $status.className = 'status ko'; return;
-  }
-  clearTimeout(t);
-  t = setTimeout(async () => {
-    try {
-      const res  = await fetch('check_pseudo.php?pseudo=' + encodeURIComponent(v), {cache:'no-store'});
-      const data = await res.json();
-      if (!data.ok) { $status.textContent = 'Format invalide.'; $status.className='status ko'; return; }
-      if (data.available) { $status.textContent = '✅ Pseudo disponible'; $status.className='status ok'; }
-      else { $status.textContent = '❌ Déjà pris'; $status.className='status ko'; }
-    } catch { $status.textContent = 'Erreur de vérification'; $status.className='status ko'; }
-  }, 250);
-});
-
-document.querySelectorAll('.toggle-pass').forEach(btn=>{
-  btn.addEventListener('click', ()=> {
-    const targetId = btn.getAttribute('data-target');
-    const input = document.getElementById(targetId);
-    if (!input) return;
-    if (input.type === 'password') {
-      input.type = 'text';
-      btn.textContent = 'Cacher';
-      btn.setAttribute('aria-pressed','true');
-      // Optionnel: éviter que le champ reste visible trop longtemps
-       setTimeout(()=>{ input.type='password'; btn.textContent='Voir'; btn.setAttribute('aria-pressed','false'); }, 10000);
-    } else {
-      input.type = 'password';
-      btn.textContent = 'Voir';
-      btn.setAttribute('aria-pressed','false');
-    }
-  });
-});
-
-
-
-
-
-(function () {
-  const REFRESH_INTERVAL = 10000; // 10 secondes
-
-  async function refreshPublicRooms() {
-    // On ne fait rien si la section n'existe pas (sécurité)
-    const oldSection = document.querySelector('.public-rooms');
-    if (!oldSection) return;
-
-    try {
-      const res = await fetch('public_rooms_snippet.php', {
-        cache: 'no-store',
-        credentials: 'same-origin'
-      });
-      if (!res.ok) {
-        return;
-      }
-
-      const html = await res.text();
-
-      // On parse le HTML reçu pour récupérer la nouvelle <section>
-      const wrapper = document.createElement('div');
-      wrapper.innerHTML = html.trim();
-
-      const newSection = wrapper.querySelector('.public-rooms');
-      if (!newSection) return;
-
-      // Remplacement propre
-      oldSection.replaceWith(newSection);
-    } catch (e) {
-      console.error('refreshPublicRooms error', e);
-    }
-  }
-
-  // Premier appel (optionnel, au cas où tu veux forcer un refresh direct)
-  // refreshPublicRooms();
-
-  // Rafraîchissement toutes les 10 secondes
-  setInterval(refreshPublicRooms, REFRESH_INTERVAL);
-})();
+  window.APP = {
+    baseUrl: "<?= APP_BASE ?>",
+    hasError: <?= empty($errors) ? 'false' : 'true' ?>
+  };
 </script>
 
-
-
-
-
+<script src="<?= APP_BASE ?>/scripts/register.js" defer></script>
 
 
 

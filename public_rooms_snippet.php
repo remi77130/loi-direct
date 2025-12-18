@@ -85,9 +85,13 @@ if ($rooms) {
     }
 }
 ?>
+<head>
+   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
 
 <section class="public-rooms">
-  <h2>Rooms actifs</h2>
+  <h3>Rooms actifs</h3>
   <p>
     Découvre quelques salons publics de Tchat-Direct.
     La lecture est libre, pour participer il suffit de te connecter ou de créer un compte gratuit.
@@ -123,7 +127,7 @@ if ($rooms) {
           $last = end($room['messages']);
           $lastDate = $last['created_at'] ?? ''; // tu peux garder que la date si tu veux
       }
-
+/*
       // 4) JSON-LD pour cette room (DiscussionForumPosting complet)
       $ld = [
           '@context'  => 'https://schema.org',
@@ -135,7 +139,7 @@ if ($rooms) {
               '@type' => 'Organization',
               'name'  => 'Tchat-Direct',
           ],
-      ];
+      ]; */
 
       // Contenu principal du post
       if ($firstMsg !== '') {

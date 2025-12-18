@@ -1,0 +1,191 @@
+/* Conteneurs généraux SEO */
+.seo-section {
+  max-width: 900px;
+  margin: 2rem auto;
+  padding: 1.5rem 1.75rem;
+  background: #111827;
+  border-radius: 16px;
+  width: 100%;
+  border: 1px solid #1f2937;
+  color: #e5e7eb;
+  box-shadow: 0 10px 30px rgba(0,0,0,.4);
+}
+
+.seo-section + .seo-section {
+  margin-top: 1.5rem;
+}
+
+.seo-section h2 {
+  font-size: 1.4rem;
+  margin: 0 0 0.75rem;
+}
+
+.seo-section h3 {
+  font-size: 1.1rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.seo-section p {
+  margin: 0 0 0.75rem;
+  line-height: 1.6;
+  font-size: 0.95rem;
+}
+
+.seo-section ul,
+.seo-section ol {
+  margin: 0.25rem 0 0.75rem 1.25rem;
+  padding: 0;
+  font-size: 0.95rem;
+}
+
+.seo-section li {
+  margin: 0.15rem 0;
+}
+
+/* Encadrés */
+.seo-box {
+  margin: 1rem 0;
+  padding: 0.9rem 1rem;
+  border-radius: 12px;
+  background: #020617;
+  border-left: 3px solid #2563eb;
+  font-size: 0.93rem;
+}
+
+.seo-box--highlight {
+  border-left-color: #facc15;
+}
+
+.seo-box strong {
+  font-weight: 600;
+}
+
+/* Grille avantages */
+.seo-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+}
+
+.seo-grid__item {
+  padding: 0.8rem 0.95rem;
+  border-radius: 12px;
+  background: #020617;
+  border: 1px solid #1f2937;
+  font-size: 0.93rem;
+}
+
+.seo-grid__item-title {
+  font-weight: 600;
+  margin-bottom: 0.3rem;
+}
+
+/* Tableau comparatif */
+.seo-table-wrapper {
+  margin-top: 0.8rem;
+  overflow-x: auto;
+    padding: 0.3rem 0.2rem;  /* léger coussin pour éviter que ça colle au bord */
+
+}
+
+.seo-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.seo-table th,
+.seo-table td {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid #1f2937;
+  text-align: left;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+
+.seo-table th {
+  background: #020617;
+  font-weight: 600;
+}
+
+.seo-table tr:nth-child(even) td {
+  background: rgba(15, 23, 42, 0.7);
+}
+
+/* FAQ accordéon */
+.seo-faq {
+  margin-top: 1rem;
+}
+
+.seo-accordion__item + .seo-accordion__item {
+  margin-top: 0.5rem;
+}
+
+.seo-accordion__question {
+  width: 100%;
+  text-align: left;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid #1f2937;
+  background: #020617;
+  color: #e5e7eb;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.95rem;
+}
+
+.seo-accordion__question span {
+  flex: 1;
+  margin-right: 0.6rem;
+}
+
+.seo-accordion__icon {
+  font-size: 1.1rem;
+  opacity: 0.7;
+}
+
+.seo-accordion__answer {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.25s ease-out;
+  background: #020617;
+  border-radius: 0 0 10px 10px;
+  border-left: 1px solid #1f2937;
+  border-right: 1px solid #1f2937;
+  border-bottom: 1px solid #1f2937;
+}
+
+.seo-accordion__answer-inner {
+  padding: 0.65rem 0.9rem 0.8rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* État ouvert */
+.seo-accordion__item.is-open .seo-accordion__answer {
+  max-height: 500px;
+}
+
+.seo-accordion__item.is-open .seo-accordion__question {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-color: #2563eb;
+}
+
+.seo-accordion__item.is-open .seo-accordion__icon {
+  transform: rotate(90deg);
+}
+
+/* Petits écrans */
+@media (min-width: 768px) {
+  .seo-grid {
+    flex-direction: row;
+  }
+
+  .seo-grid__item {
+    flex: 1;
+  }
+}
