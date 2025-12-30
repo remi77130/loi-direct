@@ -152,16 +152,20 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
   <!-- SEO -->
   <link rel="canonical" href="https://tchat-direct.com/register.php">
 
-<link rel="stylesheet" href="<?= APP_BASE ?>/styles/seo.css">
-<link rel="stylesheet" href="<?= APP_BASE ?>/styles/register.css">
+  <!-- Stylesheets -->
+   <link rel="stylesheet" href="<?= APP_BASE ?>/styles/tokens.css?v=1">
+<link rel="stylesheet" href="<?= APP_BASE ?>/styles/register.css?v=1">
+
+<link rel="stylesheet" href="<?= APP_BASE ?>/styles/seo.css?v=1">
+
 
   <meta name="description" content="Inscrivez-vous sur Tchat Direct pour rejoindre des salons de discussion anonymes et discuter en ligne gratuitement.">
   <meta name="keywords" content="tchat direct, tchat en ligne, chat anonyme, coco chat, direct tchat">
 
   <meta name="robots" content="index,follow">
 
-  <!-- jQuery UNIQUEMENT si tu en as besoin ici -
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>-->
+  <!-- jQuery UNIQUEMENT si tu en as besoin ici --->
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>
 
   <!-- Google Analytics 4 -->
   <script async src="https://www.googletagmanager.com/gtag/js?id=G-FHFM0ESDMP"></script>
@@ -188,7 +192,14 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
 
 <header  id="header"  class="site-header">
   <a href="register.php" class="logo-link">
-<img src="<?= APP_BASE ?>/uploads/tchat_direct_logo.webp">
+
+
+  
+<img src="<?= APP_BASE ?>/uploads/tchat_direct_logo.webp" alt="Tchat Direct logo"
+  class="logo-img"
+  width="210"
+  height="210"
+  decoding="async">
   </a> <p class="logo-note">Le logo </p>
 
 </header>
@@ -259,7 +270,7 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
     </form>
 
     <div class="footer_link_login">Déjà inscrit ? 
-      <a href="login.php"><span style="font-weight:600;text-decoration:underline;cursor:pointer;">Connexion</span></a>
+      <a href="login.php"><span>Connexion</span></a>
 </div>
   </div>
 
@@ -569,6 +580,46 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
   </div>
 </section>
 
+<footer class="site-footer brutal" role="contentinfo">
+  <div class="footer-strip footer-links-strip">
+    <nav class="footer-links" aria-label="Liens du site">
+      <a class="footer-link" href="<?= APP_BASE ?>/legal.php">Mentions légales</a>
+      <a class="footer-link" href="<?= APP_BASE ?>/privacy.php">Confidentialité</a>
+      <a class="footer-link" href="<?= APP_BASE ?>/cgu.php">CGU</a>
+      <a class="footer-link" href="<?= APP_BASE ?>/contact.php">Contact</a>
+    </nav>
+  </div>
+
+  <div class="footer-strip footer-social-strip">
+    <div class="footer-social">
+      <a class="social-btn" href="https://instagram.com/TON_COMPTE" target="_blank" aria-label="Instagram">
+        <!-- Instagram SVG identique -->
+        <svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Z"/>
+          <path d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z"/>
+          <path d="M17.5 6.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/>
+        </svg>
+      </a>
+
+      <a class="social-btn" href="https://t.me/TON_GROUPE" target="_blank" aria-label="Telegram">
+        <!-- Telegram SVG identique -->
+        <svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M21.9 4.6c.2-.8-.5-1.4-1.2-1.1L2.8 10.6c-.8.3-.7 1.5.1 1.8l4.6 1.6 1.8 5.7c.2.7 1 .8 1.5.4l2.6-2.3 5.1 3.7c.6.4 1.4.1 1.6-.6l3.8-16.3Z"/>
+        </svg>
+      </a>
+    </div>
+  </div>
+
+  <div class="footer-meta brutal-meta">
+    © <?= date('Y') ?> Tchat Direct — BETA
+  </div>
+</footer>
+
+
+
+
+
+
 
 
 
@@ -674,7 +725,7 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
   };
 </script>
 
-<script src="<?= APP_BASE ?>/scripts/register.js" defer></script>
+<script src="<?= APP_BASE ?>/script/register.js?v=1" defer></script>
 
 
 

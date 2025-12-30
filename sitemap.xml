@@ -1,9 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>https://tchat-direct.com/</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
 
-</urlset>
+  <sitemap>
+    <loc>https://tchat-direct.com/sitemaps/sitemap_pages.xml</loc>
+  </sitemap>
+
+  <sitemap>
+    <loc>https://tchat-direct.com/sitemaps/sitemap_rooms_1.php</loc>
+  </sitemap>
+
+</sitemapindex>

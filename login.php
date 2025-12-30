@@ -275,7 +275,7 @@ if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
 <link rel="stylesheet" href="<?= APP_BASE ?>/styles/login.css">
 
 <meta name="description" content="Tchat Direct est une plateforme de tchat en ligne anonyme et gratuit. Rejoignez des salons, créez vos propres rooms et discutez en direct.">
-<meta name="keywords" content="tchat direct, tchat en ligne, chat anonyme, coco chat, direct tchat">
+<meta name="keywords" content="tchat direct, tchat en ligne, chat anonyme, tchatche gratuite, direct tchat">
 
 <!-- Canonical : si l’URL officielle est bien /login.php -->
 <link rel="canonical" href="https://tchat-direct.com/login.php">

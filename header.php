@@ -16,6 +16,7 @@
   </a> 
 </span>
     <a href="<?= APP_BASE ?>/index.php" class="active">Récents</a>
+    <a href="<?= APP_BASE ?>/quiz_bon_coup.php" class="active">Quiz</a>
     <a href="<?= APP_BASE ?>/index.php?mine=1">Mes post</a>
     <a style="color: pink;font-weight:700;" href="<?= APP_BASE ?>/chat_rooms.php" rel="noopener">Rooms</a>
 

@@ -25,8 +25,8 @@ body.neo .site-header{
 }
 
 body.neo .logo-img{
-  height: 72px;
-  width:auto;
+  height: 90px;
+  width:var(--w-auto);
   display:block;
 }
 
@@ -369,7 +369,7 @@ body.neo .public-room__image{
     overflow-x: hidden;
   }
   body.neo .logo-img{
-    height: 64px;
+    height: 70px;
   }
   body.neo .card,
   body.neo .public-rooms,

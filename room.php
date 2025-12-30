@@ -174,6 +174,10 @@ if (!empty($msgs)) {
   <link rel="icon" type="image/png" sizes="16x16" href="/uploads/favicon-16x16.png">
   <link rel="apple-touch-icon" sizes="180x180" href="/uploads/apple-touch-icon.png">
   <link rel="manifest" href="site.webmanifest"><!-- OpenGraph -->
+<!-- Stylesheet -->
+<link rel="stylesheet" href="<?= APP_BASE ?>/styles/tokens.css">
+<link rel="stylesheet" href="<?= APP_BASE ?>/styles/room.css">
+  
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Tchat-Direct">
 <meta property="og:title" content="<?= htmlspecialchars('Salon ' . $roomName . ' – Tchat Direct', ENT_QUOTES, 'UTF-8') ?>">
@@ -198,117 +202,13 @@ if (!empty($msgs)) {
 
   </script>
 
-  <style>
-    :root{font-family:system-ui,Segoe UI,Roboto,Arial,sans-serif}
-    body{
-      margin:0;
-      background:#0f172a;
-      color:#e5e7eb;
-      display:flex;
-      flex-direction:column;
-      min-height:100vh;
-      align-items:center;
-    }
-    .site-header{
-      width:100%;
-      padding:12px 20px;
-      display:flex;
-      align-items:center;
-      justify-content:flex-start;
-    }
-    .logo-img{height:80px;display:block}
-    .page{
-      width:100%;
-      max-width:900px;
-      padding:16px;
-      box-sizing:border-box;
-    }
-    .room-header{
-      margin-bottom:16px;
-    }
-    .room-header h1{
-      margin:0 0 8px;
-      font-size:24px;
-    }
-    .room-header p{
-      margin:0;
-      font-size:14px;
-      color:#9ca3af;
-    }
 
-    .public-room__messages{
-      max-height:none;
-      overflow:visible;
-      padding-right:0;
-      margin-bottom:25px
-    }
-    .public-room__list{
-      list-style:none;
-      margin:0;
-      padding:0;
-    }
-    .public-room__item{
-      padding:0.6rem 0;
-      border-bottom:1px dashed #1f2937;
-    }
-    .public-room__meta{
-      font-size:0.8rem;
-      color:#9ca3af;
-      margin-bottom:0.15rem;
-    }
-    .public-room__author{font-weight:600}
-    .public-room__sep{margin:0 0.25rem}
-    .public-room__body{
-      font-size:0.9rem;
-      line-height:1.4;
-    }
-    .public-room__likes{
-      margin-left:0.5rem;
-      font-size:0.8rem;
-      padding:0.1rem 0.4rem;
-      border-radius:999px;
-      background:#111827;
-      color:#fbbf24;
-    }
-    .public-room__image-wrap{margin-top:4px}
-    .public-room__image{
-      max-width:60%;
-      height:auto;
-      border-radius:8px;
-      display:block;
-    }
-
-    .cta-bar{
-      margin:16px 0;
-      padding:12px;
-      background:#111827;
-      border-radius:10px;
-      font-size:14px;
-    }
-    .cta-bar a.btn{
-      display:inline-block;
-      margin-top:8px;
-      padding:8px 14px;
-      border-radius:999px;
-      background:#2563eb;
-      color:#fff;
-      text-decoration:none;
-      font-weight:600;
-    }
-    .cta-bar a.btn:hover{background:#1d4ed8;}
-
-    .link_response{    color: aliceblue;
-    border: 0.5px solid hotpink;
-    padding: 10px 15px;
-    border-radius: 900px;
-    text-decoration: none;}
-  </style>
 </head>
-<body>
+<body class="neo">
 
 <header class="site-header">
   <a href="index.php" class="logo-link">
-    <img src="uploads/tchat_direct_logo.webp" alt="Tchat Direct logo" class="logo-img">
+<img src="<?= APP_BASE ?>/uploads/tchat_direct_logo.webp" class="logo-img" alt="Tchat Direct">
   </a>
 </header>
 
@@ -364,10 +264,16 @@ if (!empty($msgs)) {
                 <strong class="public-room__author">
                   <?= htmlspecialchars($msg['pseudo'] ?? 'Anonyme', ENT_QUOTES, 'UTF-8') ?>
                 </strong>
-                <span class="public-room__sep">·</span>
-                <time datetime="<?= htmlspecialchars($msg['created_at'], ENT_QUOTES, 'UTF-8') ?>">
-                  <?= htmlspecialchars($msg['created_at'], ENT_QUOTES, 'UTF-8') ?>
-                </time>
+              <?php
+          $dt = $msg['created_at'];
+         $hourOnly = '';
+         if ($dt) {
+         $hourOnly = date('H:i', strtotime($dt));
+            }
+              ?>
+          <time datetime="<?= htmlspecialchars($dt, ENT_QUOTES, 'UTF-8') ?>">
+            <?= htmlspecialchars($hourOnly, ENT_QUOTES, 'UTF-8') ?>
+            </time>
 
                 <?php if ($likes > 0): ?>
                   <span class="public-room__likes">
@@ -405,6 +311,11 @@ if (!empty($msgs)) {
                             <a class="link_response" href="register.php">Répondre </a>
   </section>
 </main>
+
+
+
+
+<script src="<?= APP_BASE ?>/js_chat_rooms.js?v=1" defer></script>
 
 </body>
 </html>

@@ -8,7 +8,5 @@ Disallow: /config.php
 Disallow: /check_pseudo.php
 Disallow: /chat_messages.php
 Disallow: /chat_room_create.php
-Disallow: /script/
-Disallow: /styles/
 
 Sitemap: https://tchat-direct.com/sitemap.xml

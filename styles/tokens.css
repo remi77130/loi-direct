@@ -1,0 +1,327 @@
+/* tokens.css — SOURCE UNIQUE DE VÉRITÉ VISUELLE */
+/* Basé STRICTEMENT sur register.css 
+🧠 Ce que tu dois retenir (simplement)
+
+register.css n’invente plus rien
+
+tokens.css contient TOUTES les valeurs
+
+Tu veux :
+
+changer le rouge ? → --c-danger
+
+grossir les titres ? → --fs-26
+
+durcir le style ? → --b-strong / --sh-xl
+
+👉 Un seul fichier à modifier = zéro dérive */
+
+
+:root{
+
+  /* ================= TYPO ================= */
+  --font-mono:
+    ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    Monaco,
+    Consolas,
+    "Liberation Mono",
+    "Courier New",
+    monospace;
+
+  /* ================= FONT SIZES ================= */
+  --fs-11: 11px;
+  --fs-12: 12px;
+  --fs-13: 13px;
+  --fs-14: 14px;
+  --fs-17: 17px;
+  --fs-18: 18px;
+  --fs-26: 26px;
+
+
+  /* ================= COULEURS DE BASE ================= */
+  --c-black: #000000;
+  --c-ink:   #0b0b0b;
+  --c-white: #ffffff;
+
+  /* ================= FONDS ================= */
+  --c-paper: #f4f4f4;   /* fond page */
+  --c-accent: #ffe600;  /* jaune bêta */
+  --c-danger: #ff5b52;  /* rouge card */
+  --c-cyan:   #4fb2c6;  /* public rooms */
+
+  /* ================= STATUT ================= */
+  --c-ok:   #7CFF6B;
+  --c-warn: #FFD1D1;
+
+  /* ================= BORDURES ================= */
+  --b-strong: 4px solid var(--c-black);
+  --b-mid:    3px solid var(--c-black);
+  --b-light:  2px dotted var(--c-black);
+
+  /* ================= RADIUS ================= */
+  --r-0: 0;
+
+/* ================= WIDTHS ================= */
+ --w-auto: auto;
+
+  /* ================= SHADOWS ================= */
+  --sh-xl: 12px 12px 0 var(--c-black);
+  --sh-l:  10px 10px 0 var(--c-black);
+  --sh-m:   8px  8px 0 var(--c-black);
+  --sh-s:   6px  6px 0 var(--c-black);
+  --sh-xs:  2px  2px 0 var(--c-black);
+
+  /* ================= SPACING ================= */
+  --sp-6:   6px;
+  --sp-8:   8px;
+  --sp-10: 10px;
+  --sp-12: 12px;
+  --sp-14: 14px;
+  --sp-16: 16px;
+  --sp-18: 18px;
+  --sp-20: 20px;
+  --sp-22: 22px;
+  --sp-40: 40px;
+
+/* ================= MARGIN ================= */
+
+--mg-0: 0px;
+--mg-6: 6px;
+--mg-8: 8px;
+--mg-10: 10px;
+--mg-12: 12px;
+--mg-14: 14px;
+--mg-30: 30px;
+
+
+}
+
+/************** styles spécifiques au QUIZ        QUIZ  ************/
+
+.nb-wrap
+{
+  font-family: var(--font-mono);
+}
+
+/* Animation quiz steps */
+.qstep {
+  opacity: 0;
+  transform: translateX(20px);
+  transition: opacity 220ms ease, transform 220ms ease;
+}
+
+.qstep.active {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.qstep.exit-left {
+  opacity: 0;
+  transform: translateX(-20px);
+}
+
+.qstep.exit-right {
+  opacity: 0;
+  transform: translateX(20px);
+}
+
+
+.answer-card {
+ display:flex;
+  gap: var(--sp-12);
+  align-items:center;
+  padding: var(--sp-14);
+  margin: var(--sp-10) 0;
+  border: var(--b-mid);
+  border-radius: var(--r-0);
+  background: var(--c-white);
+  box-shadow: var(--sh-s);
+  cursor:pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.answer-card:hover {
+ transform: translateX(4px);
+  box-shadow: var(--sh-m);
+
+}
+
+/* Empêche les clics “précis” sur la radio : on clique la carte */
+.answer-card input{
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  pointer-events: none;
+}
+.answer-card{
+  position: relative;
+}
+
+/* Sélection : neo brutal bien visible */
+.answer-card:has(input:checked){
+  background: var(--c-accent);
+  border: var(--b-strong);
+  box-shadow: var(--sh-xl);
+}
+
+/* Accessibilité : focus clavier */
+.answer-card:focus-within{
+  outline: 0;
+  box-shadow: var(--sh-xl);
+}
+
+
+/* ===== Neo brutal helpers (Quiz) ===== */
+
+/* ===== Erreurs quiz : liste sans puces (neo brutal) ===== */
+
+
+.nb-wrap{
+  max-width: 820px;
+  margin: 0 auto;
+  padding: var(--sp-16);
+}
+
+.nb-card{
+  border: var(--b-mid);
+  background: var(--c-white);
+  box-shadow: var(--sh-s);
+  padding: var(--sp-12);
+  margin: var(--sp-12) 0;
+}
+
+.nb-card--tight{
+  padding: var(--sp-10);
+}
+
+.nb-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap: var(--sp-12);
+}
+
+.nb-actions{
+  display:flex;
+  gap: var(--sp-10);
+  align-items:center;
+  margin-top: var(--sp-12);
+}
+
+.nb-btn{
+  padding: var(--sp-10) var(--sp-14);
+  border: var(--b-mid);
+  background: var(--c-white);
+  box-shadow: var(--sh-s);
+  cursor:pointer;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+
+.nb-btn:hover{
+  transform: translateX(3px);
+  box-shadow: var(--sh-m);
+}
+
+.nb-btn:disabled{
+  opacity: .55;
+  cursor:not-allowed;
+  transform:none;
+  box-shadow: var(--sh-s);
+}
+
+/* Progress */
+.nb-progress{
+  height: 10px;
+  border: var(--b-mid);
+  margin-top: var(--sp-8);
+  background: var(--c-white);
+}
+
+#progressBar{
+  height:100%;
+  width:0%;
+  background: var(--c-black); /* ou var(--c-accent) si tu veux */
+  transition: width 160ms ease;
+}
+
+/* Errors */
+.nb-error{
+  border: var(--b-mid);
+  background: var(--c-white);
+  box-shadow: var(--sh-s);
+  padding: var(--sp-12);
+}
+
+
+
+.qerr{
+  border: var(--b-mid);
+  background: var(--c-white);
+  box-shadow: var(--sh-s);
+  padding: var(--sp-10);
+  margin-top: var(--sp-10);
+}
+
+/* Quiz steps container (tu as déjà l’anim qstep) */
+.qstep{
+  border: var(--b-mid);
+  background: var(--c-white);
+  box-shadow: var(--sh-s);
+  padding: var(--sp-12);
+  margin: var(--sp-12) 0;
+}
+
+
+
+
+/* ===== Quiz responsive fix ===== */
+
+/* 1) Les réponses : le texte prend la place, wrap normal */
+.answer-card span{
+  flex: 1;
+  min-width: 0;            /* important en flex pour éviter les trucs bizarres */
+  white-space: normal;
+  word-break: normal;
+  overflow-wrap: anywhere; /* au pire, casse proprement si mot trop long */
+}
+
+/* Radio alignée proprement quand ça wrap */
+.answer-card{
+  align-items: flex-start;
+}
+
+/* 2) Actions : ça wrap en mobile au lieu de compresser */
+.nb-actions{
+  flex-wrap: wrap;
+}
+
+.nb-actions .nb-btn{
+  flex: 1 1 160px;         /* 2 boutons par ligne si possible */
+}
+
+/* 3) Mobile : cartes + padding moins agressifs */
+@media (max-width: 480px){
+  .nb-wrap{
+    padding: var(--sp-10);
+  }
+
+  .answer-card{
+    padding: var(--sp-12);
+    gap: var(--sp-10);
+  }
+
+  .nb-actions .nb-btn{
+    flex: 1 1 100%;        /* 1 bouton par ligne si c’est trop serré */
+  }
+
+
+  .nb-wrap{
+    font-size: var(--fs-14);
+  }
+
+}
+

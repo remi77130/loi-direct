@@ -95,11 +95,9 @@ let pollDelay   = 2000;     // 2s
     catch { return ''; }
   }
 
-const ACTIVE_BOX = document.getElementById('activeUsersBox');
-const PRESENCE_THRESHOLD_S = 90; // doit être ≤ au seuil serveur
 
 async function refreshActiveUsers(){
-  if (!ACTIVE_BOX) return;
+  if (!ACTIVE_BOX) return;  
   try{
     const roomParam = (typeof currentRoom !== 'undefined' && currentRoom) ? `&room_id=${encodeURIComponent(currentRoom)}` : '';
     const r = await fetch(`${BASE}/chat_presence_list.php?threshold=${PRESENCE_THRESHOLD_S}${roomParam}`, {
