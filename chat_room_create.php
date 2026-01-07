@@ -31,6 +31,10 @@ if (!hash_equals($_SESSION['csrf'] ?? '', $csrf)) {
   echo json_encode(['ok'=>false,'error'=>'csrf']); exit;
 }
 
+
+
+
+
 $uid = (int)($_SESSION['user_id'] ?? 0);
 
 /* --- Params // --- Inputs ------ */
@@ -38,11 +42,16 @@ $name = trim((string)($_POST['name'] ?? ''));
 $name = mb_substr($name, 0, 20);
 $is_private = isset($_POST['is_private']) ? 1 : 0;
 $pwd = (string)($_POST['password'] ?? '');
+$is_ephemeral = isset($_POST['is_ephemeral']) && ($_POST['is_ephemeral'] === '1' || $_POST['is_ephemeral'] === 'on');
+$expires_at = $is_ephemeral ? date('Y-m-d H:i:s', time() + 86400) : null;
+
 
 // Validation fonctionnelle
 
 if ($name === '') { http_response_code(422); echo json_encode(['ok'=>false,'error'=>'nom']); exit; }
 if ($is_private === 1 && $pwd === '') { http_response_code(422); echo json_encode(['ok'=>false,'error'=>'password']); exit; }
+
+
 
 /* ---------------- Limite 1 salon / 24 h, tout type ---------------- */
 $st = $mysqli->prepare("
@@ -67,10 +76,13 @@ if ($since !== null && (int)$since < 86400) {
 $hash = $is_private ? password_hash($pwd, PASSWORD_DEFAULT) : null;
 
 $ins = $mysqli->prepare("
-  INSERT INTO chat_rooms (name, password_hash, is_private, created_by)
-  VALUES (?, ?, ?, ?)
+  INSERT INTO chat_rooms (name, password_hash, is_private, created_by, is_ephemeral, expires_at)
+  VALUES (?, ?, ?, ?, ?, ?)
 ");
-$ins->bind_param('ssii', $name, $hash, $is_private, $uid);
+$privInt = $is_private ? 1 : 0;
+$ephInt  = $is_ephemeral ? 1 : 0;
+
+$ins->bind_param('ssiiis', $name, $hash, $privInt, $uid, $ephInt, $expires_at);
 
 if ($ins->execute()) {
   echo json_encode(['ok'=>true,'id'=>$mysqli->insert_id], JSON_UNESCAPED_UNICODE);

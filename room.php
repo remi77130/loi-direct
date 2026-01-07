@@ -101,19 +101,20 @@ if (!empty($msgs)) {
         $metaDesc = $firstText;
     }
 }
+// SEO : données structurées JSON-LD --- >
 // JSON-LD complet pour une room publique
 // JSON-LD complet pour une room publique
-$ld = [
-  '@context'  => 'https://schema.org',
-  '@type'     => 'DiscussionForumPosting',
-  'headline'  => 'Salon public - '.$roomName,
-  'name'      => $roomName,
-  'url'       => $canonicalUrl,
-  'publisher' => [
-      '@type' => 'Organization',
-      'name'  => 'Tchat-Direct',
-  ],
-];
+//$ld = [
+  //'@context'  => 'https://schema.org',
+  //'@type'     => 'DiscussionForumPosting',
+  //'headline'  => 'Salon public - '.$roomName,
+  //'name'      => $roomName,
+  //'url'       => $canonicalUrl,
+  //'publisher' => [
+   //   '@type' => 'Organization',
+     // 'name'  => 'Tchat-Direct',
+ // ],
+//];
 
 // Init SAFE (évite les warnings)
 $firstDate = '';

@@ -22,8 +22,8 @@ header('Pragma: no-cache');
 header('Expires: 0');
 
 
-require __DIR__ . '/db.php';     // fournit $mysqli (mysqli)
-require __DIR__ . '/config.php'; // si tu as APP_BASE ou helpers
+require __DIR__ . '/../db.php';     // fournit $mysqli (mysqli)
+require __DIR__ . '/../config.php'; // si tu as APP_BASE ou helpers
 
 
 
@@ -262,7 +262,7 @@ $_SESSION['csrf'] = bin2hex(random_bytes(16));
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Tchat direct - Quiz — Es-tu un bon coup ?</title>
-  <link rel="stylesheet" href="<?= APP_BASE ?>/styles/tokens.css">
+  <link rel="stylesheet" href="<?= APP_BASE ?>/../styles/tokens.css">
 </head>
 <body>
 

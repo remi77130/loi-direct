@@ -11,19 +11,42 @@ header('Cache-Control: no-store');
 /* 1) Entrées */
 $room_id = (int)($_GET['room_id'] ?? 0);
 $after   = max(0, (int)($_GET['after_id'] ?? 0));
-if ($room_id <= 0) { http_response_code(400); echo json_encode(['ok'=>false,'error'=>'room_id']); exit; }
+if ($room_id <= 0) {
+  http_response_code(400);
+  echo json_encode(['ok'=>false,'error'=>'room_id']);
+  exit;
+}
 
-/* 2) Accès salon */
-$st = $mysqli->prepare("SELECT is_private FROM chat_rooms WHERE id=?");
+/* 2) Accès salon + blocage si expiré */
+$st = $mysqli->prepare("SELECT is_private, expires_at FROM chat_rooms WHERE id=?");
 $st->bind_param('i', $room_id);
 $st->execute();
-$st->bind_result($is_private);
-if (!$st->fetch()) { $st->close(); http_response_code(404); echo json_encode(['ok'=>false,'error'=>'notfound']); exit; }
+$st->bind_result($is_private, $expires_at);
+
+if (!$st->fetch()) {
+  $st->close();
+  http_response_code(404);
+  echo json_encode(['ok'=>false,'error'=>'notfound']);
+  exit;
+}
 $st->close();
 
+// Si salon expiré => on bloque direct
+// $expires_at est une string 'YYYY-MM-DD HH:MM:SS' ou NULL
+if (!empty($expires_at) && strtotime((string)$expires_at) <= time()) {
+  // Nettoyage optionnel : éviter "locked ok" qui traine en session
+  unset($_SESSION['rooms_ok'][$room_id]);
+
+  http_response_code(410); // Gone
+  echo json_encode(['ok'=>false,'error'=>'expired']);
+  exit;
+}
+
+// Salon privé => check unlock
 if ((int)$is_private === 1 && empty($_SESSION['rooms_ok'][$room_id])) {
   http_response_code(403);
-  echo json_encode(['ok'=>false,'error'=>'locked']); exit;
+  echo json_encode(['ok'=>false,'error'=>'locked']);
+  exit;
 }
 
 /* 3) Requête messages (JOIN users + likes dans les deux cas) */
@@ -37,7 +60,7 @@ $baseSelect = "
     m.file_mime,
     m.file_w,
     m.file_h,
-u.avatar_url AS avatar_url,
+    u.avatar_url AS avatar_url,
     CASE
       WHEN m.color IS NOT NULL
        AND m.created_at >= NOW() - INTERVAL 5 MINUTE
@@ -57,12 +80,10 @@ u.avatar_url AS avatar_url,
 if ($after > 0) {
   $sql  = $baseSelect . " AND m.id > ? ORDER BY m.id ASC LIMIT 200";
   $stmt = $mysqli->prepare($sql);
-  // ordre des paramètres = user_id, room_id, after
   $stmt->bind_param('iii', $_SESSION['user_id'], $room_id, $after);
 } else {
   $sql  = $baseSelect . " ORDER BY m.id DESC LIMIT 50";
   $stmt = $mysqli->prepare($sql);
-  // ordre des paramètres = user_id, room_id
   $stmt->bind_param('ii', $_SESSION['user_id'], $room_id);
 }
 

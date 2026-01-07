@@ -8,12 +8,15 @@ require_login();
 if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
 ?>
 <!doctype html><html lang="fr"><head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta charset="utf-8">
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <meta name="robots" content="noindex, nofollow">
-<link rel="stylesheet" href="<?= APP_BASE ?>/styles/index.css"><title>Salons de discussion</title>
-<link rel="stylesheet" href="<?= APP_BASE ?>/styles/chat_rooms.css">
-  <meta name="robots" content="noindex, nofollow">
+
+  <link rel="stylesheet" href="<?= APP_BASE ?>/styles/tokens.css?v=1">
+<link rel="stylesheet" href="<?= APP_BASE ?>/styles/chat_rooms.css?v=1">
+
 
 
 </head>
@@ -35,7 +38,7 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
 
 
 <!-- Modale d'information système -->
-<div id="systemNotice" class="overlay-dialog overlay-dialog--info">
+<div id="systemNotice" class="overlay-dialog">
   <div class="overlay-dialog__box">
     <button class="overlay-dialog__close" id="systemNoticeClose">&times;</button>
 
@@ -65,43 +68,61 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
 
 <div class="wrap">
   <div class="card">
-    <h1 style="margin:0 0 6px">Salons de discussion</h1>
+    <h1 style="margin:0 0 6px">Salons</h1>
 
-    <form id="newRoom" autocomplete="off" >
-      <input name="name" maxlength="20" placeholder="Nom du salon (ex: Discu Sympa)" required
-             style="flex:1;padding:10px;border-radius:10px;border:1px solid var(--line);background:#0b1220;color:var(--txt)">
-      <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
-      <button class="btn" type="submit">Créer</button>
-      <span id="roomStatus" class="mut"></span>
+<form id="newRoom" class="cr-form" autocomplete="off">
+  <input
+    class="cr-input"
+    name="name"
+    maxlength="20"
+    placeholder="Nom du salon (ex: Discu Sympa)"
+    required
+  >
 
-<label style="display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    font-weight: 600;
-    font-size: 18px;
-    margin-left: 8px;">
-  <input type="checkbox" name="is_private" id="is_private">
-  Protégé
+  <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
+
+  <button class="btn cr-btn" type="submit">Créer</button>
+  <span id="roomStatus" class="mut cr-status"></span>
+
+  <label class="cr-toggle"> <!--- Checkbox private stylée -->
+    <input type="checkbox" name="is_private" id="is_private">
+    Protégé
+  </label>
+
+  <input
+    type="password"
+    class="cr-input cr-input--pwd"
+    name="password"
+    id="room_pwd"
+    placeholder="Mot de passe"
+    maxlength="20"
+    style="display:none"
+  >
+
+  <script> // Toggle affichage mot de passe
+  const chk = document.getElementById('is_private');
+  const pwd = document.getElementById('room_pwd');
+  chk.addEventListener('change', (e)=>{
+    const on = e.target.checked;
+    pwd.style.display = on ? 'inline-block' : 'none';
+    pwd.toggleAttribute('required', on);
+    if (!on) pwd.value = '';
+  });
+  </script>
+
+
+<label class="chk">
+  <input type="checkbox" name="is_ephemeral" value="1">
+  Salon éphémère (24h)
 </label>
-<input type="password" name="password" id="room_pwd" placeholder="Mot de passe" maxlength="20" style="display:none; margin-top:8px;">
-<script>
-const chk = document.getElementById('is_private');
-const pwd = document.getElementById('room_pwd');
-chk.addEventListener('change', (e)=>{
-  const on = e.target.checked;
-  pwd.style.display = on ? 'inline-block' : 'none';
-  pwd.toggleAttribute('required', on); // ← ajoute/enlève required
-  if (!on) pwd.value = '';
-});
-</script>
 
+</form>
 
-    </form>
 
 
     
 <!-- Modale utilisateurs actifs -->
-<div id="activeModal" class="modal" hidden>
+<div id="activeModal" class="active_modal" hidden>
 
 
   <div class="modal-box">
@@ -157,8 +178,8 @@ chk.addEventListener('change', (e)=>{
 
 
 
-
-<div id="lockModal" class="modal-overlay"  role="dialog" aria-modal="true" hidden>
+<!-- Modal salon protégé -->
+<div id="lockModal" class="modal-overlay"  role="dialog" aria-modal="true" hidden> 
   <div class="modal-box">
     <h3>Salon protégé</h3>
     <p class="mut">Entrez le mot de passe.</p>
@@ -185,20 +206,15 @@ chk.addEventListener('change', (e)=>{
 
     <div class="rooms" id="rooms"></div>
 
-        <h2 style="margin-top:16px;font-size:14px">Users en ligne</h2>
+        <h2 >Users en ligne</h2>
     <div id="presenceInline"></div>
 
 
   </div>
+<div class="return">
+  <a class="nav-link" href="<?= APP_BASE ?>/index.php">&larr; Retour</a>
 
-  <p><a style="text-decoration: none;
-    color: antiquewhite;
-    border: 0.5px solid blanchedalmond;
-    border-radius: 35px 122px;
-    padding: 10px;
-    font-size: 18px;
-    font-weight: 700;
-    box-shadow: 5px 3px 5px #00000073;" href="<?= APP_BASE ?>/index.php">&larr; Retour</a></p>
+</div>
 </div>
 
 <!-- Modal chat -->
@@ -210,7 +226,7 @@ chk.addEventListener('change', (e)=>{
          <button id="chatBackBtn" type="button" class="btn btn-ghost btn_retour">
       ← Salons
     </button>
-        <strong id="roomTitle">Salon</strong>
+        <strong class="room_Title" id="roomTitle">Salon</strong>
       </div>
 
       <div class="chatHead-actions">
@@ -275,7 +291,7 @@ chk.addEventListener('change', (e)=>{
           type="color"
           id="msgColor"
           name="color"
-          value="#FFFFFF"
+          value="#000000ff"
           title="Choisir une couleur de message (optionnel)"
         >
       </label>
@@ -514,9 +530,11 @@ roomDeleteBtn?.addEventListener('click', async () => {
       return;
     }
 
+
+
+
     // On ferme le chat et on recharge la liste des salons
-    chatModal.style.display = 'none';
-    currentRoom = 0;
+await closeChat({ reloadRooms: true });    currentRoom = 0;
     await loadRooms();
   } catch (err) {
     console.error(err);
@@ -831,47 +849,57 @@ roomShareBtn?.addEventListener('click', () => {
 
 
 
-
-function closeChat(){
-  // On arrête le polling messages + présence + ping
+async function closeChat({ reloadRooms = false, clearUrl = true } = {}) {
+  // Stop tout ce qui tourne
   stopPolling();
   stopPresence();
-  stopTypingWatch();   // <--- ajoute cette ligne
+  stopTypingWatch();
 
-
-  // On reset l’état
-  currentRoom   = 0;
+  // Reset état
+  currentRoom = 0;
   currentRoomId = 0;
-  lastId        = 0;
-  roomIdInp.value = '';
-  chatMsgs.innerHTML = '';
-  toBottom.style.display = 'none';
+  lastId = 0;
 
-  // On masque la modale
-  chatModal.style.display = 'none';
+  if (roomIdInp) roomIdInp.value = '';
+  if (chatMsgs) chatMsgs.innerHTML = '';
+  if (toBottom) toBottom.style.display = 'none';
 
-  // Optionnel : on enlève ?room= de l’URL si présent
-  try {
-    const url = new URL(window.location.href);
-    if (url.searchParams.has('room')) {
-      url.searchParams.delete('room');
-      window.history.pushState({}, '', url);
-    }
-  } catch (e) {
-    // On s’en fout si ça plante, ce n’est pas bloquant
+  // Cache la modale
+  if (chatModal) chatModal.hidden = true;
+
+  // Optionnel : retire ?room=
+  if (clearUrl) {
+    try {
+      const url = new URL(window.location.href);
+      if (url.searchParams.has('room')) {
+        url.searchParams.delete('room');
+        window.history.pushState({}, '', url);
+      }
+    } catch {}
+  }
+
+  // Optionnel : recharge la liste des salons
+  if (reloadRooms) {
+    try { await loadRooms(); } catch {}
   }
 }
-// Clic sur le bouton "← Salons" = fermeture du chat
-chatBackBtn?.addEventListener('click', closeChat);
 
-// Optionnel : clic sur le fond noir de la modale ferme aussi le chat
-chatModal?.addEventListener('click', e => {
-  if (e.target === chatModal) {
-    closeChat();
-  }
+/* ===== Events fermeture ===== */
+
+// Bouton "← Salons"
+chatBackBtn?.addEventListener('click', () => {
+  closeChat({ reloadRooms: true, clearUrl: true });
 });
 
+// Clic sur le fond (overlay) : ferme
+chatModal?.addEventListener('click', (e) => {
+  if (e.target === chatModal) {
+    closeChat({ reloadRooms: true, clearUrl: true });
+  }
 
+
+  
+});
 
 
 
@@ -1159,7 +1187,7 @@ function startPresence() {
   // Rafraîchit l’affichage
   if (presenceInline) {
     refreshInlinePresence();
-    presenceListTimer = setInterval(refreshInlinePresence, 500);
+    presenceListTimer = setInterval(refreshInlinePresence, 1000);
   }
 }
 function stopPresence() {
@@ -1214,37 +1242,51 @@ async function refreshInlinePresence(){
  *                          OUVERTURE / FERMETURE SALON
  * =============================================================================*/
 
-function openRoom(id, name){
-  // Met le chat devant et ferme une éventuelle fiche user
-  chatModal.classList.remove('behind');
+/* =============================================================================
+ *                    OUVERTURE / FERMETURE SALON (PROPRE)
+ * ============================================================================= */
+
+/**
+ * Ouvre la modale chat et initialise l'état du salon.
+ */
+function openRoom(id, name) {
+  // Chat au premier plan, ferme éventuelle fiche profil
+  chatModal?.classList.remove('behind');
   if (userModal) userModal.hidden = true;
 
-  // Normalise l’ID en nombre
-  const roomIdNum = Number(id);
+  const roomIdNum = Number(id) || 0;
+  if (!roomIdNum) return;
 
-  // Reset état
-  currentRoom    = roomIdNum;   // ancien système de polling
-  currentRoomId  = roomIdNum;   // pour le "typing"
-  lastId         = 0;
-  roomIdInp.value = roomIdNum;
-  roomTitle.textContent = name;
-  chatMsgs.innerHTML = '';
-  toBottom.style.display = 'none';
-  chatModal.style.display = 'flex';
+  // Reset état chat
+  currentRoom = roomIdNum;
+  currentRoomId = roomIdNum;
+  lastId = 0;
 
-  startTypingWatch(id); // Lancer / arrêter le typing avec l’ouverture/fermeture des salons
+  if (roomIdInp) roomIdInp.value = String(roomIdNum);
+  if (roomTitle) roomTitle.textContent = name || 'Salon';
+  if (chatMsgs) chatMsgs.innerHTML = '';
+  if (toBottom) toBottom.style.display = 'none';
 
+  // Affiche la modale (standard: hidden)
+  if (chatModal) chatModal.hidden = false;
+  document.body.style.overflow = 'hidden';
 
-  // Redémarre polling + présence
+  // Typing watch + polling messages + présence
+  startTypingWatch(roomIdNum);
   stopPolling();  startPolling();
   stopPresence(); startPresence();
 
-
-  // Focus rapide dans la zone de texte
-  const bodyInput = chatForm.querySelector('[name="body"]');
+  // Focus input
+  const bodyInput = chatForm?.querySelector('[name="body"]');
   if (bodyInput) setTimeout(() => bodyInput.focus(), 50);
 }
 
+/**
+ * Ferme la modale chat et nettoie l'état.
+ * @param {object} opts
+ * @param {boolean} opts.reloadRooms - recharge la liste des salons après fermeture
+ * @param {boolean} opts.clearUrl    - retire ?room= de l’URL
+ */
 /* =============================================================================
  *                                 MESSAGES
  * =============================================================================*/
@@ -1316,6 +1358,7 @@ function renderMessage(m){
     body.style.whiteSpace = 'pre-wrap';
     const span = document.createElement('span');
     const mentionRegex = /(@[A-Za-zÀ-ÖØ-öø-ÿ0-9_.-]+)/g;
+    const safe = escapeHtml(m.body);
     const htmlWithMentions = String(m.body).replace(mentionRegex, '<span class="mention">$1</span>');
     span.innerHTML = htmlWithMentions;
     if (m.color && /^#[0-9A-Fa-f]{6}$/.test(m.color)) span.style.color = m.color;
@@ -1440,13 +1483,20 @@ async function fetchMessages(){
     const r = await fetch(`${BASE}/chat_messages_fetch.php?room_id=${currentRoom}&after_id=${lastId}`, {
       cache:'no-store', credentials:'same-origin'
     });
-    if (!r.ok) {
-      if (r.status === 403 || r.status === 404) {
-        stopPolling();
-        toBottom.style.display = 'none';
-      }
-      return;
-    }
+
+
+if (!r.ok) {
+  if (r.status === 410) {
+    handleRoomExpired();
+    return;
+  }
+  if (r.status === 403 || r.status === 404) {
+    stopPolling();
+    toBottom.style.display = 'none';
+  }
+  return;
+}
+
     const j = await r.json();
     if (!j.ok) return;
 
@@ -1460,6 +1510,29 @@ async function fetchMessages(){
     }
   } catch {}
 }
+
+function handleRoomExpired(){
+  stopPolling();
+  toBottom.style.display = 'none';
+
+  // Ferme / reset l'état du salon courant
+  currentRoom = 0;
+  currentRoomId = 0;
+  lastId = 0;
+  roomIdInp.value = '';
+  roomTitle.textContent = 'Salon expiré';
+  chatMsgs.innerHTML = '';
+
+  // Message visible
+  const div = document.createElement('div');
+  div.className = 'msg sys';
+  div.textContent = 'Ce salon a expiré (24h).';
+  chatMsgs.appendChild(div);
+
+  // Bonus: refresh la liste des salons si tu as une fonction
+  if (typeof loadRooms === 'function') loadRooms();
+}
+
 
 // Polling des messages (2s)
 function startPolling(){
@@ -1751,65 +1824,26 @@ startPresence();
 
 
 <script>
-const systemNotice = document.getElementById('systemNotice');
-const systemNoticeClose = document.getElementById('systemNoticeClose');
+document.addEventListener('click', (e) => {
+  // clic sur la croix
+  if (e.target.closest('#systemNoticeClose')) {
+    const modal = document.getElementById('systemNotice');
+    if (modal) modal.style.display = 'none';
+  }
 
-// Ouvrir la modale
-function openSystemNotice() {
-  if (!systemNotice) return;
-  systemNotice.classList.add('is-active');
-}
-
-// Fermer la modale
-function closeSystemNotice() {
-  if (!systemNotice) return;
-  systemNotice.classList.remove('is-active');
-}
-
-// Ouverture auto au chargement, seulement si on n'est pas déjà sur un salon (?room=)
-// et une seule fois par navigateur.
-document.addEventListener('DOMContentLoaded', () => {
-  if (!systemNotice) return;
-
-  const params = new URLSearchParams(window.location.search);
-  const hasRoom = params.has('room');
-  const alreadySeen = localStorage.getItem('systemNoticeSeen') === '1'; // déjà vu
-
-  // Si on a déjà vu la bannière ou si on est déjà sur un salon, on ne l'ouvre pas
-  if (alreadySeen || hasRoom) return;
-
-  openSystemNotice();
-  localStorage.setItem('systemNoticeSeen', '1');
-});
-
-// Bouton fermer (croix)
-systemNoticeClose?.addEventListener('click', closeSystemNotice);
-
-// Fermer en cliquant en dehors de la boîte
-systemNotice?.addEventListener('click', (e) => {
-  if (e.target === systemNotice) {
-    closeSystemNotice();
+  // clic sur le fond (overlay)
+  if (e.target.id === 'systemNotice') {
+    e.target.style.display = 'none';
   }
 });
 
-// Fermer avec ESC
+// ESC
 document.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
-    closeSystemNotice();
+    const modal = document.getElementById('systemNotice');
+    if (modal) modal.style.display = 'none';
   }
 });
-
-
-// MENU MOBILE
-
-  const btn = document.querySelector('.nav-toggle');
-  const nav = document.getElementById('primary-nav');
-  btn.addEventListener('click', ()=>{
-    const open = nav.classList.toggle('is-open');
-    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
-
-
 
 
 </script>

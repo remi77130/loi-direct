@@ -5,27 +5,33 @@
 <IfModule mod_rewrite.c>
   RewriteEngine On
 
-  # 1) Toujours enlever le www (HTTP et HTTPS)
+  # 1) Forcer HTTPS + enlever www
   RewriteCond %{HTTP_HOST} ^www\.tchat-direct\.com$ [NC]
   RewriteRule ^ https://tchat-direct.com%{REQUEST_URI} [L,R=301]
 
-  # 2) Forcer HTTPS sur le domaine nu (sans www)
   RewriteCond %{HTTP_HOST} ^tchat-direct\.com$ [NC]
   RewriteCond %{HTTPS} off
   RewriteRule ^ https://tchat-direct.com%{REQUEST_URI} [L,R=301]
 
-  # 3) Ne pas réécrire si la cible est déjà un fichier ou un dossier
+  # 2) Forcer /index.php -> /
+  RewriteCond %{THE_REQUEST} \s/+index\.php[\s?] [NC]
+  RewriteRule ^index\.php$ / [L,R=301]
+
+  # 3) URL SEO pour le blog
+  # /blog -> blog.php
+  RewriteRule ^blog/?$ blog.php [L]
+
+  # 4) Sécurité : ne pas réécrire les vrais fichiers / dossiers
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # 4) /p/123-titre -> project.php?id=123
+  # 5) Autres règles existantes
   RewriteRule ^p/([0-9]+)-?([A-Za-z0-9-]*)$ project.php?id=$1 [QSA,L]
-
-  # 5) /tag/xxx -> index.php?tag=xxx
   RewriteRule ^tag/([A-Za-z0-9-]+)$ index.php?tag=$1 [QSA,L]
 
 </IfModule>
+
 
   
 # ============================

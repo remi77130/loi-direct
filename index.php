@@ -277,7 +277,10 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Tchat direct</title>
-<link rel="stylesheet" href="<?= APP_BASE ?>/styles/index.css">
+  <link rel="stylesheet" href="<?= APP_BASE ?>/styles/tokens.css?v=1">
+  <link rel="stylesheet" href="<?= APP_BASE ?>/styles/index.css">
+
+
 <meta name="robots" content="noindex, nofollow">
 
 
@@ -305,9 +308,9 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
     unset($noTagQuery['tag']);              // on retire le tag
     if ($q !== '') $noTagQuery['q'] = $q;   // on conserve la recherche si présente
   ?>
-    <div class="meta" style="margin-bottom:10px">
+    <div class="meta meta--pad">
       Filtré par tag : <strong>#<?= htmlspecialchars($tagSlug,ENT_QUOTES) ?></strong>
-      — <a href="<?= APP_BASE ?>/index.php<?= $noTagQuery ? ('?'.http_build_query($noTagQuery)) : '' ?>" style="color:#93c5fd">Effacer</a>
+      — <a href="<?= APP_BASE ?>/index.php<?= $noTagQuery ? ('?'.http_build_query($noTagQuery)) : '' ?>" class="link">Effacer</a>
     </div>
   <?php endif; ?>
 
@@ -319,17 +322,17 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
    *    - Affiche la liste des pseudos correspondants
    * ----------------------------------------------------------- */
   if ($isUserQuery): ?>
-    <h2 style="margin-top:16px">Utilisateurs</h2>
+    <h2 class="section-title">Utilisateurs</h2>
 
     <?php if (!$userResults): ?>
       <p>Aucun utilisateur trouvé.</p>
     <?php else: foreach ($userResults as $u): ?>
-      <div style="border:1px solid #334155;border-radius:10px;padding:10px;margin:8px 0;background:#111827;display:flex;justify-content:space-between;align-items:center">
+      <div class="user-row">
         <div>@<?= htmlspecialchars($u['pseudo'],ENT_QUOTES) ?></div>
         <!-- Actions rapides : envoyer un message, voir le profil -->
         <div style="display:flex;gap:8px">
 <a class="btn js-open-user" href="#" data-user-id="<?= (int)$u['id'] ?>">Message</a>
-          <a class="btn" style="background:#374151" href="<?= APP_BASE ?>/profile.php?id=<?= (int)$u['id'] ?>">Voir profil</a>
+          <a class="btn btn-muted" href="<?= APP_BASE ?>/profile.php?id=<?= (int)$u['id'] ?>">Voir profil</a>
         </div>
       </div>
     <?php endforeach; endif; ?>
@@ -342,14 +345,14 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 
     // Indication de recherche si q non vide
     if ($q !== ''): ?>
-      <div class="meta" style="margin-bottom:10px">
+      <div class="meta meta--pad">
         Résultats pour « <?= htmlspecialchars($q,ENT_QUOTES); ?> »
       </div>
     <?php endif; ?>
 
     <!-- Flash succès (ex: après création de projet) -->
     <?php if (!empty($_SESSION['flash_success'])): ?>
-      <div class="card" style="border-color:#14532d;background:#052e16;color:#bbf7d0;margin-bottom:12px">
+      <div class="card card--success">
         <?= htmlspecialchars($_SESSION['flash_success'], ENT_QUOTES); unset($_SESSION['flash_success']); ?>
       </div>
     <?php endif; ?>
@@ -369,12 +372,12 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
       <?php foreach ($projects as $p): ?>
         <article class="card">
           <!-- Titre -->
-          <h3 style="margin:0 0 6px"><?= htmlspecialchars($p['title'],ENT_QUOTES); ?></h3>
+          <h3 class="card-title"><?= htmlspecialchars($p['title'],ENT_QUOTES); ?></h3>
 
           <!-- Meta auteur + date -->
           <div class="meta">
             Par
-            <a href="#" class="user-link" data-user-id="<?= (int)$p['author_id'] ?>">
+            <a href="#" class="user-link_law_projects" data-user-id="<?= (int)$p['author_id'] ?>">
               <?= htmlspecialchars($p['author'], ENT_QUOTES) ?>
             </a>
             • Publié le <?= htmlspecialchars(date('d/m/Y H:i', strtotime($p['published_at']??'')),ENT_QUOTES); ?>
@@ -386,29 +389,26 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
           <?php $slug = slugify($p['title']); ?>
 
           <!-- CTA Lire -->
-          <div style="margin-top:10px">
+          <div class="card-cta">
             <a class="btn" href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>">Lire</a>
           </div>
 
           <!-- Miniature (si présente) cliquable vers la page projet -->
           <?php if (!empty($p['cover_thumb'])): ?>
-            <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>"
-               style="float:right;display:block;border-radius:10px;overflow:hidden;margin:0;position:relative;z-index:2;box-shadow:3px 2px 5px #0000004f;">
+            <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="cover">
               <img
                 src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'], ENT_QUOTES) ?>"
                 alt="<?= htmlspecialchars($p['title'], ENT_QUOTES) ?>"
                 width="50" height="50" loading="lazy"
-                style="width:50px;height:50px;object-fit:cover;display:block;">
+                class="cover-img">
             </a>
           <?php endif; ?>
 
           <!-- Chips de tags -->
           <?php if (!empty($tagsByProject[(int)$p['id']] ?? [])): ?>
-            <div style="margin-top:8px; display:flex; flex-wrap:wrap; gap:6px">
+            <div class="tag-chips">
               <?php foreach ($tagsByProject[(int)$p['id']] as $tg): ?>
-                <a href="<?= tag_url($tg['slug']) ?>"
-                   style="font-size:12px; padding:4px 8px; border:1px solid #334155;
-                          border-radius:999px; color:#cbd5e1; text-decoration:none; background:#0b1220">
+                <a class="link_tag_chips" href="<?= tag_url($tg['slug']) ?>" class="tag-chip">
                    #<?= htmlspecialchars($tg['name'], ENT_QUOTES) ?>
                 </a>
               <?php endforeach; ?>
@@ -416,7 +416,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
           <?php endif; ?>
 
           <!-- Compteur de likes -->
-          <span style="margin-left:8px;font-size:12px;color:#94a3b8">
+          <span class="likes">
             ❤ <?= (int)$p['likes_count']; ?>
           </span>
         </article>
@@ -429,7 +429,7 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
             <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page-1]) ?>">&laquo; Précédent</a>
           <?php endif; ?>
 
-          <span style="color:#94a3b8">Page <?= $page; ?> / <?= $totalPages; ?></span>
+          <span class="pager-meta">Page <?= $page; ?> / <?= $totalPages; ?></span>
 
           <?php if ($page < $totalPages): ?>
             <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page+1]) ?>">Suivant &raquo;</a>
@@ -445,17 +445,17 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 
 <!-- MODAL USER -->                   <!-- MODAL USER -->
 
-<div id="userModal" style="position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:50">
-  <div style="background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;min-width:280px;max-width:90%">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-      <strong id="umPseudo" style="font-size:16px">Pseudo</strong>
-      <button id="umClose" class="btn" type="button" style="background:#374151;padding:4px 8px">×</button>
+<div id="userModal" class="user_modal">
+  <div class="user_modal-box">
+    <div class="modal-head">
+      <strong id="umPseudo" class="modal-title">Pseudo</strong>
+      <button id="umClose" class="btn btn-muted" type="button">×</button>
     </div>
 
 
 
       <!-- INFOS PROFIL -->
-    <div id="umInfos" class="muted" style="margin-top:6px; font-size:13px">
+    <div id="umInfos" class="muted um-infos">
       <!-- rempli en JS -->
     </div>
 
@@ -466,15 +466,13 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
 
 
     <div style="margin-top:12px">
-      <a id="umLink" class="btn" href="#" style="display:inline-block">Voir le profil</a>
+      <a id="umLink" class="btn" href="#">Voir le profil</a>
     </div>
 
-    <button id="umMsgToggle" class="btn" type="button" style="margin-top:12px;background:#2563eb">Envoyer un message</button>
+    <button id="umMsgToggle" class="btn" type="button">Envoyer un message</button>
 
-    <form id="umMsgForm"  enctype="multipart/form-data" style="display:none;margin-top:10px">
-      <textarea name="body" rows="4" maxlength="2000" required placeholder="Ton message…" 
-      style="width:100%;padding:10px;border-radius:10px;border:1px 
-      solid #334155;background:#0b1220;color:#e5e7eb"></textarea>
+    <form id="umMsgForm" enctype="multipart/form-data" class="um-form" style="display:none">
+      <textarea name="body" rows="4" maxlength="2000" required placeholder="Ton message…" class="um-textarea"></textarea>
 
      
 
@@ -669,12 +667,6 @@ refreshBadge();
 setInterval(refreshBadge, 20000);
 
 
-  const btn = document.querySelector('.nav-toggle');
-  const nav = document.getElementById('primary-nav');
-  btn.addEventListener('click', ()=>{
-    const open = nav.classList.toggle('is-open');
-    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  });
 </script>
 
 </body>

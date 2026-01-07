@@ -1,38 +1,24 @@
 <?php
-/* messages_inbox.php — Messagerie avec réponse inline (texte + image)
- * Hypothèses:
- * - Table messages(sender_id, recipient_id, body, image_path, created_at, read_at)
- * - message_send.php gère CSRF + texte et/ou image (déjà en place chez toi)
- *Sécurité : require_login(), CSRF token, échappement HTML, pas de données sensibles dans le DOM.
-
-UX : carte pliable, aperçu 2 lignes, réponse inline sans recharger, 
-support image + photo (accept="image/*" capture="environment").
-
-Compat : pas de dépendances externes, pur PHP/MySQLi + JS natif.
-
-Back-end : le recipient_id pour la réponse est calculé 
-selon la vue (reçus/envoyés) et injecté dans chaque formulaire.*/
+/* messages_inbox.php — Messagerie (threads) avec réponse inline (texte + image)
+ * - Table messages(sender_id, recipient_id, body, image_path, created_at, read_at, deleted_by_sender, deleted_by_recipient)
+ * - message_send.php gère CSRF + texte et/ou image
+ * - messages_delete_thread.php gère la suppression d’un thread (soft-delete côté user)
+ */
 
 declare(strict_types=1);
 session_start();
 
-require __DIR__.'/db.php';
-require __DIR__.'/auth.php';
-require __DIR__.'/config.php';
-
+require __DIR__ . '/db.php';
+require __DIR__ . '/auth.php';
+require __DIR__ . '/config.php';
 
 function media_url(?string $p): ?string {
   if (!$p) return null;
   $p = ltrim($p, '/');
-  if (preg_match('~^https?://~i', $p)) return $p;      // déjà absolu
-  if (str_starts_with($p, 'uploads/')) $p = substr($p, 8); // legacy
-  return rtrim(APP_BASE,'/').'/uploads/'.$p;           // /uploads/… toujours
+  if (preg_match('~^https?://~i', $p)) return $p;                // déjà absolu
+  if (str_starts_with($p, 'uploads/')) $p = substr($p, 8);       // legacy
+  return rtrim(APP_BASE, '/') . '/uploads/' . $p;                // /uploads/…
 }
-
-
-
-
-
 
 /* CSRF pour les formulaires de réponse inline */
 if (empty($_SESSION['csrf'])) {
@@ -40,7 +26,7 @@ if (empty($_SESSION['csrf'])) {
 }
 $csrf = $_SESSION['csrf'];
 
-$uid  = (int)$_SESSION['user_id'];
+$uid  = (int)($_SESSION['user_id'] ?? 0);
 $sent = isset($_GET['sent']); // ?sent=1 => boîte d’envoi, sinon reçus
 
 /* Marquer comme lus (en ignorant ce que j’ai "soft-deleted") */
@@ -80,7 +66,8 @@ $sql = '
       AND (m.deleted_by_recipient IS NULL OR m.deleted_by_recipient = 0)
     )
   ORDER BY other_id, m.created_at ASC';
-$stmt = $mysqli->prepare($sql) ?: exit('Prepare failed: '.$mysqli->error);
+
+$stmt = $mysqli->prepare($sql) ?: exit('Prepare failed: ' . $mysqli->error);
 $stmt->bind_param('iiii', $uid, $uid, $uid, $uid);
 $stmt->execute();
 $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -90,318 +77,327 @@ $stmt->close();
 $threads = []; // other_id => ['other'=>pseudo, 'msgs'=>[...], 'last_at'=>timestamp]
 foreach ($rows as $r) {
   $oid = (int)$r['other_id'];
-  if (!isset($threads[$oid])) $threads[$oid] = ['other'=>$r['other'], 'msgs'=>[], 'last_at'=>0];
+  if (!isset($threads[$oid])) $threads[$oid] = ['other' => $r['other'], 'msgs' => [], 'last_at' => 0];
   $threads[$oid]['msgs'][] = $r;
   $ts = strtotime($r['created_at']);
   if ($ts > $threads[$oid]['last_at']) $threads[$oid]['last_at'] = $ts;
 }
-usort($threads, fn($a,$b)=> $b['last_at'] <=> $a['last_at']);
-
+usort($threads, fn($a, $b) => $b['last_at'] <=> $a['last_at']);
 ?>
 <!doctype html>
-<meta charset="utf-8">
-<title>Mes messages</title>
-<!-- CSS -->
-<style>
-  body{background:#0f172a;color:#e5e7eb;font-family:system-ui}
-.wrap{max-width:800px;margin:20px auto}
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
 
-.msg-card{border:1px solid #334155;border-radius:10px;padding:12px;margin:10px 0;background:#111827;cursor:default}
-.msg-head{font-size:12px;color:#94a3b8;display:flex;gap:6px;align-items:center;cursor:pointer}
-.chev{margin-left:auto;opacity:.7;transition:transform .15s}
-.msg-card[data-open="1"] .chev{transform:rotate(90deg)}
+  <link rel="stylesheet" href="<?= APP_BASE ?>/styles/tokens.css?v=1">
+  <link rel="stylesheet" href="<?= APP_BASE ?>/styles/messages_inbox.css?v=1">
 
-.msg-preview{color:#e5e7eb;margin-top:6px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-
-/* Corps repliable avec scroll interne */
-.msg-body{max-height:0;overflow:hidden;transition:max-height .2s ease}
-.msg-card[data-open="1"] .msg-body{
-  max-height:65vh;      /* hauteur max visible */
-  overflow:auto;        /* scroll interne */
-  padding-right:4px;    /* éviter le recouvrement du texte par la barre */
-}
-
-
- .msg-head{display:flex;gap:6px;align-items:center}
-  .msg-head .spacer{flex:1}
-  .thread-del{background:#ef4444;border:none;color:#fff;border-radius:8px;
-              padding:4px 8px;cursor:pointer;font-size:12px}
-  .thread-del:hover{opacity:.9}
-
-
-/* Formulaire de réponse */
-.reply{margin-top:12px;border-top:1px dashed #334155;padding-top:10px}
-.reply textarea{width:100%;padding:10px;border:1px solid #334155;border-radius:10px;background:#0b1220;color:#e5e7eb;resize:vertical}
-.reply .row{display:flex;gap:8px;align-items:center;margin-top:8px}
-.reply input[type="file"]{color:#94a3b8}
-.btn{background:#2563eb;color:#fff;border:none;border-radius:10px;padding:8px 12px;cursor:pointer}
-.muted{font-size:12px;color:#94a3b8;margin-top:6px}
-
-/* Bulles */
-.msg-out{margin-top:10px;border:1px solid #1f3a8a;background:#0b1220;border-radius:12px;padding:10px}
-.msg-out-head{font-size:12px;color:#93c5fd;margin-bottom:6px}
-.msg-out-text{white-space:pre-wrap}
-.msg-in{
-  border:1px solid #334155;
-  background:#0b1220;
-  border-radius:12px;
-  padding:10px;
-  margin-top:10px;
-}
-
-</style>
-
+  <title>Mes messages</title>
+</head>
 <body>
   <div class="wrap">
     <h1><?= $sent ? 'Messages envoyés' : 'Messages reçus' ?></h1>
     <p><a href="?">Reçus</a> · <a href="?sent=1">Envoyés</a></p>
 
-
-    
-
     <?php foreach ($threads as $t): ?>
-  <?php
+      <?php
+        $otherRaw  = (string)$t['other'];
+        $other     = htmlspecialchars($otherRaw, ENT_QUOTES);
+        $other_id  = (int)$t['msgs'][0]['other_id'];
+        $lastDate  = htmlspecialchars(date('d/m/Y H:i', $t['last_at']), ENT_QUOTES);
 
+        // Aperçu = dernier message du thread
+        $lastMsg = end($t['msgs']);
+        $preview = trim((string)$lastMsg['body']);
+        $preview = $preview !== '' ? htmlspecialchars(mb_strimwidth($preview, 0, 120, '…', 'UTF-8'), ENT_QUOTES) : '';
+      ?>
 
+      <div class="msg-card" data-open="0" data-other="<?= $other_id ?>">
+        <div class="msg-head" role="button" tabindex="0" aria-expanded="false">
+          <div class="thread-title">
+            Avec <strong class="thread-user"><?= $other ?></strong>
+            <span class="thread-date"><?= $lastDate ?></span>
+          </div>
 
-    $other    = htmlspecialchars($t['other'], ENT_QUOTES);
-    $other_id = (int)$t['msgs'][0]['other_id'];
-    $lastDate = htmlspecialchars(date('d/m/Y H:i', $t['last_at']), ENT_QUOTES);
+          <span class="spacer"></span>
 
-    // Aperçu = 1ère/dernière ligne de la conv (ici la dernière)
-    $lastMsg  = end($t['msgs']);
-    $preview  = trim((string)$lastMsg['body']);
-    $preview  = $preview !== '' ? htmlspecialchars(mb_strimwidth($preview,0,120,'…','UTF-8'),ENT_QUOTES) : '';
-  ?>
-  <div class="msg-card" data-open="0">
+          <button type="button" class="thread-del" data-other="<?= $other_id ?>">Supprimer</button>
+          <span class="chev">›</span>
+        </div>
 
-  <!--  <div class="msg-head">Avec <strong>
-      /*?= $other ?></strong> — <//?= $lastDate ?>
-      <span class="chev">▶</span></div>-->
+        <?php if ($preview !== ''): ?>
+          <div class="msg-preview"><?= $preview ?></div>
+        <?php endif; ?>
 
-      <div class="msg-head">
-  Avec <strong><?= $other ?></strong> — <?= $lastDate ?>
-  <span class="spacer"></span>
-  <button type="button" class="thread-del" data-other="<?= $other_id ?>">Supprimer</button>
-  <span class="chev">▶</span>
-</div>
+        <div class="msg-body">
+          <?php foreach ($t['msgs'] as $m): ?>
+            <?php
+              $mine = ((int)$m['sender_id'] === $uid);
+              $dt   = htmlspecialchars(date('d/m/Y H:i', strtotime($m['created_at'])), ENT_QUOTES);
+              $txt  = trim((string)$m['body']);
+              $img  = media_url($m['image_path'] ?? null);
+            ?>
+            <div class="<?= $mine ? 'msg-out' : 'msg-in' ?>">
+              <div class="msg-out-head"><?= $mine ? 'Moi' : $other ?> — <?= $dt ?></div>
 
+              <?php if ($txt !== ''): ?>
+                <div class="msg-out-text"><?= htmlspecialchars($txt, ENT_QUOTES) ?></div>
+              <?php endif; ?>
 
-    <?php if ($preview !== ''): ?><div class="msg-preview"><?= $preview ?></div><?php endif; ?>
+              <?php if ($img): ?>
+                <div class="msg-img">
+                  <a href="<?= htmlspecialchars($img, ENT_QUOTES) ?>" target="_blank" rel="noopener">
+                    <img src="<?= htmlspecialchars($img, ENT_QUOTES) ?>" alt="">
+                  </a>
+                </div>
+              <?php endif; ?>
+            </div>
+          <?php endforeach; ?>
 
-    <div class="msg-body">
-      <?php foreach ($t['msgs'] as $m): ?>
-        <?php
-          $mine = ((int)$m['sender_id'] === $uid);
-          $dt   = htmlspecialchars(date('d/m/Y H:i', strtotime($m['created_at'])), ENT_QUOTES);
-          $txt  = trim((string)$m['body']);
-          $img  = !empty($m['image_path']) ? (APP_BASE . '/' . $m['image_path']) : null;
-        ?>
-        <div class="<?= $mine ? 'msg-out' : 'msg-in' ?>" style="<?= $mine?'':'border:1px solid #334155;background:#0b1220;border-radius:12px;padding:10px;margin-top:10px' ?>">
-          <div class="msg-out-head"><?= $mine ? 'Moi' : $other ?> — <?= $dt ?></div>
-          <?php if ($txt !== ''): ?>
-            <div class="msg-out-text"><?= htmlspecialchars($txt, ENT_QUOTES) ?></div>
-          <?php endif; ?>
-         <?php $img = media_url($m['image_path'] ?? null); ?>
-<?php if ($img): ?>
-  <div style="margin-top:8px">
-    <a href="<?= htmlspecialchars($img,ENT_QUOTES) ?>" target="_blank" rel="noopener">
-      <img src="<?= htmlspecialchars($img,ENT_QUOTES) ?>" style="max-width:100px;max-height:100px;border-radius:8px;display:block">
-    </a>
+          <!-- Formulaire de réponse inline -->
+          <form class="reply" method="post" enctype="multipart/form-data" data-recipient="<?= $other_id ?>">
+            <p class="muted">Répondre à <strong><?= $other ?></strong></p>
+            <textarea name="body" rows="3" maxlength="2000" placeholder="Écris ta réponse…"></textarea>
+            <div class="row">
+              <input type="file" name="image" accept="image/*" capture="environment">
+              <button class="btn" type="submit">Envoyer</button>
+              <span class="muted reply-status"></span>
+            </div>
+            <input type="hidden" name="recipient_id" value="<?= $other_id ?>">
+            <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf, ENT_QUOTES) ?>">
+          </form>
+        </div>
+      </div>
+    <?php endforeach; ?>
+
+    <p><a class="backlink" href="<?= APP_BASE ?>/index.php">← Retour</a></p>
   </div>
-<?php endif; ?>
 
-        </div>
-      <?php endforeach; ?>
-
-      <!-- Formulaire de réponse inline (inchangé) -->
-      <form class="reply" method="post" enctype="multipart/form-data" data-recipient="<?= $other_id ?>">
-        <label class="muted">Répondre à <strong><?= $other ?></strong></label>
-        <textarea name="body" rows="3" maxlength="2000" placeholder="Écris ta réponse…"></textarea>
-        <div class="row">
-          <input type="file" name="image" accept="image/*" capture="environment">
-          <button class="btn" type="submit">Envoyer</button>
-          <span class="muted reply-status"></span>
-        </div>
-        <input type="hidden" name="recipient_id" value="<?= $other_id ?>">
-        <input type="hidden" name="csrf" value="<?= htmlspecialchars($csrf,ENT_QUOTES) ?>">
-      </form>
+  <!-- Modal suppression thread -->
+  <div id="delModal" class="delModal" aria-hidden="true">
+    <div class="delBox" role="dialog" aria-modal="true" aria-labelledby="delTitle">
+      <h3 id="delTitle" class="delTitle">Supprimer la conversation ?</h3>
+      <p class="delText">Tous les messages avec <strong id="delUser"></strong> seront supprimés. Action irréversible.</p>
+      <div id="delErr" class="delErr"></div>
+      <div class="delActions">
+        <button id="delCancel" class="btn btn-muted" type="button">Annuler</button>
+        <button id="delConfirm" class="btn btn-danger" type="button">Oui, supprimer</button>
+      </div>
     </div>
   </div>
-<?php endforeach; ?>
 
-    <p><a href="<?= APP_BASE ?>/index.php" style="color:#93c5fd">← Retour</a></p>
-  </div>
-
-
-<div id="delModal" style="position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:60">
-  <div style="background:#111827;border:1px solid #334155;border-radius:14px;padding:16px;max-width:420px;width:90%">
-    <h3 style="margin:0 0 8px">Supprimer la conversation ?</h3>
-    <p style="color:#94a3b8">Tous les messages avec <strong id="delUser"></strong> seront supprimés. Action irréversible.</p>
-    <div id="delErr" style="display:none;color:#f87171;font-size:13px;margin-bottom:8px"></div>
-    <div style="display:flex;gap:8px;justify-content:flex-end">
-      <button id="delCancel" class="btn" type="button" style="background:#374151">Annuler</button>
-      <button id="delConfirm" class="btn" type="button" style="background:#ef4444">Oui, supprimer</button>
-    </div>
-  </div>
-</div>
-
-
-
-<!-- JS -->
 <script>
 const BASE = '<?= APP_BASE ?>';
 const CSRF = '<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>';
 
+/* ===== Helpers UI (thread card) ===== */
+function setExpanded(card, isOpen){
+  card.dataset.open = isOpen ? "1" : "0";
+  const head = card.querySelector(".msg-head");
+  if (head) head.setAttribute("aria-expanded", isOpen ? "true" : "false");
+}
+function setThreadDate(card, dateText){
+  const el = card.querySelector(".thread-date");
+  if (el) el.textContent = dateText;
+}
+function setThreadPreview(card, text){
+  let el = card.querySelector(".msg-preview");
+  if (!el){
+    el = document.createElement("div");
+    el.className = "msg-preview";
+    const body = card.querySelector(".msg-body");
+    card.insertBefore(el, body);
+  }
+  el.textContent = text;
+}
 
+/* ===== Delete modal ===== */
+let delCtx = { id: 0, card: null, name: '' };
 
+const delModal   = document.getElementById('delModal');
+const delUser    = document.getElementById('delUser');
+const delErr     = document.getElementById('delErr');
+const delCancel  = document.getElementById('delCancel');
+const delConfirm = document.getElementById('delConfirm');
 
+function openDelModal(otherId, card){
+  delCtx.id = otherId;
+  delCtx.card = card;
+  delCtx.name = card.querySelector('.thread-user')?.textContent || '';
+  delUser.textContent = delCtx.name;
+  delErr.textContent = '';
+  delErr.style.display = 'none';
+  delModal.style.display = 'flex';
+  delModal.setAttribute('aria-hidden', 'false');
+}
 
+function closeDelModal(){
+  delModal.style.display = 'none';
+  delModal.setAttribute('aria-hidden', 'true');
+}
 
-
-
-
-/* open modal */
-let delCtx = { id:0, card:null, name:'' };
-document.addEventListener('click', (e)=>{
+document.addEventListener('click', (e) => {
   const btn = e.target.closest('.thread-del');
   if (!btn) return;
-  e.stopPropagation();               // don't toggle the card
+  e.stopPropagation(); // ne pas toggler la card
   const card = btn.closest('.msg-card');
-  delCtx.id = parseInt(btn.dataset.other, 10);
-  delCtx.card = card;
-  delCtx.name = card.querySelector('.msg-head strong')?.textContent || '';
-  document.getElementById('delUser').textContent = delCtx.name;
-  document.getElementById('delErr').style.display = 'none';
-  document.getElementById('delModal').style.display = 'flex';
+  const otherId = parseInt(btn.dataset.other, 10) || 0;
+  if (!card || !otherId) return;
+  openDelModal(otherId, card);
 });
 
-/* close helpers */
-const delModal = document.getElementById('delModal');
-document.getElementById('delCancel').onclick = ()=> delModal.style.display='none';
-delModal.addEventListener('click', (e)=>{ if (e.target===delModal) delModal.style.display='none'; });
-document.addEventListener('keydown', (e)=>{ if (e.key==='Escape') delModal.style.display='none'; });
+delCancel.addEventListener('click', closeDelModal);
+delModal.addEventListener('click', (e) => { if (e.target === delModal) closeDelModal(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDelModal(); });
 
-/* confirm delete */
-document.getElementById('delConfirm').addEventListener('click', async ()=>{
-  const err = document.getElementById('delErr');
-  err.style.display = 'none';
+delConfirm.addEventListener('click', async () => {
+  delErr.style.display = 'none';
+  delErr.textContent = '';
+
   try{
     const fd = new FormData();
     fd.append('other_id', String(delCtx.id));
     fd.append('csrf', CSRF);
+
     const r = await fetch(`${BASE}/messages_delete_thread.php`, { method:'POST', body: fd });
     const j = await r.json();
+
     if (j.ok){
       if (delCtx.card) delCtx.card.remove();
-      delModal.style.display = 'none';
+      closeDelModal();
     } else {
-      err.textContent = 'Suppression impossible ('+(j.error||'erreur')+')';
-      err.style.display = 'block';
+      delErr.textContent = 'Suppression impossible (' + (j.error || 'erreur') + ')';
+      delErr.style.display = 'block';
     }
-  }catch(_){
-    err.textContent = 'Erreur réseau.';
-    err.style.display = 'block';
+  } catch(_){
+    delErr.textContent = 'Erreur réseau.';
+    delErr.style.display = 'block';
   }
 });
 
+/* ===== Toggle open/close ===== */
+document.addEventListener('click', (e) => {
+  // si click sur delete button -> ignore (déjà géré)
+  if (e.target.closest('.thread-del')) return;
 
-
-
-/* Ouvrir/fermer en cliquant sur l’entête uniquement
-   et auto-scroll en bas quand on ouvre */
-document.addEventListener('click', (e)=>{
   const head = e.target.closest('.msg-head');
-  if(!head) return;
+  if (!head) return;
+
   const card = head.closest('.msg-card');
-  card.dataset.open = card.dataset.open === '1' ? '0' : '1';
-  if (card.dataset.open === '1') {
+  if (!card) return;
+
+  const isOpen = card.dataset.open === '1';
+  setExpanded(card, !isOpen);
+
+  if (!isOpen) {
     const body = card.querySelector('.msg-body');
-    body.scrollTop = body.scrollHeight;
+    if (body) body.scrollTop = body.scrollHeight;
   }
 });
 
-/* Envoi inline + MAJ aperçu/date + remonter la card + rester en bas */
-document.addEventListener('submit', async (e)=>{
+// accessibilité clavier
+document.addEventListener('keydown', (e) => {
+  const head = e.target.closest?.('.msg-head');
+  if (!head) return;
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault();
+  head.click();
+});
+
+/* ===== Envoi inline + MAJ aperçu/date + remonter la card ===== */
+document.addEventListener('submit', async (e) => {
   const form = e.target.closest('form.reply');
-  if(!form) return;
+  if (!form) return;
   e.preventDefault();
 
   const status = form.querySelector('.reply-status');
-  status.textContent = '';
   const btn = form.querySelector('button[type="submit"]');
+
+  status.textContent = '';
   btn.disabled = true;
 
   try {
     const fd = new FormData(form);
-    const hasText = (fd.get('body')||'').toString().trim().length>0;
-    const hasImg  = form.querySelector('input[type="file"]').files.length>0;
-    if (!hasText && !hasImg) {
-      status.style.color = '#f87171';
+    const bodyText = (fd.get('body') || '').toString().trim();
+    const fileInput = form.querySelector('input[type="file"]');
+    const hasImg = fileInput && fileInput.files && fileInput.files.length > 0;
+
+    if (!bodyText && !hasImg) {
       status.textContent = 'Écris un message ou choisis une image.';
-      btn.disabled = false; return;
+      btn.disabled = false;
+      return;
     }
 
-    const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
-    const j = await r.json().catch(()=>({ok:false,error:'bad_json'}));
+    const r = await fetch(`${BASE}/message_send.php`, { method: 'POST', body: fd });
+    const j = await r.json().catch(() => ({ ok:false, error:'bad_json' }));
 
-    if (j.ok) {
-      const bodyText  = (fd.get('body')||'').toString().trim();
-      const fileInput = form.querySelector('input[type="file"]');
-      const file      = fileInput.files[0] || null;
-
-      const out = document.createElement('div');
-      out.className = 'msg-out';
-      out.innerHTML =
-        `<div class="msg-out-head">Moi — à l’instant</div>` +
-        (bodyText ? `<div class="msg-out-text">${bodyText.replace(/[&<>"']/g, s => (
-          {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]))}</div>` : '');
-      if (file){
-        const url = URL.createObjectURL(file);
-        const img = new Image();
-        img.src = url; img.onload = () => URL.revokeObjectURL(url);
-        out.appendChild(img);
-      }
-      form.before(out);
-
-      // rester scrolé en bas
-      const body = form.closest('.msg-card').querySelector('.msg-body');
-      body.scrollTop = body.scrollHeight;
-
-      // MAJ aperçu/date + remonter la card
-      const card = form.closest('.msg-card');
-      const head = card.querySelector('.msg-head');
-      const previewDiv = card.querySelector('.msg-preview') ||
-                         card.insertBefore(document.createElement('div'), card.querySelector('.msg-body'));
-      previewDiv.className = 'msg-preview';
-      previewDiv.textContent = bodyText || '[image]';
-      const now = new Date();
-      const dateStr = now.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric'})+
-                      ' '+now.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'});
-const pat = /— .*?<span class="chev">/;
-head.innerHTML = pat.test(head.innerHTML)
-  ? head.innerHTML.replace(pat, `— ${dateStr} <span class="chev">`)
-  : head.innerHTML.replace('<span class="chev">', `— ${dateStr} <span class="chev">`);
-      const list = card.parentElement;
-      const first = list.querySelector('.msg-card');
-      if (first && card !== first) list.insertBefore(card, first);
-
-      status.style.color = '#34d399';
-      status.textContent = 'Envoyé ✅';
-      form.reset();
-      form.querySelector('textarea').focus();
-      if (typeof refreshBadge === 'function') refreshBadge();
-    } else {
-      status.style.color = '#f87171';
-      status.textContent = 'Échec ('+(j.error||'erreur')+')';
+    if (!j.ok) {
+      status.textContent = 'Échec (' + (j.error || 'erreur') + ')';
+      return;
     }
+
+    // ajoute le message à la fin
+    const out = document.createElement('div');
+    out.className = 'msg-out';
+    out.innerHTML = `<div class="msg-out-head">Moi — à l’instant</div>` +
+      (bodyText ? `<div class="msg-out-text"></div>` : '');
+
+    if (bodyText){
+      // escape simple
+      out.querySelector('.msg-out-text').textContent = bodyText;
+    }
+
+    if (hasImg) {
+      const file = fileInput.files[0];
+      const url = URL.createObjectURL(file);
+      const imgWrap = document.createElement('div');
+      imgWrap.className = 'msg-img';
+      const a = document.createElement('a');
+      a.href = url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+      const img = new Image();
+      img.src = url;
+      img.onload = () => URL.revokeObjectURL(url);
+      a.appendChild(img);
+      imgWrap.appendChild(a);
+      out.appendChild(imgWrap);
+    }
+
+    form.before(out);
+
+    const card = form.closest('.msg-card');
+    const body = card.querySelector('.msg-body');
+    if (body) body.scrollTop = body.scrollHeight;
+
+    // maj preview + date
+    setThreadPreview(card, bodyText || '[image]');
+    const now = new Date();
+    const dateStr =
+      now.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric' }) +
+      ' ' +
+      now.toLocaleTimeString('fr-FR', { hour:'2-digit', minute:'2-digit' });
+    setThreadDate(card, dateStr);
+
+    // remonter la card en haut
+    const list = card.parentElement;
+    const first = list.querySelector('.msg-card');
+    if (first && card !== first) list.insertBefore(card, first);
+
+    status.textContent = 'Envoyé';
+    form.reset();
+    form.querySelector('textarea')?.focus();
+
+    if (typeof refreshBadge === 'function') refreshBadge();
+
   } catch(_) {
-    status.style.color = '#f87171';
     status.textContent = 'Erreur réseau.';
   } finally {
     btn.disabled = false;
   }
 });
 </script>
-
 </body>
+</html>

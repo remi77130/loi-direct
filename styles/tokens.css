@@ -30,6 +30,7 @@ durcir le style ? → --b-strong / --sh-xl
     "Courier New",
     monospace;
 
+
   /* ================= FONT SIZES ================= */
   --fs-11: 11px;
   --fs-12: 12px;
@@ -37,19 +38,28 @@ durcir le style ? → --b-strong / --sh-xl
   --fs-14: 14px;
   --fs-17: 17px;
   --fs-18: 18px;
+  --fs-20: 20px;
   --fs-26: 26px;
 
+/* ================= FONT WEIGHTS ================= */
+  --fw-bold:bold;
+  --fww-500:500;
+  --fw-lighter:lighter;
+ 
 
   /* ================= COULEURS DE BASE ================= */
   --c-black: #000000;
   --c-ink:   #0b0b0b;
   --c-white: #ffffff;
 
+
   /* ================= FONDS ================= */
   --c-paper: #f4f4f4;   /* fond page */
   --c-accent: #ffe600;  /* jaune bêta */
-  --c-danger: #ff5b52;  /* rouge card */
+  --c-danger: #ff382e;  /* rouge card */
   --c-cyan:   #4fb2c6;  /* public rooms */
+  --c-aqua:  #26fff0;  /* private rooms */
+    --c-3aff: #ca3aff; /* card */
 
   /* ================= STATUT ================= */
   --c-ok:   #7CFF6B;
@@ -74,6 +84,7 @@ durcir le style ? → --b-strong / --sh-xl
   --sh-xs:  2px  2px 0 var(--c-black);
 
   /* ================= SPACING ================= */
+  --sp-0:   0px;
   --sp-6:   6px;
   --sp-8:   8px;
   --sp-10: 10px;
@@ -96,7 +107,18 @@ durcir le style ? → --b-strong / --sh-xl
 --mg-30: 30px;
 
 
+
+/* ================= POSITION ================= */
+
+--pos-r: relative;
+--pos-a: absolute;
+--pos-f: fixed;
+--pos-s: static;
+--pos-st: sticky;
+
 }
+
+
 
 /************** styles spécifiques au QUIZ        QUIZ  ************/
 
@@ -302,6 +324,18 @@ durcir le style ? → --b-strong / --sh-xl
 .nb-actions .nb-btn{
   flex: 1 1 160px;         /* 2 boutons par ligne si possible */
 }
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* 3) Mobile : cartes + padding moins agressifs */
 @media (max-width: 480px){
