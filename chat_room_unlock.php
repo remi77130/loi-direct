@@ -43,7 +43,7 @@ $k = 'unlock_'.$room_id.'_'.($_SERVER['REMOTE_ADDR'] ?? 'na');
 $_SESSION['tries'][$k] = $_SESSION['tries'][$k] ?? ['n'=>0,'t'=>time()];
 $w = 600; // 10 min
 if (time() - $_SESSION['tries'][$k]['t'] > $w) $_SESSION['tries'][$k] = ['n'=>0,'t'=>time()];
-if ($_SESSION['tries'][$k]['n'] >= 5) { http_response_code(429); echo json_encode(['ok'=>false,'error'=>'too_many']); exit; }
+if ($_SESSION['tries'][$k]['n'] >= 5) { http_response_code(429); echo json_encode(['ok'=>false,'error'=>'fdp']); exit; }
 
 if (!$hash || !password_verify($pwd, $hash)) {
   $_SESSION['tries'][$k]['n']++;

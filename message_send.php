@@ -49,25 +49,80 @@ $u->execute(); $u->store_result();
 if ($u->num_rows === 0) { $u->close(); http_response_code(404); echo json_encode(['ok'=>false,'error'=>'recipient_not_found']); exit; }
 $u->close();
 
-/* Image optionnelle */
+/* Média optionnel (image ou vidéo) */
 $image_path = null;
-if (!empty($_FILES['image']) && $_FILES['image']['error'] !== UPLOAD_ERR_NO_FILE) {
-  $f = $_FILES['image'];
-  if ($f['error'] !== UPLOAD_ERR_OK) { echo json_encode(['ok'=>false,'error'=>'upload']); exit; }
-  if ($f['size'] > 5*1024*1024)      { echo json_encode(['ok'=>false,'error'=>'too_big']); exit; }
+$file_mime  = null;
 
-  $info = @getimagesize($f['tmp_name']);
-  if ($info === false) { echo json_encode(['ok'=>false,'error'=>'not_image']); exit; }
-  $mime = $info['mime'] ?? '';
-  $ext  = match($mime){ 'image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp', default=>null };
-  if ($ext === null) { echo json_encode(['ok'=>false,'error'=>'bad_type']); exit; }
+if (!empty($_FILES['image']) && ($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
+  $f = $_FILES['image'];
+
+  if (($f['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+    echo json_encode(['ok'=>false,'error'=>'upload','code'=>($f['error'] ?? null)]);
+    exit;
+  }
+
+  // Taille max (aligne avec ton config si tu veux)
+  $maxBytes = 50 * 1024 * 1024; // 50MB
+  if (($f['size'] ?? 0) > $maxBytes) {
+    echo json_encode(['ok'=>false,'error'=>'too_big']);
+    exit;
+  }
+
+  $tmp = $f['tmp_name'] ?? '';
+  if ($tmp === '' || !is_file($tmp)) {
+    echo json_encode(['ok'=>false,'error'=>'tmp_missing']);
+    exit;
+  }
+
+  // MIME réel
+  $finfo = new finfo(FILEINFO_MIME_TYPE);
+  $mime  = $finfo->file($tmp) ?: '';
+
+  $allowed = [
+    'image/jpeg','image/png','image/webp','image/gif',
+    'video/mp4','video/webm','video/ogg',
+  ];
+  if (!in_array($mime, $allowed, true)) {
+    echo json_encode(['ok'=>false,'error'=>'bad_type','detected'=>$mime]);
+    exit;
+  }
+
+  // Extension
+  $extMap = [
+    'image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif',
+    'video/mp4'=>'mp4','video/webm'=>'webm','video/ogg'=>'ogv',
+  ];
+  $ext = $extMap[$mime] ?? null;
+  if ($ext === null) {
+    echo json_encode(['ok'=>false,'error'=>'bad_type']);
+    exit;
+  }
 
   $dir = __DIR__.'/uploads/msg';
-  if (!is_dir($dir)) mkdir($dir, 0775, true);
+  if (!is_dir($dir) && !mkdir($dir, 0775, true)) {
+    echo json_encode(['ok'=>false,'error'=>'dir']);
+    exit;
+  }
+
   $name = bin2hex(random_bytes(16)).'.'.$ext;
   $dest = $dir.'/'.$name;
-  if (!move_uploaded_file($f['tmp_name'], $dest)) { echo json_encode(['ok'=>false,'error'=>'move_failed']); exit; }
-  $image_path = 'uploads/msg/'.$name; // chemin relatif pour le web
+
+  if (!move_uploaded_file($tmp, $dest)) {
+    echo json_encode(['ok'=>false,'error'=>'move_failed']);
+    exit;
+  }
+
+  // Si c'est une image : on peut vérifier qu'elle est valide
+  if (str_starts_with($mime, 'image/')) {
+    if (@getimagesize($dest) === false) {
+      @unlink($dest);
+      echo json_encode(['ok'=>false,'error'=>'not_image']);
+      exit;
+    }
+  }
+
+  $image_path = 'uploads/msg/'.$name; // chemin relatif web
+  $file_mime  = $mime;
 }
 
 /* Exiger au moins du texte OU une image */
@@ -77,9 +132,12 @@ if ($image_path === null && $body === '') {
 }
 
 /* Insertion */
-$st = $mysqli->prepare("INSERT INTO messages (sender_id, recipient_id, body, image_path, created_at)
-                        VALUES (?,?,?,?,NOW())");
-$st->bind_param('iiss', $sender_id, $recipient_id, $body, $image_path);
+$st = $mysqli->prepare("
+  INSERT INTO messages (sender_id, recipient_id, body, image_path, file_mime, created_at)
+  VALUES (?,?,?,?,?,NOW())
+");
+$st->bind_param('iisss', $sender_id, $recipient_id, $body, $image_path, $file_mime);
+
 if (!$st->execute()) { http_response_code(500); echo json_encode(['ok'=>false,'error'=>'db']); exit; }
 $id = $mysqli->insert_id;
 $st->close();

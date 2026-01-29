@@ -1,0 +1,192 @@
+/* blog.css — Neo brutal blog (tokens only) */
+
+html, body { margin:0; padding:0; }
+body{
+  font-family: var(--font-mono);
+  background: var(--c-paper);
+  color: var(--c-ink);
+}
+
+/* ===== Header ===== */
+.b-header{
+  border-bottom: var(--b-mid);
+  background: var(--c-white);
+  box-shadow: var(--sh-xs);
+}
+
+.b-nav{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: var(--sp-12) var(--sp-16);
+  display:flex;
+  gap: var(--sp-10);
+  align-items:center;
+  flex-wrap: wrap;
+}
+
+.b-link{
+  display:inline-block;
+  text-decoration:none;
+  color: var(--c-ink);
+  font-weight: 800;
+
+  border: var(--b-mid);
+  background: var(--c-white);
+  box-shadow: var(--sh-s);
+  padding: var(--sp-8) var(--sp-12);
+
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.b-link:hover{
+  transform: translateX(4px);
+  box-shadow: var(--sh-m);
+  background: var(--c-accent);
+}
+
+.b-link--cta{
+  background: var(--c-danger);
+}
+
+/* ===== Layout ===== */
+.b-wrap{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: var(--sp-16);
+      border: 5px solid black;
+}
+
+.t-article{
+
+  padding: var(--sp-12);
+}
+
+.b-article{
+  border: var(--b-mid);
+  background: var(--c-white);
+  box-shadow: var(--sh-xl);
+  padding: var(--sp-16);
+}
+
+.b-cardLink{
+
+  padding: var(--sp-10) var(--sp-14);
+  margin-top: var(--sp-12);
+
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+
+.t-article h2
+{
+  
+  background-color: var(--c-accent);
+  font-weight: var(--fw-bold);
+  padding: var(--sp-6);
+}
+
+.b-article header{
+  border-bottom: var(--b-light);
+  padding-bottom: var(--sp-12);
+  margin-bottom: var(--sp-12);
+}
+
+.b-article h1{
+  margin: 0 0 var(--sp-8);
+  font-size: var(--fs-26);
+  line-height: 1.15;
+}
+
+.b-meta{
+  margin: 0;
+  font-size: var(--fs-13);
+  opacity: .85;
+}
+
+/* ===== Typo content ===== */
+.b-article p{
+  font-size: var(--fs-14);
+  line-height: 1.65;
+  margin: var(--sp-12) 0;
+}
+
+.b-article h2{
+  margin: var(--sp-20) 0 var(--sp-10);
+  font-size: var(--fs-18);
+  line-height: 1.2;
+
+  display:inline-block;
+  border: var(--b-mid);
+  background: var(--c-accent);
+  box-shadow: var(--sh-s);
+  padding: var(--sp-8) var(--sp-10);
+}
+
+.b-article ul{
+  margin: var(--sp-10) 0 var(--sp-12);
+  padding-left: 22px;
+}
+
+.b-article li{
+  margin: var(--sp-6) 0;
+  font-size: var(--fs-14);
+}
+
+.b-article hr{
+  border: 0;
+  border-top: var(--b-light);
+  margin: var(--sp-16) 0;
+}
+
+/* CTA section */
+.b-article section[aria-label]{
+  border: var(--b-mid);
+  box-shadow: var(--sh-s);
+  background: var(--c-white);
+  padding: var(--sp-12);
+  width: max-content;
+}
+
+.b-article section a{
+  font-weight: 900;
+  color: var(--c-ink);
+  text-decoration: none;
+  border-bottom: var(--b-mid);
+  width: 50%;
+  margin-bottom: var(--sp-12);
+}
+
+.b-article section a:hover{
+  background: var(--c-accent);
+}
+
+/* Footer */
+.b-footer{
+  max-width: 980px;
+  margin: 0 auto;
+  padding: var(--sp-16);
+}
+
+.b-footer a{
+
+  padding: var(--sp-8) var(--sp-12);
+  transition: transform 120ms ease, box-shadow 120ms ease, background-color 120ms ease;
+}
+
+.b-footer a:hover{
+  transform: translateX(4px);
+  box-shadow: var(--sh-m);
+  background: var(--c-accent);
+}
+
+ footer .b-link
+{
+  margin-left: var(--sp-8);
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 600px){
+  .b-wrap{ padding: var(--sp-12); }
+  .b-article{ padding: var(--sp-12); }
+  .b-link{ width: 50%; text-align:center; }
+}

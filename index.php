@@ -420,6 +420,8 @@ $totalPages = max(1, (int)ceil($totalRows / $per));
             ❤ <?= (int)$p['likes_count']; ?>
           </span>
         </article>
+    <hr />
+
       <?php endforeach; ?>
 
       <!-- Pagination quand > 1 page de résultats -->
@@ -646,25 +648,33 @@ umMsgForm.addEventListener('submit', async (e)=>{
   }
 });
 
-// fermer la modale
-umClose.addEventListener('click', ()=> modal.style.display='none');
-modal.addEventListener('click', (e)=> { if (e.target === modal) modal.style.display='none'; });
-document.addEventListener('keydown', (e)=> { if (e.key === 'Escape') modal.style.display='none'; });
 
-const BADGE = document.getElementById('msgBadge');
-async function refreshBadge(){
+const BADGE = document.getElementById('msgBadge'); // badge des messages non lus
+
+async function refreshBadge(){ // actualise le badge des messages non lus
   try{
     const r = await fetch('<?= APP_BASE ?>/unread_count.php',{cache:'no-store'});
     if(!r.ok) throw 0;
     const j = await r.json();
-    if(j.ok && typeof j.unread==='number'){
-      if(j.unread>0){ BADGE.style.display='inline-block'; BADGE.textContent=j.unread>99?'99+':j.unread; }
-      else{ BADGE.style.display='none'; BADGE.textContent=''; }
+
+    if(j.ok && typeof j.unread==='number'){ // mise à jour du badge
+      if(j.unread>0){
+        BADGE.style.display='inline-block';
+        BADGE.textContent = j.unread>99 ? '99+' : j.unread;
+
+        BADGE.classList.add('has-msg');     // ✅ AJOUT
+      } else {
+        BADGE.style.display='none';
+        BADGE.textContent='';
+
+        BADGE.classList.remove('has-msg');  // ✅ RETRAIT
+      }
     }
   }catch(e){}
 }
 refreshBadge();
 setInterval(refreshBadge, 20000);
+
 
 
 </script>

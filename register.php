@@ -118,15 +118,6 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "name": "Tchat-Direct",
-  "url": "https://tchat-direct.com/",
-  "description": "Tchat-Direct est un site de tchat en ligne. Rejoins tchat direct pour discuter en ligne. tchatche gratuit."
-}
-</script>
 
 
 <meta property="og:title" content="Tchat Direct – Chat Anonyme Gratuit, Salons Publics & Privés en Direct">
@@ -583,10 +574,11 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
 <footer class="site-footer brutal" role="contentinfo">
   <div class="footer-strip footer-links-strip">
     <nav class="footer-links" aria-label="Liens du site">
-      <a class="footer-link" href="<?= APP_BASE ?>/legal.php">Mentions légales</a>
-      <a class="footer-link" href="<?= APP_BASE ?>/privacy.php">Confidentialité</a>
-      <a class="footer-link" href="<?= APP_BASE ?>/cgu.php">CGU</a>
-      <a class="footer-link" href="<?= APP_BASE ?>/contact.php">Contact</a>
+      <a class="footer-link" href="<?= APP_BASE ?>">Mentions légales</a>
+      <a class="footer-link" href="<?= APP_BASE ?>">Confidentialité</a>
+      <a class="footer-link" href="<?= APP_BASE ?>">CGU</a>
+      <a class="footer-link" href="<?= APP_BASE ?>">Contact</a>
+      <a class="footer-link" href="<?= APP_BASE ?>/blog/blog.php">Blog</a>
     </nav>
   </div>
 
@@ -624,95 +616,6 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
 
 
 
-
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
-    {
-      "@type": "Question",
-      "name": "Pourquoi dois-je m’inscrire si le tchat est gratuit ?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "L’inscription sert à créer ton pseudo et ton mot de passe pour sécuriser l’accès à ton compte et à tes salons. Le tchat reste gratuit et anonyme."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Est-ce que Tchat Direct est vraiment un tchat gratuit sans inscription lourde ?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Oui, l’inscription est réduite au strict minimum : un pseudo et un mot de passe, sans formulaire complexe ni données sensibles."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Mon tchat est-il anonyme une fois inscrit ?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Oui, tu échanges sous un pseudo de ton choix, sans obligation de dévoiler ton identité réelle."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Puis-je créer un salon privé avec mot de passe ?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Oui, tu peux créer des rooms privées protégées par mot de passe pour contrôler qui peut rejoindre la discussion."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Comment fonctionne la rencontre tchat gratuit sur Tchat Direct ?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "La rencontre se fait par le dialogue dans des salons publics ou privés, sans algorithme de matching, dans un cadre anonyme et sobre."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Y a-t-il un tchat mobile gratuit sur Tchat Direct ?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Le site est accessible directement depuis ton navigateur mobile, ce qui en fait un tchat mobile gratuit sans application à installer."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Quelle est la différence avec les anciens tchats anonymes ?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Tchat Direct propose une interface plus récente, des rooms publiques et privées, et une URL dédiée pour chaque salon."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Les salons sont-ils modérés ?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Des règles de respect et de légalité s’appliquent pour maintenir un environnement de discussion convivial."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Puis-je utiliser Tchat Direct pour des échanges sérieux ou amicaux ?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Oui, les rooms permettent aussi d’organiser des échanges amicaux, de groupe ou d’entraide."
-      }
-    },
-    {
-      "@type": "Question",
-      "name": "Comment supprimer mon compte Tchat Direct ?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Tu peux demander la suppression de ton compte en contactant l’administrateur ou via les options prévues quand elles sont disponibles."
-      }
-    }
-  ]
-}
-</script>
 
     </main>
 

@@ -85,11 +85,11 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
   <span id="roomStatus" class="mut cr-status"></span>
 
   <label class="cr-toggle"> <!--- Checkbox private stylée -->
-    <input type="checkbox" name="is_private" id="is_private">
+    <input  type="checkbox" name="is_private" id="is_private" >
     Protégé
   </label>
 
-  <input
+  <input 
     type="password"
     class="cr-input cr-input--pwd"
     name="password"
@@ -97,7 +97,8 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
     placeholder="Mot de passe"
     maxlength="20"
     style="display:none"
-  >
+
+  >   
 
   <script> // Toggle affichage mot de passe
   const chk = document.getElementById('is_private');
@@ -151,7 +152,7 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
 
 
     <div id="umDMBox" hidden style="margin-top:10px">
- <img id="dmAvatar" class="dm-avatar" src="" alt="">  
+ <img id="dmAvatar" class="dm-avatar" alt="avatar utilisateur">  
      <span id="dmName" class="dm-name"></span>
 
 
@@ -159,11 +160,14 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
        
       </div>
 
-      <form id="dmSend" method="post" enctype="multipart/form-data" autocomplete="off">
+
+      <!-- DM form -->
+       
+      <form id="dmSend" method="post" enctype="multipart/form-data" autocomplete="off"> 
         <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'] ?? '', ENT_QUOTES) ?>">
         <input type="hidden" name="recipient_id" id="dmRecipient">
         <textarea name="body" id="dmBody" rows="3" maxlength="2000" placeholder="Votre message…"></textarea>
-        <input type="file" name="image" accept="image/*">
+      <input type="file" name="file" accept="image/*,video/mp4,video/webm,video/ogg"> <!-- Ajout input file pour image/vidéo, sql garder image_path comme “chemin média” et ajouter file_mime. -->
         <button type="submit" id="dmBtn">Envoyer</button>
       </form>
 
@@ -274,11 +278,11 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
     <div class="chatForm-toolbar">
       <!-- Input file caché, déclenché par le label -->
       <input
-        type="file"
-        id="chatImage"
-        name="image"
-        accept="image/jpeg,image/png,image/webp"
-        hidden
+       id="chatImage"
+  name="file"
+  type="file"
+  accept="image/*,video/mp4,video/webm,video/ogg"
+  hidden
       >
 
       <label for="chatImage" class="btn-icon" title="Joindre une image">
@@ -291,7 +295,7 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
           type="color"
           id="msgColor"
           name="color"
-          value="#000000ff"
+          value="#000000"
           title="Choisir une couleur de message (optionnel)"
         >
       </label>
@@ -479,7 +483,7 @@ lockForm?.addEventListener('submit', async (e) => {
 
   } catch (err) {
     console.error('Erreur unlock room:', err);
-    if (lockStatus) lockStatus.textContent = 'Erreur réseau.';
+    if (lockStatus) lockStatus.textContent = 'Anti brute force activé. IP Identifié';
   }
 });
 
@@ -502,7 +506,7 @@ lockClose?.addEventListener('click', () => {
 roomDeleteBtn?.addEventListener('click', async () => {  
   if (!currentRoom) return; 
 
-  const ok = confirm("Tu es sur de vouloir supprimer ce salon ?\nTous les messages associés seront définitivement supprimés.");
+  const ok = confirm("Tu es sur de vouloir supprimer ce salon ?\Tous les messages associés seront définitivement supprimés.");
   if (!ok) return;
 
   const fd = new FormData();
@@ -847,8 +851,6 @@ roomShareBtn?.addEventListener('click', () => {
 });
 
 
-
-
 async function closeChat({ reloadRooms = false, clearUrl = true } = {}) {
   // Stop tout ce qui tourne
   stopPolling();
@@ -1069,19 +1071,36 @@ async function loadRooms(){
       return;
     }
 
-  RLIST.innerHTML = j.rooms.map(x => {
-  const priv = Number(x.is_private) === 1;
-  const last = x.last_at ? new Date(x.last_at.replace(' ','T')).toLocaleString() : '—';
+    // On construit le HTML de la liste des rooms en JSON
+RLIST.innerHTML = j.rooms.map(x => { // pour chaque salon
+  const priv = Number(x.is_private) === 1; // salon privé ?
+  const eph  = Number(x.is_ephemeral) === 1; // salon éphémère ?
+  
+
+  const last = x.last_at ? new Date(x.last_at.replace(' ','T')).toLocaleString() : '—'; // date dernier message
+
+  // Texte du badge (priorité: protégé > éphémère > public)
+ const icons = `
+    <div class="room-icons" aria-label="Attributs du salon">
+      ${priv ? `<span class="ico ico-lock" title="Salon protégé" aria-label="protégé">🔒</span>` : ``}
+      ${eph  ? `<span class="ico ico-eph"  title="Salon éphémère (24h)" aria-label="éphémère">⏳</span>` : ``}
+    </div>
+  `;
+
   return `
+ 
     <div class="row room"
          data-id="${x.id}"
          data-name="${escapeHtml(x.name)}"
          data-private="${priv ? 1 : 0}"
+         data-ephemeral="${eph ? 1 : 0}"
          data-created-by="${x.created_by}">
-      <div><strong>${escapeHtml(x.name)}${priv ? ' 🔒' : ''}</strong></div>
+      ${icons}
+      <div><strong>${escapeHtml(x.name)}${priv ? ' ' : ''}</strong></div>
       <div class="mut">${last}</div>
     </div>`;
 }).join('');
+
   } catch {
     RLIST.innerHTML = '<div class="mut">Erreur.</div>';
   }
@@ -1366,32 +1385,53 @@ function renderMessage(m){
     content.appendChild(body);
   }
 
-  // Image éventuelle
-  if (m.file_url && /^image\//.test(m.file_mime || '')) {
-    const src = m.file_url;
-    if (isViewed(src)) {
+// Image éventuelle
+if (m.file_url && /^image\//.test(m.file_mime || '')) {
+  const src = m.file_url;
+
+  if (isViewed(src)) {
+    const img = document.createElement('img');
+    Object.assign(img, { src, alt:'image', loading:'lazy' });
+    img.className = 'chat-img';
+    img.addEventListener('click', () => openImgModal(src));
+    content.appendChild(img);
+  } else {
+    const veil = document.createElement('div');
+    veil.className = 'imageVeil imageVeil--blur';
+    veil.style.backgroundImage = `url('${src}')`;
+    veil.innerHTML = '<span>Cliquer pour afficher l’image</span>';
+    veil.addEventListener('click', () => {
+      openImgModal(src);
+      markViewed(src);
+
       const img = document.createElement('img');
       Object.assign(img, { src, alt:'image', loading:'lazy' });
       img.className = 'chat-img';
       img.addEventListener('click', () => openImgModal(src));
-      content.appendChild(img);
-    } else {
-      const veil = document.createElement('div');
-      veil.className = 'imageVeil imageVeil--blur';
-      veil.style.backgroundImage = `url('${src}')`;
-      veil.innerHTML = '<span>Cliquer pour afficher l’image</span>';
-      veil.addEventListener('click', () => {
-        openImgModal(src);
-        markViewed(src);
-        const img = document.createElement('img');
-        Object.assign(img, { src, alt:'image', loading:'lazy' });
-        img.className = 'chat-img';
-        img.addEventListener('click', () => openImgModal(src));
-        veil.replaceWith(img);
-      });
-      content.appendChild(veil);
-    }
+      veil.replaceWith(img);
+    });
+    content.appendChild(veil);
   }
+}
+
+// Vidéo éventuelle
+if (m.file_url && /^video\//.test(m.file_mime || '')) {
+  const src = m.file_url;
+
+  const video = document.createElement('video');
+  video.className = 'chat-video';
+  video.controls = true;
+  video.playsInline = true;
+  video.preload = 'metadata';
+
+  const source = document.createElement('source');
+  source.src = src;
+  source.type = m.file_mime || 'video/mp4';
+
+  video.appendChild(source);
+  content.appendChild(video);
+}
+
 
 
     // Footer actions (likes, etc.)
@@ -1553,29 +1593,45 @@ function stopPolling(){
 // Compression client des images avant upload
 chatForm?.querySelector('input[type="file"]')?.addEventListener('change', async (e) => {
   const file = e.target.files[0];
-  if (!file || !/^image\/(jpeg|png|webp)$/.test(file.type)) return;
+  if (!file || !/^image\/(jpeg|png|webp)$/.test(file.type)) return; // seulement jpeg, png, webp
 
   const url = URL.createObjectURL(file);
-  const img = new Image(); img.src = url;
-  await new Promise(res => img.onload = res);
 
-  const MAX = 1280;
-  let { width, height } = img;
-  if (width > height && width > MAX){ height *= MAX/width; width = MAX; }
-  else if (height > width && height > MAX){ width *= MAX/height; height = MAX; }
+  try {
+    const img = new Image();
+    img.src = url;
+    await new Promise((res, rej) => {
+      img.onload = () => res();
+      img.onerror = () => rej(new Error('img load failed'));
+    });
 
-  const canvas = document.createElement('canvas');
-  canvas.width = width; canvas.height = height;
-  canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+    const MAX = 1280;
+    let { width, height } = img;
+    if (width > height && width > MAX){ height *= MAX/width; width = MAX; }
+    else if (height > width && height > MAX){ width *= MAX/height; height = MAX; } // carré
 
-  const blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', 0.8));
-  const compressed = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type:'image/jpeg' });
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(width);
+    canvas.height = Math.round(height);
 
-  const dt = new DataTransfer(); dt.items.add(compressed);
-  e.target.files = dt.files;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-  URL.revokeObjectURL(url);
+    const blob = await new Promise((res) => canvas.toBlob(res, 'image/jpeg', 0.8)); // qualité 80%
+    if (!blob) return;
+
+    const compressed = new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type:'image/jpeg' });
+
+    const dt = new DataTransfer();
+    dt.items.add(compressed);
+    e.target.files = dt.files;
+
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 });
+
+
 
 // Envoi d’un message (texte + image)
 chatForm?.addEventListener('submit', async (e) => {
@@ -1845,6 +1901,24 @@ document.addEventListener('keydown', (e) => {
   }
 });
 
+// Couleur message
+// Couleur message : on sanitise le champ directement (pas besoin de formData global)
+const msgColorInput = document.getElementById('msgColor');
+
+function sanitizeHexColor(v){
+  const c = String(v || '').trim();
+  return /^#[0-9A-Fa-f]{6}$/.test(c) ? c : '#000000';
+}
+
+if (msgColorInput){
+  // Normalise la valeur au chargement
+  msgColorInput.value = sanitizeHexColor(msgColorInput.value);
+
+  // Normalise à chaque changement
+  msgColorInput.addEventListener('input', () => {
+    msgColorInput.value = sanitizeHexColor(msgColorInput.value);
+  });
+}
 
 </script>
 

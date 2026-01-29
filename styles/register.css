@@ -435,6 +435,7 @@ body.neo .public-room__image{
   margin-top: var(--sp-40);
   border-top: var(--b-strong);
   background: var(--c-paper);
+  width: 100%;
 }
 
 /* bandes horizontales */

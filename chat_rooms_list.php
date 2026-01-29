@@ -29,6 +29,7 @@ $sql = "
     r.id,
     r.name,
     r.is_private,
+     r.is_ephemeral,
     r.created_by,
     (SELECT MAX(created_at)
        FROM chat_messages cm
@@ -39,6 +40,7 @@ $sql = "
       WHERE p.room_id = r.id
         AND p.last_seen > (NOW() - INTERVAL {$ttl} SECOND)
     ) AS active_count
+
   FROM chat_rooms r
   ORDER BY COALESCE(
     (SELECT MAX(created_at) FROM chat_messages cm WHERE cm.room_id = r.id),
@@ -51,12 +53,16 @@ $sql = "
 $res = $mysqli->query($sql);
 $rooms = [];
 
-if ($res) {
+
+//Patch du JSON
+if ($res) { 
   while ($row = $res->fetch_assoc()) {
     $rooms[] = [
       'id'           => (int)$row['id'],
       'name'         => (string)$row['name'],
       'is_private'   => (int)$row['is_private'], // 0 ou 1
+      'is_ephemeral' => isset($row['is_ephemeral']) ? (int)$row['is_ephemeral'] : 0,
+
       'last_at'      => $row['last_at'] ? (string)$row['last_at'] : null,
       'active_count' => isset($row['active_count']) ? (int)$row['active_count'] : 0,
       'created_by'   => isset($row['created_by']) ? (int)$row['created_by'] : 0,

@@ -14,9 +14,13 @@ THUMB_MAX_W / THUMB_MAX_H = dimensions max des miniatures générées.
 Conclusion: ce fichier pose le cadre global (routes, punchlines, règles d’upload).*/
 
 declare(strict_types=1);
-define('APP_BASE', rtrim(dirname($_SERVER['PHP_SELF']), '/\\')); // ex: /loi
-define('PROJECT_PAGE', 'project.php'); // unique
+$docRoot = realpath($_SERVER['DOCUMENT_ROOT']);
+$appRoot = realpath(__DIR__); // dossier où est config.php (racine du projet)
+$base = str_replace($docRoot, '', $appRoot);
+$base = str_replace('\\', '/', $base);
 
+define('APP_BASE', rtrim($base, '/')); // ex: /loi
+define('BLOG_BASE', APP_BASE . '/blog');
 
 
 function random_punchline(string $pseudo): string { // Phrase dacceuil 
@@ -61,12 +65,28 @@ function project_url(int $id, string $title): string {
 }
 
 
-// images
-define('UPLOAD_DIR', __DIR__ . '/uploads');
-define('UPLOAD_URL', APP_BASE . '/uploads');
-define('UPLOAD_MAX_MB', 5);                        // 5 Mo par image
-define('UPLOAD_MAX_FILES', 5);                     // max 5 images
-define('UPLOAD_ALLOWED', ['image/jpeg','image/png','image/webp']);
+// Uploads VIDEO ET IMAGE
+
+define('UPLOAD_DIR', __DIR__ . '/uploads');     // Dossier physique
+define('UPLOAD_URL', APP_BASE . '/uploads');    // URL publique
+
+// Taille max (vidéo = plus lourd). Mets 50 Mo par exemple.
+define('UPLOAD_MAX_MB', 50);    // Poids max total par envoi
+define('UPLOAD_MAX_FILES', 5);  // Nombre max de fichiers par envoi
+
+define('UPLOAD_ALLOWED', [
+  // images
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+  'image/gif',
+
+  // vidéos
+  'video/mp4',
+  'video/webm',
+  'video/ogg',
+]);
+
 
     // Thumbnails
     define('THUMB_MAX_W', 480);

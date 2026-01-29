@@ -67,28 +67,65 @@ $body = trim((string)($_POST['body'] ?? ''));
 $body = preg_replace('/[\p{Cc}\p{Cf}&&[^\n\t]]/u','',$body);
 $body = mb_substr($body,0,2000);
 
-$fileUrl=$fileMime=null; $w=$h=null;
+$fileUrl = $fileMime = null;
+$w = $h = null;
 
-if (!empty($_FILES['image']['name'])) {
-  if (($_FILES['image']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) { echo json_encode(['ok'=>false,'error'=>'upload']); exit; }
+if (!empty($_FILES['file']['name'])) {
+
+  if (($_FILES['file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+    echo json_encode(['ok'=>false,'error'=>'upload','code'=>($_FILES['file']['error'] ?? null)]);
+    exit;
+  }
+
   $maxBytes = (int)UPLOAD_MAX_MB * 1024 * 1024;
-  if (($_FILES['image']['size'] ?? 0) > $maxBytes) { echo json_encode(['ok'=>false,'error'=>'too_big']); exit; }
+  if (($_FILES['file']['size'] ?? 0) > $maxBytes) {
+    echo json_encode(['ok'=>false,'error'=>'too_big']);
+    exit;
+  }
+
+  $tmp = $_FILES['file']['tmp_name'] ?? '';
+  if ($tmp === '' || !is_file($tmp)) {
+    echo json_encode(['ok'=>false,'error'=>'tmp_missing']);
+    exit;
+  }
 
   $finfo = new finfo(FILEINFO_MIME_TYPE);
-  $mime  = $finfo->file($_FILES['image']['tmp_name']) ?: '';
-  if (!in_array($mime, UPLOAD_ALLOWED, true)) { echo json_encode(['ok'=>false,'error'=>'mime']); exit; }
+  $mime  = $finfo->file($tmp) ?: '';
+  if (!in_array($mime, UPLOAD_ALLOWED, true)) {
+    echo json_encode(['ok'=>false,'error'=>'mime','detected'=>$mime]);
+    exit;
+  }
 
-  if (!is_dir(UPLOAD_DIR) && !mkdir(UPLOAD_DIR, 0775, true)) { echo json_encode(['ok'=>false,'error'=>'dir']); exit; }
+  if (!is_dir(UPLOAD_DIR) && !mkdir(UPLOAD_DIR, 0775, true)) {
+    echo json_encode(['ok'=>false,'error'=>'dir']);
+    exit;
+  }
 
-  $ext = $mime==='image/jpeg'?'jpg':($mime==='image/png'?'png':($mime==='image/webp'?'webp':'bin'));
+  $extMap = [
+    'image/jpeg'=>'jpg','image/png'=>'png','image/webp'=>'webp','image/gif'=>'gif',
+    'video/mp4'=>'mp4','video/webm'=>'webm','video/ogg'=>'ogv',
+  ];
+  $ext = $extMap[$mime] ?? 'bin';
+
   $fname = 'chat_'.date('Ymd_His').'_'.bin2hex(random_bytes(6)).'.'.$ext;
   $dest  = rtrim(UPLOAD_DIR,'/').'/'.$fname;
-  if (!move_uploaded_file($_FILES['image']['tmp_name'], $dest)) { echo json_encode(['ok'=>false,'error'=>'move']); exit; }
 
-  [$imgW,$imgH] = @getimagesize($dest) ?: [null,null];
-  $fileUrl = rtrim(UPLOAD_URL,'/').'/'.$fname;
-  $fileMime = $mime; $w=$imgW; $h=$imgH;
+  if (!move_uploaded_file($tmp, $dest)) {
+    echo json_encode(['ok'=>false,'error'=>'move']);
+    exit;
+  }
+
+  if (str_starts_with($mime,'image/')) {
+    $info = @getimagesize($dest);
+    if (!$info) { echo json_encode(['ok'=>false,'error'=>'bad_image']); exit; }
+    $w = (int)$info[0];
+    $h = (int)$info[1];
+  }
+
+  $fileUrl  = rtrim(UPLOAD_URL,'/').'/'.$fname;
+  $fileMime = $mime;
 }
+
 
 if ($body === '' && !$fileUrl) { echo json_encode(['ok'=>false,'error'=>'empty']); exit; }
 

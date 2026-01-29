@@ -125,6 +125,14 @@ a:hover{background:var(--c-accent)}
   box-shadow: var(--sh-xs);
 }
 
+.msg-video
+{    display: block;
+    max-width: 180px;
+    max-height: 180px;
+    border: var(--b-mid);
+    box-shadow: var(--sh-xs);}
+
+
 /* Formulaire reply */
 
  .reply{

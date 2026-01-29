@@ -242,15 +242,6 @@ if (random_int(1, LOGIN_GC_DEN) <= LOGIN_GC_NUM) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
-<script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "WebSite",
-  "name": "Tchat-Direct",
-  "url": "https://tchat-direct.com/",
-  "description": "Tchat-Direct est un site de tchat en ligne avec salons publics anonymes, messages instantanés, images et réactions."
-}
-</script>
 <meta property="og:title" content="Tchat Direct – Chat Anonyme Gratuit, Salons Publics & Privés en Direct">
 <meta property="og:description" content="Rejoins tchat direct pour discuter en ligne. tchatche gratuit.">
 <meta property="og:url" content="https://tchat-direct.com">

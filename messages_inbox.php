@@ -146,13 +146,27 @@ usort($threads, fn($a, $b) => $b['last_at'] <=> $a['last_at']);
                 <div class="msg-out-text"><?= htmlspecialchars($txt, ENT_QUOTES) ?></div>
               <?php endif; ?>
 
-              <?php if ($img): ?>
-                <div class="msg-img">
-                  <a href="<?= htmlspecialchars($img, ENT_QUOTES) ?>" target="_blank" rel="noopener">
-                    <img src="<?= htmlspecialchars($img, ENT_QUOTES) ?>" alt="">
-                  </a>
-                </div>
-              <?php endif; ?>
+<?php if ($img): ?> <!-- Affichage image ou vidéo, gardes image_path comme “média”, et tu choisis <video> si extension vidéo. -->
+  <?php
+    $path = (string)parse_url($img, PHP_URL_PATH);
+    $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+    $isVideo = in_array($ext, ['mp4','webm','ogv','ogg'], true); // ogv chez toi, parfois ogg
+  ?>
+  <div class="msg-img">
+    <?php if ($isVideo): ?>
+      <video class="msg-video" controls playsinline preload="metadata"> <!-- preload metadata pour ne pas charger toute la vidéo d’un coup -->
+        <source src="<?= htmlspecialchars($img, ENT_QUOTES) ?>" type="video/<?= $ext === 'ogv' ? 'ogg' : $ext ?>">
+      </video>
+    <?php else: ?>
+      <a href="<?= htmlspecialchars($img, ENT_QUOTES) ?>" target="_blank" rel="noopener">
+        <img src="<?= htmlspecialchars($img, ENT_QUOTES) ?>" alt="">
+      </a>
+    <?php endif; ?>
+  </div>
+<?php endif; ?>
+
+
+
             </div>
           <?php endforeach; ?>
 
@@ -161,7 +175,7 @@ usort($threads, fn($a, $b) => $b['last_at'] <=> $a['last_at']);
             <p class="muted">Répondre à <strong><?= $other ?></strong></p>
             <textarea name="body" rows="3" maxlength="2000" placeholder="Écris ta réponse…"></textarea>
             <div class="row">
-              <input type="file" name="image" accept="image/*" capture="environment">
+<input type="file" name="image" accept="image/*,video/mp4,video/webm,video/ogg">
               <button class="btn" type="submit">Envoyer</button>
               <span class="muted reply-status"></span>
             </div>
@@ -349,22 +363,33 @@ document.addEventListener('submit', async (e) => {
       out.querySelector('.msg-out-text').textContent = bodyText;
     }
 
-    if (hasImg) {
-      const file = fileInput.files[0];
-      const url = URL.createObjectURL(file);
-      const imgWrap = document.createElement('div');
-      imgWrap.className = 'msg-img';
-      const a = document.createElement('a');
-      a.href = url;
-      a.target = '_blank';
-      a.rel = 'noopener';
-      const img = new Image();
-      img.src = url;
-      img.onload = () => URL.revokeObjectURL(url);
-      a.appendChild(img);
-      imgWrap.appendChild(a);
-      out.appendChild(imgWrap);
-    }
+if (hasImg) { // affiche l’image ou vidéo
+  const file = fileInput.files[0];
+  const url = URL.createObjectURL(file);
+
+  const wrap = document.createElement('div');
+wrap.className = 'msg-img';
+
+// pas de <a> en preview blob
+if (file.type.startsWith('video/')) {
+  const v = document.createElement('video');
+  v.className = 'msg-video';
+  v.controls = true;
+  v.playsInline = true;
+  v.preload = 'metadata';
+  v.src = url;
+
+  // ne revoke pas ici
+  wrap.appendChild(v);
+} else {
+  const img = new Image();
+  img.src = url;
+  wrap.appendChild(img);
+}
+
+out.appendChild(wrap);
+
+}
 
     form.before(out);
 

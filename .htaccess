@@ -21,14 +21,23 @@
   # /blog -> blog.php
   RewriteRule ^blog/?$ blog.php [L]
 
-  # 4) Sécurité : ne pas réécrire les vrais fichiers / dossiers
+  # 4) Blog (articles) : /blog/slug -> /blog/slug.php si le fichier existe
+  RewriteCond %{DOCUMENT_ROOT}/blog/$1.php -f
+  RewriteRule ^blog/([a-z0-9-]+)/?$ blog/$1.php [L]
+
+  # 5) Sécurité : ne pas réécrire les vrais fichiers / dossiers
   RewriteCond %{REQUEST_FILENAME} -f [OR]
   RewriteCond %{REQUEST_FILENAME} -d
   RewriteRule ^ - [L]
 
-  # 5) Autres règles existantes
+
+  
+
+  # 6) Autres règles existantes
   RewriteRule ^p/([0-9]+)-?([A-Za-z0-9-]*)$ project.php?id=$1 [QSA,L]
   RewriteRule ^tag/([A-Za-z0-9-]+)$ index.php?tag=$1 [QSA,L]
+  # réécriture pour que /loi/uploads/...pointe sur /uploads/...
+  RewriteRule ^loi/uploads/(.*)$ uploads/$1 [L]
 
 </IfModule>
 

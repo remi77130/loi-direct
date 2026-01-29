@@ -136,6 +136,7 @@ body{
 .cr-status{
   flex: 1 1 180px;
   min-width: 160px;
+  color: var(--c-black);
 }
 
 .cr-toggle{
@@ -188,37 +189,44 @@ body{
   background: var(--c-accent);
 }
 
-.row.room strong{
-  font-size: var(--fs-20);
-  overflow: hidden;
-  white-space: nowrap;
-  width: 60%;
-  background: var(--c-aqua);
-  display: block;
-  text-overflow: ellipsis;
-}
-
-.row.room .mut{ margin-top: var(--sp-6); }
 
 /* badge public/protégé */
-.row.room::after{
-  content:"PUBLIC";
-  position:absolute;
-  top: var(--sp-10);
-  right: var(--sp-10);
-  border: var(--b-mid);
-  background: var(--c-cyan);
-  box-shadow: var(--sh-xs);
-  padding: 2px 8px;
-  font-size: var(--fs-12);
-  font-weight:900;
-  letter-spacing:.4px;
+.row.room{
+  position: relative;
+  padding-right: 56px; /* espace pour 2 icônes */
 }
 
-.row.room[data-private="1"]::after{
-  content:"PROTÉGÉ";
-  background: var(--c-danger);
+
+.row.room{
+  position: relative;
+  padding-right: 56px; /* espace pour 2 icônes */
 }
+
+.room-icons{
+  position: absolute;
+  top: var(--sp-10);
+  right: var(--sp-10);
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.room-icons .ico{
+  border: var(--b-mid);
+  box-shadow: var(--sh-xs);
+  background: var(--c-white);
+  padding: 2px 6px;
+  font-size: var(--fs-12);
+  line-height: 1;
+  font-weight: 900;
+  user-select: none;
+}
+
+/* Option : colorer selon type */
+.room-icons .ico-lock{ background: var(--c-red); color:#000; }
+.room-icons .ico-eph { background: var(--c-yellow); color:#000; }
+
+
 
 /* ===== Presence list ===== */
 #presenceInline{
@@ -249,6 +257,14 @@ body{
   border-radius:999px;
   border: var(--b-mid);
   object-fit:cover;
+}
+
+
+.dm-avatar
+{
+  width:50px;
+  height:50px;
+ 
 }
 
 .active-name{
@@ -348,9 +364,18 @@ body{
 
 .chat-img
 {
-     width: 40%;
-    border: 5px solid #000000;
+    width: 60%;
+    border: var( --c-black);
 }
+.chat-video
+{
+    width: 60%;
+    border: var( --c-black)  
+  
+  }
+
+
+
 
   .msg{
   display: flex;
@@ -513,6 +538,8 @@ body{
 .btn-send-label,
 .btn-send-icon{ font-weight: 900; }
 
+
+
 /* ===== Responsive ===== */
 @media (max-width: 700px){
   #chatModal.modal{
@@ -555,7 +582,10 @@ body{
     font-size: var(--fs-16);
     width: 60%; /* au lieu de 0% (bug) */
 
+
   }
+
+
 }
 
 @media (max-width: 480px){

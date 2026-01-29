@@ -59,7 +59,7 @@ durcir le style ? → --b-strong / --sh-xl
   --c-danger: #ff382e;  /* rouge card */
   --c-cyan:   #4fb2c6;  /* public rooms */
   --c-aqua:  #26fff0;  /* private rooms */
-    --c-3aff: #ca3aff; /* card */
+  --c-3aff: #ca3aff; /* card */
 
   /* ================= STATUT ================= */
   --c-ok:   #7CFF6B;

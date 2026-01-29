@@ -1,4 +1,5 @@
-<link rel="stylesheet" href="styles/header.css">
+  <link rel="stylesheet" href="<?= APP_BASE ?>/styles/header.css">
+
 <header class="site-header">
   <div class="h-wrap">
     <a class="brand" href="<?= APP_BASE ?>/">Tchat direct</a>
@@ -15,7 +16,8 @@
       <a href="<?= APP_BASE ?>/index.php" class="nav-link">Récents</a>
       <a href="<?= APP_BASE ?>/quiz/quizzes.php" class="nav-link">Quiz</a>
       <a href="<?= APP_BASE ?>/index.php?mine=1" class="nav-link">Mes post</a>
-      <a href="<?= APP_BASE ?>/chat_rooms.php" class="nav-link nav-link--hot" rel="noopener">Rooms</a>
+      <a href="<?= APP_BASE ?>/chat_rooms.php" class="nav-link--hot" rel="noopener">Rooms</a>
+      <a href="<?= APP_BASE ?>/" class="nav-link" rel="noopener">Boutique</a>
 
       <form action="<?= APP_BASE ?>/index.php" method="get" class="nav-search">
         <input class="nav-input" name="q" placeholder="Rechercher…">
@@ -28,10 +30,10 @@
       <a class="nav-link" href="<?= APP_BASE ?>/write.php">Écrire un post</a>
 
       <a class="nav-link" href="<?= APP_BASE ?>/messages_inbox.php">
-        Messages <span id="msgBadge" class="msg-badge" style="display:none">0</span>
+        Messages <span id="msgBadge" class="msg-badge" style="display:none" >0</span>
       </a>
 
-      <a class="nav-link" href="<?= APP_BASE ?>/logout.php">Se déconnecter</a>
+      <a class="nav-link-disconect" href="<?= APP_BASE ?>/logout.php">Se déconnecter</a>
     </nav>
   </div>
 </header>
