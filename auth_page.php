@@ -1,116 +1,8 @@
 <?php
-// register.php — inscription avec mot de passe (hash) + validations côté serveur
-declare(strict_types=1);
-session_start();
-
-require __DIR__ . '/db.php';
-require __DIR__ . '/config.php'; // APP_BASE, helpers…
+// auth_page.php: page de connexion et d’inscription, avec gestion des erreurs et redirections.
+include __DIR__ . '/auth_page_action.php'; ?>
 
 
-// IMPORTANT : NE PAS mettre require_login() ici,
-// register.php doit rester accessible à tous (public).
-
-// --- 1) Récupérer les 10 dernières rooms publiques (is_private = 0) ---
-
-
-/* INFO FICHIER 
-
-Lecture de $pseudo et validations serveur complètes.
-Champ confirmation ajouté.
-Hash du mot de passe toujours stocké (password_hash).
-Gestion d’erreurs prepare/execute avec error_log + message générique.
-Redirection sûre via APP_BASE.
-
-
-*/
-
-
-
-
-
-
-
-if (empty($_SESSION['csrf'])) {
-  $_SESSION['csrf'] = bin2hex(random_bytes(16));
-}
-
-$errors = [];
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-  // 1) CSRF
-  $csrf = $_POST['csrf'] ?? '';
-  if (!hash_equals($_SESSION['csrf'] ?? '', $csrf)) {
-    $errors[] = "Session expirée. Recharge la page.";
-  } else {
-    // 2) Récupération & normalisation
-    $pseudo  = mb_substr(trim((string)($_POST['pseudo'] ?? '')), 0, 20);
-    $pass1   = (string)($_POST['password'] ?? '');
-    $pass2   = (string)($_POST['password_confirm'] ?? '');
-
-   // pseudo déjà trim()
-if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
-    $errors[] = "Le pseudo doit faire 3 à 20 caractères (lettres avec accents, chiffres, . _ -, Pas despace).";
-}
-
-
-    $len = mb_strlen($pass1);
-    if ($len < 8 || $len > 128) {
-      $errors[] = "Mot de passe : 8 à 128 caractères.";
-    }
-    if ($pass1 !== $pass2) {
-      $errors[] = "Les mots de passe ne correspondent pas.";
-    }
-
-    // 4) Pseudo disponible ?
-    if (!$errors) {
-      $chk = $mysqli->prepare('SELECT 1 FROM users WHERE pseudo=? LIMIT 1');
-      if (!$chk) {
-        $errors[] = "Erreur serveur.";
-        error_log('register check prepare: '.$mysqli->error);
-      } else {
-        $chk->bind_param('s', $pseudo);
-        if (!$chk->execute()) {
-          $errors[] = "Erreur serveur.";
-          error_log('register check execute: '.$chk->error);
-        } else {
-          $chk->store_result();
-          if ($chk->num_rows > 0) {
-            $errors[] = "Ce pseudo est déjà pris.";
-          }
-        }
-        $chk->close();
-      }
-    }
-
-    // 5) Création du compte
-    if (!$errors) {
-      $hash = password_hash($pass1, PASSWORD_DEFAULT);
-
-      $ins = $mysqli->prepare('INSERT INTO users (pseudo, password_hash) VALUES (?, ?)');
-      if (!$ins) {
-        $errors[] = "Erreur serveur.";
-        error_log('register insert prepare: '.$mysqli->error);
-      } else {
-        $ins->bind_param('ss', $pseudo, $hash);
-        if ($ins->execute()) {
-          // Succès: login direct
-          session_regenerate_id(true);
-          $_SESSION['user_id'] = $ins->insert_id;
-          $_SESSION['pseudo']  = $pseudo;
-          $_SESSION['flash_success'] = random_punchline($pseudo);
-
-          header('Location: '.rtrim(APP_BASE,'/').'/chat_rooms.php', true, 303);
-          exit;
-        } else {
-          $errors[] = "Erreur serveur.";
-          error_log('register insert execute: '.$ins->error);
-        }
-        $ins->close();
-      }
-    }
-  }
-} 
-?>
 
 <!doctype html>
 <html lang="fr">
@@ -118,155 +10,133 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  <title>Tchat Direct – Tchat gratuit (salons publics et privés)</title>
+  <meta name="description" content="Tchat Direct : accéder aux salons 
+  de discussion publics et privés. Plateforme rapide, moderne et sécurisée.">
 
+  <link rel="canonical" href="https://tchat-direct.com/">
 
-<meta property="og:title" content="Tchat Direct – Chat Anonyme Gratuit, Salons Publics & Privés en Direct">
-<meta property="og:description" content="Rejoins tchat direct pour discuter en ligne. tchatche gratuit.">
-<meta property="og:url" content="https://tchat-direct.com/register.php">
-<meta property="og:type" content="website">
-
-
-  <title>Tchat Direct – Chat Anonyme Gratuit, Salons Publics & Privés en Direct</title>
-
-  <!-- Favicon principal -->
-<link rel="icon" href="favicon.ico" type="image/x-icon">
-  <!-- Favicon PNG pour les navigateurs modernes -->
-  <link rel="icon" type="image/png" sizes="32x32" href="/uploads/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="/uploads/favicon-16x16.png">
-
-  <!-- Icône pour iOS / mobile -->
-  <link rel="apple-touch-icon" sizes="180x180" href="/uploads/apple-touch-icon.png">
-
-  <!-- PWA / manifest -->
-  <link rel="manifest" href="site.webmanifest">
-
-  <!-- SEO -->
-  <link rel="canonical" href="https://tchat-direct.com/register.php">
-
-  <!-- Stylesheets -->
-   <link rel="stylesheet" href="<?= APP_BASE ?>/styles/tokens.css?v=1">
-<link rel="stylesheet" href="<?= APP_BASE ?>/styles/register.css?v=1">
-
-<link rel="stylesheet" href="<?= APP_BASE ?>/styles/seo.css?v=1">
-
-
-  <meta name="description" content="Inscrivez-vous sur Tchat Direct pour rejoindre des salons de discussion anonymes et discuter en ligne gratuitement.">
-  <meta name="keywords" content="tchat direct, tchat en ligne, chat anonyme, coco chat, direct tchat">
-
-  <meta name="robots" content="index,follow">
-
-  <!-- jQuery UNIQUEMENT si tu en as besoin ici --->
-  <script src="https://code.jquery.com/jquery-3.6.0.min.js" defer></script>
-
-  <!-- Google Analytics 4 -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-FHFM0ESDMP"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-FHFM0ESDMP');
-  </script>
-
-
-
-
-
-
-
+<link rel="stylesheet" href="<?= app_base() ?>/styles/tokens.css?v=1">
+<link rel="stylesheet" href="<?= app_base() ?>/styles/auth_page.css?v=1">
 
 </head>
 
 <body class="neo">
 
-
-
-
-<header  id="header"  class="site-header">
-  <a href="register.php" class="logo-link">
-
-
-  
-<img src="<?= APP_BASE ?>/uploads/tchat_direct_logo.webp" alt="Tchat Direct logo"
-  class="logo-img"
-  width="210"
-  height="210"
-  decoding="async">
-  </a> <p class="logo-note">Le logo </p>
-
+<header id="header" class="site-header">
+  <a href="<?= app_base() ?>/auth_page.php" class="logo-link">
+    <img src="<?= app_base() ?>/uploads/tchat_direct_logo.webp" alt="Tchat Direct logo" class="logo-img" decoding="async">
+  </a>
 </header>
-
-
 
 <main id="main-content">
 
+  <h1 >Tchat direct</h1>
 
-
-
-<!-- Bannière version Bêta -->
-<div class="banner" id="betaBanner">
-  🚧 Ce site est actuellement en version <strong>Bêta</strong>. Certaines fonctionnalités peuvent être instables. Merci de na pas partager.
-</div>
-
- <h1>Tchat direct - Inscription</h1>
-
-
-
-
-
-<div class="container_text_login_01">
-  <h2>Chat sans inscription</h2>
-<p class="text_login_01">  Interface simple, accès rapide, salons publics et privés, discussions anonymes.
-      Tchat Direct vise l’efficacité sans inscription lourde. Tu te connectes, tu choisis un salon, tu échanges.
-    </p>
-</div>
-
-
-
-  <div id="register-form" class="card">
-   
-    <h2>Créer un compte</h2>
-
-    <?php if ($errors): ?>
-      <div class="errors">
-        <?php foreach ($errors as $e) echo "<div>".htmlspecialchars($e, ENT_QUOTES)."</div>"; ?>
+  <div class="auth-top" >
+    <div>
+      <h2  id="cardTitle"><?= $active === 'register' ? 'Créer un compte' : 'Se connecter' ?></h2>
+      <div class="auth-actions">
+ 
       </div>
-    <?php endif; ?>
+    </div>
 
-    <form  method="post" autocomplete="off" novalidate>
-      <label for="pseudo">Pseudo
-</label>
-      <input type="text" id="pseudo" name="pseudo" minlength="3" maxlength="20"
-      pattern="^[\p{L}0-9_.-]{3,20}$" required placeholder="ex: Remi_85, 3–20 caractères, Pas d'espace"
->
-       
-      <div class="hint">3–20 caractères. Lettres, chiffres et underscore uniquement.</div>
-      <div id="status" class="status"></div>
-<label for="password">Mot de passe</label>
-<div class="pass-wrap">
-  <input type="password" id="password" name="password" minlength="8" maxlength="128"
-         required placeholder="••••••••" autocomplete="new-password">
-  <button type="button" class="toggle-pass" data-target="password" aria-pressed="false" title="Voir le mot de passe">Voir</button>
-</div>
+    <hr>
 
-<label for="password_confirm">Confirmer le mot de passe</label>
-<div class="pass-wrap">
-  <input type="password" id="password_confirm" name="password_confirm" minlength="8" maxlength="128"
-         required placeholder="••••••••" autocomplete="new-password">
-  <button type="button" class="toggle-pass" data-target="password_confirm" aria-pressed="false" 
-  title="Voir le mot de passe">Voir</button>
-</div>
+    <!-- LOGIN -->
+    <section id="loginBox" <?= $active === 'login' ? '' : 'hidden' ?>>
+      <?php if (!empty($errors['login'])): ?>
+        <div class="errors">
+          <?php foreach ($errors['login'] as $e) echo "<div>".htmlspecialchars($e, ENT_QUOTES)."</div>"; ?>
+        </div>
+      <?php endif; ?>
 
-      <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>">
-      <button id="submitBtn" class="btn" type="submit">S’inscrire</button>
-    </form>
+      <form method="post" autocomplete="off" novalidate>
+        <input type="hidden" name="action" value="login">
+        <input type="hidden" name="view" value="login">
+        <input type="hidden" name="next" value="<?= htmlspecialchars($next, ENT_QUOTES) ?>">
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>">
 
-    <div class="footer_link_login">Déjà inscrit ? 
-      <a href="login.php"><span>Connexion</span></a>
-</div>
+        <label for="pseudo_login">Pseudo</label>
+        <input type="text" id="pseudo_login" autocomplete="pseudo" name="pseudo"
+               minlength="3" maxlength="20"
+               pattern="^[\p{L}0-9_.-]{3,20}$"
+               required
+               placeholder="ex: Remi_85"
+               value="<?= $active === 'login' ? htmlspecialchars($postedPseudo, ENT_QUOTES) : '' ?>">
+
+        <label for="password_login">Mot de passe</label>
+        <div class="pass-wrap">
+          <input type="password" id="password_login" name="password"
+                 minlength="8" maxlength="128"
+                 required placeholder="••••••••" autocomplete="password_hash"> 
+          <button type="button" class="toggle-pass" data-target="password_login" aria-pressed="false">Voir</button>
+        </div>
+
+        <button class="btn_connect" type="submit">Se connecter</button>
+
+        <p>
+          Pas de compte ? <a href="#" class="linkToRegister" id="linkToRegister">S’enregistrer</a>
+        </p>
+      </form>
+    </section>
+
+    <!-- REGISTER -->
+    <section id="registerBox" <?= $active === 'register' ? '' : 'hidden' ?>>
+      <?php if (!empty($errors['register'])): ?>
+        <div class="errors">
+          <?php foreach ($errors['register'] as $e) echo "<div>".htmlspecialchars($e, ENT_QUOTES)."</div>"; ?>
+        </div>
+      <?php endif; ?>
+
+      <form method="post" autocomplete="off" novalidate>
+        <input type="hidden" name="action" value="register">
+        <input type="hidden" name="view" value="register">
+        <input type="hidden" name="next" value="<?= htmlspecialchars($next, ENT_QUOTES) ?>">
+        <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>">
+
+        <label for="pseudo_register">Pseudo</label>
+        <input type="text" id="pseudo_register" name="pseudo" autocomplete="pseudo"
+               minlength="3" maxlength="20"
+               pattern="^[\p{L}0-9_.-]{3,20}$"
+               required
+               placeholder="ex: Remi_85, 3–20 caractères, pas d'espace"
+               value="<?= $active === 'register' ? htmlspecialchars($postedPseudo, ENT_QUOTES) : '' ?>">
+
+        <div class="hint">3–20 caractères. Lettres, chiffres, . _ - (pas d’espace).</div>
+
+        <label for="password_register">Mot de passe</label>
+        <div class="pass-wrap">
+          <input type="password" id="password_register" name="password"
+                 minlength="8" maxlength="128"
+                 required placeholder="••••••••" autocomplete="password_hash">
+          <button type="button" class="toggle-pass" data-target="password_register" aria-pressed="false">Voir</button>
+        </div>
+
+        <label for="password_confirm_register">Confirmer le mot de passe</label>
+        <div class="pass-wrap">
+          <input type="password" id="password_confirm_register" name="password_confirm"
+                 minlength="8" maxlength="128"
+                 required placeholder="••••••••" autocomplete="new-password">
+          <button type="button" class="toggle-pass" data-target="password_confirm_register" aria-pressed="false">Voir</button>
+        </div>
+
+        <button class="btn_connect" type="submit">Créer mon compte</button>
+
+        <p>
+          Déjà un compte ? <a href="#" class="linkToLogin" id="linkToLogin">Se connecter</a>
+        </p>
+      </form>
+    </section>
   </div>
 
 
 
+
+
+
+
+  
 
 
 
@@ -570,41 +440,42 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
 
   </div>
 </section>
-
 <footer class="site-footer brutal" role="contentinfo">
-  <div class="footer-strip footer-links-strip">
-    <nav class="footer-links" aria-label="Liens du site">
-      <a class="footer-link" href="<?= APP_BASE ?>">Mentions légales</a>
-      <a class="footer-link" href="<?= APP_BASE ?>">Confidentialité</a>
-      <a class="footer-link" href="<?= APP_BASE ?>">CGU</a>
-      <a class="footer-link" href="<?= APP_BASE ?>">Contact</a>
-      <a class="footer-link" href="<?= APP_BASE ?>/blog/blog.php">Blog</a>
-    </nav>
-  </div>
 
-  <div class="footer-strip footer-social-strip">
-    <div class="footer-social">
-      <a class="social-btn" href="https://instagram.com/TON_COMPTE" target="_blank" aria-label="Instagram">
-        <!-- Instagram SVG identique -->
-        <svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M7 2h10a5 5 0 0 1 5 5v10a5 5 0 0 1-5 5H7a5 5 0 0 1-5-5V7a5 5 0 0 1 5-5Z"/>
-          <path d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Z"/>
-          <path d="M17.5 6.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0Z"/>
-        </svg>
-      </a>
+  <div class="footer-inner">
 
-      <a class="social-btn" href="https://t.me/TON_GROUPE" target="_blank" aria-label="Telegram">
-        <!-- Telegram SVG identique -->
-        <svg class="social-ico" viewBox="0 0 24 24" aria-hidden="true">
-          <path d="M21.9 4.6c.2-.8-.5-1.4-1.2-1.1L2.8 10.6c-.8.3-.7 1.5.1 1.8l4.6 1.6 1.8 5.7c.2.7 1 .8 1.5.4l2.6-2.3 5.1 3.7c.6.4 1.4.1 1.6-.6l3.8-16.3Z"/>
-        </svg>
-      </a>
+    <div class="footer-col">
+      <h3>Tchat Direct</h3>
+      <p>
+        Plateforme moderne de salons publics et privés.
+        Discussion libre, anonyme ou privée.
+      </p>
     </div>
-  </div>
+<!-- Navigation 
+    <div class="footer-col">
+      <h4>Navigation</h4>
+      <ul>
+        <li><a href="/rooms.php">Salons publics</a></li>
+        <li><a href="/auth_page.php">Connexion / Inscription</a></li>
+        <li><a href="/blog.php">Blog</a></li>
+      </ul>
+    </div>
 
-  <div class="footer-meta brutal-meta">
+    <div class="footer-col">
+      <h4>Légal</h4>
+      <ul>
+        <li><a href="/mentions-legales.php">Mentions légales</a></li>
+        <li><a href="/confidentialite.php">Confidentialité</a></li>
+        <li><a href="/cgu.php">CGU</a></li>
+      </ul>
+    </div>
+
+  </div>
+      -->
+  <div class="footer-bottom">
     © <?= date('Y') ?> Tchat Direct — BETA
   </div>
+      
 </footer>
 
 
@@ -617,21 +488,57 @@ if (!preg_match('/^[\p{L}0-9_.-]{3,20}$/u', $pseudo)) {
 
 
 
-    </main>
 
 
+
+
+
+
+</main>
 
 <script>
-  window.APP = {
-    baseUrl: "<?= APP_BASE ?>",
-    hasError: <?= empty($errors) ? 'false' : 'true' ?>
-  };
+  const loginBox = document.getElementById('loginBox');
+  const registerBox = document.getElementById('registerBox');
+  const btnLogin = document.getElementById('btnShowLogin');
+  const btnRegister = document.getElementById('btnShowRegister');
+  const linkToRegister = document.getElementById('linkToRegister');
+  const linkToLogin = document.getElementById('linkToLogin');
+  const cardTitle = document.getElementById('cardTitle');
+
+  const nextVal = <?= json_encode($next, JSON_UNESCAPED_SLASHES) ?>;
+
+  function show(which){
+    if(which === 'register'){
+      registerBox.hidden = false;
+      loginBox.hidden = true;
+      if(cardTitle) cardTitle.textContent = 'Créer un compte';
+      history.replaceState(null, '', '?view=register&next=' + encodeURIComponent(nextVal));
+    } else {
+      loginBox.hidden = false;
+      registerBox.hidden = true;
+      if(cardTitle) cardTitle.textContent = 'Se connecter';
+      history.replaceState(null, '', '?view=login&next=' + encodeURIComponent(nextVal));
+    }
+  }
+
+  btnLogin?.addEventListener('click', () => show('login'));
+  btnRegister?.addEventListener('click', () => show('register'));
+  linkToRegister?.addEventListener('click', (e) => { e.preventDefault(); show('register'); });
+  linkToLogin?.addEventListener('click', (e) => { e.preventDefault(); show('login'); });
+
+  // Toggle password buttons (réutilise ta logique)
+  document.querySelectorAll('.toggle-pass').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-target');
+      const input = document.getElementById(id);
+      if(!input) return;
+      const isPw = input.getAttribute('type') === 'password';
+      input.setAttribute('type', isPw ? 'text' : 'password');
+      btn.setAttribute('aria-pressed', isPw ? 'true' : 'false');
+      btn.textContent = isPw ? 'Masquer' : 'Voir';
+    });
+  });
 </script>
-
-<script src="<?= APP_BASE ?>/script/register.js?v=1" defer></script>
-
-
-
 
 </body>
 </html>

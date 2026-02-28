@@ -92,7 +92,7 @@ require __DIR__ . '/../config.php'; // là où APP_BASE est défini
 <header class="b-header">
   <nav class="b-nav">
     <a class="b-link" href="<?= APP_BASE ?>/../">Accueil</a>
-    <a class="b-link b-link--active" href="<?= APP_BASE ?>/blog">Blog</a>
+    <a class="b-link b-link--active" href="<?= APP_BASE ?>blog.php">← Blog</a>
     <a class="b-link" href="<?= APP_BASE ?>/../login.php">Se connecter</a>
     <a class="b-link b-link--cta" href="<?= APP_BASE ?>/../register.php">S’inscrire</a>
   </nav>

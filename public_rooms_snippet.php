@@ -85,10 +85,7 @@ if ($rooms) {
     }
 }
 ?>
-<head>
-   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-</head>
+
 
 <section class="public-rooms">
   <h3>Rooms actifs</h3>
@@ -127,7 +124,7 @@ if ($rooms) {
           $last = end($room['messages']);
           $lastDate = $last['created_at'] ?? ''; // tu peux garder que la date si tu veux
       }
-/*
+
       // 4) JSON-LD pour cette room (DiscussionForumPosting complet)
       $ld = [
           '@context'  => 'https://schema.org',
@@ -139,7 +136,7 @@ if ($rooms) {
               '@type' => 'Organization',
               'name'  => 'Tchat-Direct',
           ],
-      ]; */
+      ]; 
 
       // Contenu principal du post
       if ($firstMsg !== '') {
@@ -228,16 +225,24 @@ $isImage  = $fileUrl !== '' && (
                   </div>
 
                   <?php if ($isImage): ?>
-                    <figure class="public-room__image-wrap">
-                      <img
-                        src="<?= htmlspecialchars($fileUrl, ENT_QUOTES, 'UTF-8') ?>"
-                        alt="Image envoyée dans le salon"
-                        class="public-room__image"
-                        <?php if ($fileW > 0 && $fileH > 0): ?>
-                          width="<?= $fileW ?>" height="<?= $fileH ?>"
-                        <?php endif; ?>
-                      >
-                    </figure>
+
+
+     <figure class="public-room__image-wrap">
+  <a href="<?= htmlspecialchars($fileUrl, ENT_QUOTES, 'UTF-8') ?>" target="_blank" rel="noopener">
+    <img
+      src="<?= htmlspecialchars($fileUrl, ENT_QUOTES, 'UTF-8') ?>"
+      alt="Image envoyée dans le salon"
+      class="public-room__image"
+      loading="lazy"
+      decoding="async"
+      <?php if ($fileW > 0 && $fileH > 0): ?>
+        width="<?= (int)$fileW ?>" height="<?= (int)$fileH ?>"
+      <?php endif; ?>
+    >
+  </a>
+</figure>
+
+
 
                   <?php endif; ?>
                 </li>
@@ -249,13 +254,13 @@ $isImage  = $fileUrl !== '' && (
                             <a href="#header">Répondre </a>
 
 
-      </article>
-
       <div class="public-room__cta">
   <a href="<?= htmlspecialchars($roomUrl, ENT_QUOTES, 'UTF-8') ?>" class="btn-primary">
     Voir le salon complet
   </a>
 </div>
+
+      </article>
 
     <?php endforeach; ?>
   <?php endif; ?>

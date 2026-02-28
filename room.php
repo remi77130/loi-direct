@@ -104,17 +104,17 @@ if (!empty($msgs)) {
 // SEO : données structurées JSON-LD --- >
 // JSON-LD complet pour une room publique
 // JSON-LD complet pour une room publique
-//$ld = [
-  //'@context'  => 'https://schema.org',
-  //'@type'     => 'DiscussionForumPosting',
-  //'headline'  => 'Salon public - '.$roomName,
-  //'name'      => $roomName,
-  //'url'       => $canonicalUrl,
-  //'publisher' => [
-   //   '@type' => 'Organization',
-     // 'name'  => 'Tchat-Direct',
- // ],
-//];
+$ld = [
+  '@context'  => 'https://schema.org',
+  '@type'     => 'DiscussionForumPosting',
+  'headline'  => 'Salon public - '.$roomName,
+  'name'      => $roomName,
+  'url'       => $canonicalUrl,
+  'publisher' => [
+      '@type' => 'Organization',
+      'name'  => 'Tchat-Direct',
+  ],
+];
 
 // Init SAFE (évite les warnings)
 $firstDate = '';
@@ -225,8 +225,8 @@ if (!empty($msgs)) {
   <div id="cta-bar" class="cta-bar">
     Tu veux participer à la discussion ?
     <br>
-    <a href="login.php" class="btn">Se connecter</a>
-    <a href="register.php" class="btn">Créer un compte gratuit</a>
+    <a href="auth_page.php" class="btn">Se connecter</a>
+    <a href="auth_page.php" class="btn">Créer un compte gratuit</a>
   </div>
 
   <section class="public-room">
@@ -309,7 +309,7 @@ if (!empty($msgs)) {
 
 
     
-                            <a class="link_response" href="register.php">Répondre </a>
+                            <a class="link_response" href="auth_page.php">Répondre </a>
   </section>
 </main>
 

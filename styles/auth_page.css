@@ -1,0 +1,448 @@
+/* auth_page.css — NÉO-BRUTALISM (calqué sur room.css)
+   Dépend de tokens.css (police/variables) mais fonctionne même sans.
+   Scopé sur body.neo pour ne pas casser le reste.
+*/
+body.neo,
+body.neo * ,
+body.neo *::before,
+body.neo *::after{
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+}
+body.neo .public-rooms{
+  width: min(520px, 94%);
+  max-width: 520px;
+  margin: 15px 0 0;
+  padding: 16px;
+  background: var(--c-aqua);
+  color: var(--c-black);
+  border: 4px solid var(--c-black);
+  border-radius: 0;
+  box-shadow: var(--sh-xl);
+  transform: rotate(0.7deg);
+      word-break: break-word;
+}
+
+/* Vignettes image dans "Rooms actifs" */
+body.neo .public-room__image-wrap{
+  margin: 10px 0;
+  border: 4px solid #000;
+  box-shadow: 6px 6px 0 #000;
+  background: #fff;
+  overflow: hidden;      /* clé pour le crop */
+}
+
+body.neo .public-room__image{
+  display:block;
+  width:100%;
+  height: 180px;         /* taille vignette */
+  object-fit: cover;     /* crop propre */
+}
+
+/* mobile */
+@media (max-width: 420px){
+  body.neo .public-room__image{ height: 150px; }
+}
+
+
+
+body.neo{
+  margin:0;
+  min-height:100vh;
+  background:#f4f4f4;
+  color:#0b0b0b;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  overflow-x:hidden;
+}
+
+/* Header */
+body.neo .site-header{
+  width:100%;
+  padding:12px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:12px;
+  background:#f4f4f4;
+  border-bottom:4px solid #000;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+body.neo .logo-link{ display:inline-flex; align-items:center; text-decoration:none; }
+
+body.neo .logo-img{
+  height:72px;
+  width:auto;
+  display:block;
+}
+
+/* Conteneur page */
+body.neo #main-content,
+body.neo main{
+  width:100%;
+  max-width: 920px;
+  padding:16px;
+  box-sizing:border-box;
+}
+
+/* Titre */
+body.neo h1{
+  margin: 14px 0 16px;
+  font-size: var(--fs-26, 26px);
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+
+/* Card (comme room-header / cta-bar) */
+body.neo .card{
+  width:100%;
+  max-width: 520px;
+  margin: 18px auto;
+  background:#fff;
+  border:4px solid #000;
+  box-shadow: 10px 10px 0 #000;
+  padding:14px;
+}
+
+/* Ligne de séparation */
+body.neo .card hr{
+  border:0;
+  border-top:4px solid #000;
+  margin: 14px 0;
+}
+
+/* Titre dans la card */
+body.neo .card h2{
+  margin:0 0 8px;
+  font-size: 18px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+}
+
+/* Bar du haut (titre + boutons switch) */
+body.neo .auth-top{
+
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  flex-wrap:wrap;
+  background-color: var(--c-accent);
+  padding: 10px 10px;
+      transform: rotate(-1.7deg);
+  border: 4px solid var(--c-black);
+}
+
+
+
+
+/* Boutons (même logique que room.css : box-shadow + translate) */
+body.neo .btn,
+body.neo button.btn{
+  display:inline-block;
+  padding: 10px 14px;
+  border-radius:0;
+  background:#ffe600;
+  color:#000;
+  text-decoration:none;
+  font-weight:900;
+  text-transform: uppercase;
+  border:4px solid #000;
+  box-shadow: 6px 6px 0 #000;
+  cursor:pointer;
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+
+body.neo .btn:hover{
+  transform: translate(-1px,-1px);
+  box-shadow: 8px 8px 0 #000;
+}
+
+body.neo .btn:active{
+  transform: translate(2px,2px);
+  box-shadow: 2px 2px 0 #000;
+}
+
+/* Variante “danger” si tu veux */
+body.neo .btn.btn-danger{
+  background:#ff3b30;
+}
+
+/* Form */
+body.neo form{
+  display:block;
+  margin:0;
+}
+
+.hint{
+  font-size: 12px;
+  color: #555;
+  margin-top: 5px;
+}
+
+body.neo label{
+  display:block;
+  margin: 10px 0 6px;
+  font-size: 12px;
+  font-weight:900;
+  text-transform: uppercase;
+}
+
+body.neo input{
+  width:100%;
+  box-sizing:border-box;
+  padding: 12px 12px;
+  border-radius:0;
+  border:4px solid #000;
+  box-shadow: 4px 4px 0 #000;
+  font: inherit;
+  background:#fff;
+  color:#000;
+}
+
+/* Wrap password + bouton voir */
+body.neo .pass-wrap{
+  display:flex;
+  align-items:stretch;
+  gap:8px;
+}
+
+body.neo .pass-wrap input{ flex:1; min-width:0; }
+
+body.neo .toggle-pass{
+  border-radius:0;
+  border:4px solid #000;
+  background:#fff;
+  color:#000;
+  font-weight:900;
+  text-transform: uppercase;
+  box-shadow: 4px 4px 0 #000;
+  padding: 0 12px;
+  cursor:pointer;
+}
+
+body.neo .toggle-pass:hover{
+  transform: translate(-1px,-1px);
+  box-shadow: 6px 6px 0 #000;
+}
+
+body.neo .toggle-pass:active{
+  transform: translate(2px,2px);
+  box-shadow: 2px 2px 0 #000;
+}
+
+/* Erreurs */
+body.neo .errors,
+body.neo .alert{
+  margin: 10px 0 12px;
+  background:#fff;
+  border:4px solid #000;
+  box-shadow: 6px 6px 0 #000;
+  padding: 10px 12px;
+  font-weight:900;
+  text-transform: uppercase;
+}
+
+body.neo .errors div,
+body.neo .alert p{
+  margin:0;
+  padding: 3px 0;
+}
+
+/* Lien bas formulaire */
+body.neo form p{
+  margin: 25px 0 0;
+  font-weight:900;
+  text-transform: uppercase;
+}
+
+body.neo a{
+  color:#000;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+
+.seo-accordion__question{
+
+  background:var(--c-accent);
+  border:4px solid #000;
+  padding: 10px 12px;
+  cursor:pointer;
+  margin-bottom: 10px;
+}
+.seo-accordion__answer-inner{
+
+  margin-bottom: 10px;
+}
+
+.social-icon{
+  width: 50px;
+
+
+}
+
+/* =========================
+   FOOTER NEO BRUTAL
+========================= */
+
+.site-footer{
+  width:100vw;
+  margin-left: calc(50% - 50vw);
+  margin-right: calc(50% - 50vw);
+
+  background:#4fb2c6;
+  border-top:4px solid #000;
+  margin-top:40px;
+}
+
+.footer-inner{
+  max-width:1000px;
+  margin:0 auto;
+  padding:30px 20px;
+
+  display:flex;
+  flex-wrap:wrap;
+  gap:30px;
+}
+
+.footer-col{
+  flex:1 1 200px;
+}
+
+.footer-col h3,
+.footer-col h4{
+  margin-bottom:10px;
+  text-transform:uppercase;
+  font-weight:900;
+}
+
+.footer-col p{
+  margin:0;
+}
+
+.footer-col ul{
+  list-style:none;
+  padding:0;
+  margin:0;
+}
+
+.footer-col li{
+  margin-bottom:6px;
+}
+
+.footer-col a{
+  text-decoration:none;
+  color:#000;
+  font-weight:700;
+}
+
+.footer-col a:hover{
+  text-decoration:underline;
+}
+
+.footer-bottom{
+  border-top:4px solid #000;
+  padding:12px 20px;
+  text-align:center;
+  font-weight:900;
+  background:#3aa8ff;
+}
+
+/* =========================
+   SEO TABLE RESPONSIVE
+========================= */
+
+@media (max-width:420px){
+
+  .seo-table{
+    display:block;
+    min-width:0;
+  }
+
+
+  .auth-top p, h2{
+    font-size: 14px;
+  }
+
+
+
+
+  .seo-table thead{
+    display:none;
+  }
+
+  .seo-table tr{
+    display:block;
+    margin-bottom:16px;
+    border:4px solid #000;
+  }
+
+  .seo-table td{
+    display:block;
+    border:none;
+    border-bottom:2px solid #000;
+  }
+
+  .seo-table td:last-child{
+    border-bottom:none;
+  }
+} 
+
+
+
+
+
+/* Mobile */
+@media (max-width: 600px){
+  body.neo .logo-img{ height: 62px; }
+  body.neo #main-content,
+  body.neo main{ padding: 12px; }
+  body.neo .card{ box-shadow: 8px 8px 0 #000; }
+
+  /* Boutons switch en ligne sur petit écran */
+  body.neo .auth-top > .auth-actions{
+    width:100%;
+    display:flex;
+    gap:8px;
+  }
+  body.neo .auth-top > .auth-actions .btn{
+    width:100%;
+  }
+
+  .public-room__image{
+    width: 50%;
+  }
+
+
+
+
+  /* Password wrap en colonne */
+  body.neo .pass-wrap{ flex-direction:column; }
+  body.neo .toggle-pass{ padding: 10px 12px; }
+}
+
+.btn_connect{
+display: inline-block;
+    padding: 10px 14px;
+    border-radius: 0;
+    background: #ffe600;
+    color: #000;
+    text-decoration: none;
+    font-weight: 900;
+    text-transform: uppercase;
+    border: 4px solid #000;
+    box-shadow: 6px 6px 0 #000;
+    cursor: pointer;
+    transition: transform .08s ease, box-shadow .08s ease;
+    width: 100%;
+    margin-top: 8px;
+
+}
+
+
+body.neo [hidden]{ display:none !important; }
