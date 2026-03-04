@@ -89,12 +89,14 @@ require __DIR__ . '/../config.php'; // là où APP_BASE est défini
 
 <body>
 
+
 <header class="b-header">
   <nav class="b-nav">
-    <a class="b-link" href="<?= APP_BASE ?>/../">Accueil</a>
-    <a class="b-link b-link--active" href="<?= APP_BASE ?>blog.php">← Blog</a>
-    <a class="b-link" href="<?= APP_BASE ?>/../login.php">Se connecter</a>
-    <a class="b-link b-link--cta" href="<?= APP_BASE ?>/../register.php">S’inscrire</a>
+    <a class="b-link" href="<?= APP_BASE ?>/index.php">Accueil</a>
+    <!--<a class="b-link b-link--active" href="<?= APP_BASE ?>/../blog.php">Blog</a>-->
+    <a class="b-link" href="<?= APP_BASE ?>/auth_page.php">Se connecter</a>
+    
+    <a class="b-link b-link--cta" href="<?= APP_BASE ?>/auth_page.php">S’inscrire</a>
   </nav>
 </header>
 
@@ -231,8 +233,8 @@ mais les alternatives modernes visent surtout une expérience plus fluide plus l
         <p>
           <strong>Envie de tester ?</strong> <br> <br>
 
-              <a class="b-link b-link--cta" href="<?= APP_BASE ?>/register.php">Créer un accès</a>
-                  <a class="b-link" href="<?= APP_BASE ?>/login.php">Se connecter</a>
+              <a class="b-link b-link--cta" href="<?= APP_BASE ?>/auth_page.php">Créer un accès</a>
+                  <a class="b-link" href="<?= APP_BASE ?>/auth_page.php">Se connecter</a>
 
         </p>
       </section>

@@ -1,682 +1,465 @@
 <?php
+// auth_page.php: page de connexion et d’inscription, avec gestion des erreurs et redirections.
+include __DIR__ . '/auth_page_action.php'; ?>
 
-/**
- * index.php — Feeed des projet publiés
- * - Auth obligatoire (require_login)
- * - Liste paginée, triée par date de publication DESC
- * - Filtres : "Mes projets", recherche texte + #tag, filtre par tag (chip)
- * - Affiche une miniature (cover) si dispo
- * - Requêtes préparées partout (SQLi-safe), pagination qui conserve le contexte
- */
-
-
-declare(strict_types=1);
-session_start();
-
-require __DIR__ . '/db.php';     // Connexion MySQLi ($mysqli)
-require __DIR__ . '/auth.php';   // require_login(), session user
-require __DIR__ . '/config.php'; // Constantes (APP_BASE, helpers slugify(), tag_url(), etc.)
-
-require_login();
-
-if (empty($_SESSION['csrf'])) {
-  $_SESSION['csrf'] = bin2hex(random_bytes(16));
-}
-
-
-/* -------------------------------------------------------------------------
- * Paramètres UI / Filtres
- * ---------------------------------------------------------------------- */
-$user_id = (int)$_SESSION['user_id'];
-
-/** "Mes projets" => limite aux projets de l'auteur courant */
-$mine = isset($_GET['mine']) && $_GET['mine'] === '1';
-
-/** Recherche libre (texte +tags). On borne côté serveur pour éviter les abus. */
-$q = mb_substr(preg_replace('/\s+/u',' ', trim((string)($_GET['q'] ?? ''))), 0, 30);
-
-/** Filtre par tag via son slug (lien chip). On laiise une marge de 10*/
-$tagSlug = mb_substr(trim((string)($_GET['tag'] ?? '')), 0, 10);
-
-/** Pagination (1-based). On borne la taille de page pour éviter les gros scans en prod. */
-$page = max(1, (int)($_GET['page'] ?? 1));
-$per  = 10;
-$off  = ($page - 1) * $per;
-
-
-
-
-
-$scope = $_GET['scope'] ?? '';
-$qraw  = trim((string)($_GET['q'] ?? ''));
-$isUserQuery = ($scope === 'users') || str_starts_with($qraw, '@');
-
-$userResults = [];
-if ($isUserQuery && $qraw !== '') {
-    // support @pseudo ou texte brut
-    $needle = ltrim($qraw, '@');
-    if (mb_strlen($needle) >= 2) {
-        // IMPORTANT: index sur users(pseudo) (utf8mb4_general_ci) pour perf
-        // CREATE INDEX idx_users_pseudo ON users(pseudo);
-        $like = $needle.'%';
-        $stmt = $mysqli->prepare('SELECT id, pseudo FROM users WHERE pseudo LIKE ? ORDER BY pseudo LIMIT 20');
-        $stmt->bind_param('s', $like);
-        $stmt->execute();
-        $userResults = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        $stmt->close();
-    }
-}
-
-
-
-
-
-
-
-
-/* -------------------------------------------------------------------------
- * Contexte pour préserver les filtres dans les liens (pager, effacer, etc.)
- * ---------------------------------------------------------------------- */
-$baseQuery = [];
-if ($mine)           $baseQuery['mine']  = 1;
-if ($tagSlug !== '') $baseQuery['tag']   = $tagSlug;
-if ($scope !== '')   $baseQuery['scope'] = $scope;
-
-$qsForPager = $baseQuery;
-if ($q !== '')       $qsForPager['q'] = $q;
-
-/* -------------------------------------------------------------------------
- * Construction dynamique du SQL
- * - WHERE de base: projets publiés
- * - JOINS : auteur, agrégat likes, + joins conditionnels pour tags/recherche
- * - On utilise bind_param pour tous les paramètres (SQLi-safe)
- * ---------------------------------------------------------------------- */
-$where = "p.status = 'published'";
-
-$joins = "JOIN users u ON u.id = p.author_id
-          LEFT JOIN (
-            SELECT project_id, COUNT(*) AS cnt
-            FROM likes
-            GROUP BY project_id
-          ) l ON l.project_id = p.id";
-
-$types  = '';   // chaîne des types pour bind_param (ex: 'issii')
-$params = [];   // valeurs associées
-
-/** Filtre "mes projets" */
-if ($mine) {
-  $where   .= " AND p.author_id = ?";
-  $types   .= 'i';
-  $params[] = $user_id;
-}
-
-/** Filtre explicite par tag slug (depuis un chip) */
-if ($tagSlug !== '') {
-  $joins   .= " JOIN project_tags pt ON pt.project_id = p.id
-               JOIN tags t ON t.id = pt.tag_id AND t.slug = ?";
-  $types   .= 's';
-  $params[] = $tagSlug;
-}
-
-/** Recherche libre : titre/summary/corps + tags (tolère '#') */
-if ($q !== '') {
-  $joins   .= " LEFT JOIN project_tags qpt ON qpt.project_id = p.id
-               LEFT JOIN tags qt ON qt.id = qpt.tag_id";
-
-  $where   .= " AND (p.title LIKE ? OR p.summary LIKE ? OR p.body_markdown LIKE ?
-                     OR qt.name LIKE ? OR qt.slug LIKE ?
-                      OR u.pseudo LIKE ?)";
-
-                     
-  $like     = '%'.$q.'%';
-  $likeTag  = '%'.ltrim($q, '#').'%';
-
-  $types   .= 'ssssss';
-  array_push($params, $like, $like, $like, $likeTag, $likeTag, $like);
-}
-
-/* -------------------------------------------------------------------------
- * SELECT principal
- * - DISTINCT car on peut dupliquer via les LEFT JOIN tags en recherche
- * - cover_thumb : première miniature si dispo (subquery simple)
- * - Pagination via LIMIT/OFFSET
- * ---------------------------------------------------------------------- */
-$sql = "SELECT DISTINCT p.author_id AS author_id,
-  p.id, p.title, p.summary, p.published_at,
-  u.pseudo AS author,
-  COALESCE(l.cnt,0) AS likes_count,
-  (SELECT path
-     FROM project_images i
-     WHERE i.project_id = p.id AND i.path IS NOT NULL
-     ORDER BY i.id ASC LIMIT 1) AS path
-FROM law_projects p
-$joins
-WHERE $where
-ORDER BY p.published_at DESC
-LIMIT ? OFFSET ?";
-
-$types  .= 'ii';
-$params[] = $per;
-$params[] = $off;
-
-/** Exécution */
-$stmt = $mysqli->prepare($sql) ?: exit('nul'.$mysqli->error);
-$stmt->bind_param($types, ...$params);
-$stmt->execute();
-$res = $stmt->get_result();
-$projects = $res->fetch_all(MYSQLI_ASSOC);
-$stmt->close();
-
-/* -------------------------------------------------------------------------
- * Récupérer les tags pour chaque projet (affichage chips en liste)
- * - Version préparée + garde IN() + chunking
- * ---------------------------------------------------------------------- */
-$projectIds    = array_values(array_unique(array_map('intval', array_column($projects, 'id'))));
-$tagsByProject = [];
-
-if (!empty($projectIds)) {
-  // éviter de binder une très grande liste d'un coup
-  foreach (array_chunk($projectIds, 200) as $chunk) {  // array_chunk(..., 200) prévient un bind trop gros d’un coup.
-    $placeholders = implode(',', array_fill(0, count($chunk), '?')) ;// Placeholders dynamiques (?, ?, …) + bind_param ⇒ pas d’injection.
-    $types        = str_repeat('i', count($chunk));
-
-    $sqlTags = "SELECT pt.project_id, t.name, t.slug
-                FROM project_tags pt
-                JOIN tags t ON t.id = pt.tag_id
-                WHERE pt.project_id IN ($placeholders)
-                ORDER BY t.name";
-
-    $stmt = $mysqli->prepare($sqlTags) ?: exit('nul '.$mysqli->error);
-    $stmt->bind_param($types, ...$chunk);
-    $stmt->execute();
-    $res = $stmt->get_result();
-
-    while ($row = $res->fetch_assoc()) {
-      $tagsByProject[(int)$row['project_id']][] = $row;
-    }
-    $stmt->close();
-  }
-}
-
-
-/* -------------------------------------------------------------------------
- * Count total pour pagination — version optimisée
- * - Pas de JOIN inutiles (users / likes)
- * - Filtre tag via EXISTS
- * - Recherche texte: LIKE sur p.*, + EXISTS pour tags
- * ---------------------------------------------------------------------- */
-$whereCount  = "p.status = 'published'";
-$typesCount  = '';
-$paramsCount = [];
-
-/** Mes projets */
-if ($mine) {
-  $whereCount  .= " AND p.author_id = ?";
-  $typesCount  .= 'i';
-  $paramsCount[] = $user_id;
-}
-
-/** Filtre explicite par tag (chip) */
-if ($tagSlug !== '') {
-  $whereCount  .= " AND EXISTS (
-                      SELECT 1
-                      FROM project_tags pt
-                      JOIN tags t ON t.id = pt.tag_id
-                      WHERE pt.project_id = p.id
-                        AND t.slug = ?
-                    )";
-  $typesCount  .= 's';
-  $paramsCount[] = $tagSlug;
-}
-
-/** Recherche libre (titre/summary/corps + tags) */
-if ($q !== '') {
-  $like    = '%'.$q.'%';
-  $likeTag = '%'.ltrim($q, '#').'%';
-
-  $whereCount .= " AND (
-      p.title LIKE ?
-      OR p.summary LIKE ?
-      OR p.body_markdown LIKE ?
-      OR EXISTS (
-          SELECT 1
-          FROM project_tags qpt
-          JOIN tags qt ON qt.id = qpt.tag_id
-          WHERE qpt.project_id = p.id
-            AND (qt.name LIKE ? OR qt.slug LIKE ?)
-      )
-      OR EXISTS (
-          SELECT 1
-          FROM users u
-          WHERE u.id = p.author_id
-            AND u.pseudo LIKE ?
-      )
-  )";
-
-  $typesCount .= 'ssssss';
-  array_push($paramsCount, $like, $like, $like, $likeTag, $likeTag, $like); // +$like pour le pseudo
-}
-
-
-$countSql = "SELECT COUNT(*) FROM law_projects p WHERE $whereCount";
-$stmt = $mysqli->prepare($countSql) ?: exit('nul: '.$mysqli->error);
-if ($typesCount !== '') $stmt->bind_param($typesCount, ...$paramsCount);
-$stmt->execute();
-$stmt->bind_result($totalRows);
-$stmt->fetch();
-$stmt->close();
-
-$totalPages = max(1, (int)ceil($totalRows / $per));
-?>
 
 
 <!doctype html>
 <html lang="fr">
 <head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
 
+  <title>Tchat Direct – Tchat gratuit (salons publics et privés)</title>
+  <meta name="description" content="Tchat Direct : accéder aux salons 
+  de discussion publics et privés. Plateforme rapide, moderne et sécurisée.">
 
-<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Tchat direct</title>
-  <link rel="stylesheet" href="<?= APP_BASE ?>/styles/tokens.css?v=1">
-  <link rel="stylesheet" href="<?= APP_BASE ?>/styles/index.css">
+  <link rel="canonical" href="https://tchat-direct.com/">
 
-
-<meta name="robots" content="noindex, nofollow">
-
+<link rel="stylesheet" href="<?= app_base() ?>/styles/tokens.css?v=1">
+<link rel="stylesheet" href="<?= app_base() ?>/styles/auth_page.css?v=1">
+<link rel="stylesheet" href="<?= app_base() ?>/styles/blog.css?v=1">
 
 </head>
-<body>
 
-<header class="site-header">
-  <?php include __DIR__ . '/header.php'; ?>
+<body class="neo">
+
+<header class="b-header">
 
 
+<!--
+<a href="<?= app_base() ?>/" class="logo-link">
+  <img src="<?= app_base() ?>/uploads/tchat_direct_logo.webp"
+       alt="Tchat Direct logo"
+       class="logo-img"
+       decoding="async">
+</a> -->
+<nav class="b-nav">
+  <a class="b-link" href="<?= app_base() ?>/">Accueil</a>
+  <a class="b-link" href="<?= app_base() ?>/auth_page.php">Se connecter</a>
+  <a class="b-link b-link--cta" href="<?= app_base() ?>/auth_page.php">S’inscrire</a>
+</nav>
 </header>
 
 
 
 
 
-<main class="wrap">
-  <?php
-  /* -----------------------------------------------------------
-   * 1) Bandeau si un filtre par tag est actif
-   *    - Construit un lien "Effacer" qui garde le contexte (mine/q)
-   * ----------------------------------------------------------- */
-  if ($tagSlug !== ''):
-    $noTagQuery = $baseQuery;               // copie du contexte
-    unset($noTagQuery['tag']);              // on retire le tag
-    if ($q !== '') $noTagQuery['q'] = $q;   // on conserve la recherche si présente
-  ?>
-    <div class="meta meta--pad">
-      Filtré par tag : <strong>#<?= htmlspecialchars($tagSlug,ENT_QUOTES) ?></strong>
-      — <a href="<?= APP_BASE ?>/index.php<?= $noTagQuery ? ('?'.http_build_query($noTagQuery)) : '' ?>" class="link">Effacer</a>
+<main id="main-content">
+
+
+
+
+  <h1 >Tchat direct</h1>
+
+  <h2>Nos dernier salon actifs</h2>
+
+
+
+    <hr>
+
+
+
+
+<!-- SEO – Bloc inscription Tchat Direct -->
+<section class="seo-section" id="seo-register-intro">
+  <h2>S’inscrire sur un site de tchat gratuit et anonyme</h2>
+  <p>
+    Tchat Direct est un <strong>site de tchat gratuit</strong> penser pour les échanges en temps réel, sans inscription compliquée ni démarches interminables. 
+    L’inscription sert uniquement à crée ton pseudo et sécuriser l’accès à tes salons, tout en restant anonyme : aucun nom réel, aucune pièce d’identité, aucune donnée sensible n’est demandée.
+  </p>
+  <p>
+    Une fois inscrit, tu accèdes à un <strong>tchat en ligne gratuit</strong> avec des salons publics, des rooms privées protégées par mot de passe et des discussions instantanées depuis mobile, tablette ou ordinateur.
+    L’objectif est simple&nbsp;: proposer une alternative moderne aux tchats anonymes classiques, dans un environnement clair, stable et facile à prendre en main.
+  </p>
+  <div class="seo-box seo-box--highlight">
+    <strong>En résumé :</strong> tu crées un pseudo, tu définis un mot de passe, et tu peux ensuite rejoindre ou créer des salons de discussion en ligne, publics ou privés, en quelques secondes.
+  </div>
+</section>
+
+<section class="seo-section" id="seo-register-avantages">
+  <h2>Pourquoi créer un compte sur Tchat Direct&nbsp;?</h2>
+  <div class="seo-grid">
+    <div class="seo-grid__item">
+      <div class="seo-grid__item-title">Tchat gratuit et anonyme</div>
+      <p>
+        L’accès au site est <strong>100&nbsp;% gratuit</strong> et anonyme. Le compte sert uniquement à te connecter et à retrouver tes salons.
+        Tu peux discuter sans exposer ta vie privée, sous le pseudo de ton choix, dans des salons publics ou privés.
+      </p>
     </div>
-  <?php endif; ?>
+    <div class="seo-grid__item">
+      <div class="seo-grid__item-title">Salons publics et rooms privées</div>
+      <p>
+        Tu peux rejoindre des <strong>salons publics</strong> déjà actifs ou créer ta <strong>room privée sécurisée par mot de passe</strong>.
+        C’est idéal pour discuter en petit groupe, organiser des échanges ciblés ou filtrer qui peut entrer dans ton salon.
+      </p>
+    </div>
+    <div class="seo-grid__item">
+      <div class="seo-grid__item-title">Rencontres et échanges sans inscription lourde</div>
+      <p>
+        De nombreuses personnes cherchent un <strong>tchat direct sans inscription lourde</strong>, pour échanger, sympathiser ou flirter en ligne.
+        Tchat Direct simplifie l’entrée&nbsp;: un pseudo, un mot de passe, et tu peux lancer la discussion.
+      </p>
+    </div>
+  </div>
+  <p>
+    Que tu cherches un <strong>tchat mobile gratuit</strong>, un espace pour discuter en soirée, ou une manière de faire des rencontres anonymes en ligne, 
+    le fait de créer un compte te donne un accès stable à un environnement pensé pour la discussion instantanée.
+  </p>
+</section>
 
+<section class="seo-section" id="seo-register-salons">
+  <h2>Salons publics, rooms privées et URL dédiée à chaque tchat</h2>
+  <p>
+    Sur Tchat Direct, chaque <strong>salon public</strong> dispose de sa propre URL, ce qui permet de partager facilement un espace précis avec tes contacts.
+    Pour les discussions plus ciblées, tu peux créer une <strong>room privée gratuite</strong>, protégée par mot de passe.
+  </p>
+  <div class="seo-box">
+    <strong>Créer un salon public ou privé, étape par étape :</strong>
+    <ol>
+      <li>Tu t’inscris en choisissant un pseudo et un mot de passe.</li>
+      <li>Tu te connectes à ton compte depuis la page de connexion.</li>
+      <li>Tu crées un salon public ou privé selon ton besoin.</li>
+      <li>Tu définis un mot de passe si tu veux un <strong>salon privé sécurisé</strong>.</li>
+      <li>Tu partages l’URL du salon avec les personnes que tu souhaites inviter.</li>
+    </ol>
+  </div>
+  <p>
+    Cette logique de <strong>tchat en ligne gratuit avec URL dédiée</strong> permet d’organiser des discussions thématiques, des groupes récurrents ou des espaces réservés à un petit cercle,
+    tout en gardant un fonctionnement simple pour les utilisateurs.
+  </p>
+</section>
 
-  <?php
-  /* -----------------------------------------------------------
-   * 2) Mode "Recherche d’utilisateurs"
-   *    - S’active si $isUserQuery === true (scope=users ou q commence par @)
-   *    - Affiche la liste des pseudos correspondants
-   * ----------------------------------------------------------- */
-  if ($isUserQuery): ?>
-    <h2 class="section-title">Utilisateurs</h2>
+<section class="seo-section" id="seo-register-adulte">
+  <h2>Tchat adulte soft et rencontres anonymes sans inscription lourde</h2>
+  <p>
+    Sur Internet, beaucoup d’utilisateurs saisissent des requêtes comme <em>tchat gratuit sans inscription</em>, <em>rencontre tchat gratuit</em> ou encore 
+    des expressions liées à un <em>tchat adulte soft</em>. L’idée est souvent la même&nbsp;: trouver un espace de discussion anonyme, rapide d’accès, 
+    sans devoir remplir de formulaires interminables.
+  </p>
+  <p>
+    Tchat Direct se positionne comme une <strong>alternative neutre et moderne</strong> à ces usages&nbsp;: 
+    tu peux discuter, sympathiser, flirter de façon soft et respectueuse, en gardant le contrôle sur ton anonymat.
+    Les rooms privées avec mot de passe permettent de filtrer qui entre, et les salons publics servent de point de départ pour rencontrer de nouvelles personnes.
+  </p>
+  <p>
+    Certaines recherches populaires montrent l’intérêt des internautes pour les échanges plus intimes en ligne (du type «&nbsp;chat sexuel sans inscription&nbsp;» ou «&nbsp;tchat sexe sans inscription&nbsp;»).
+    Tchat Direct reste centré sur la <strong>discussion</strong> et la <strong>modération</strong>, en offrant un cadre sobre, anonyme et clairement séparé des contenus explicites.
+  </p>
+</section>
 
-    <?php if (!$userResults): ?>
-      <p>Aucun utilisateur trouvé.</p>
-    <?php else: foreach ($userResults as $u): ?>
-      <div class="user-row">
-        <div>@<?= htmlspecialchars($u['pseudo'],ENT_QUOTES) ?></div>
-        <!-- Actions rapides : envoyer un message, voir le profil -->
-        <div style="display:flex;gap:8px">
-<a class="btn js-open-user" href="#" data-user-id="<?= (int)$u['id'] ?>">Message</a>
-          <a class="btn btn-muted" href="<?= APP_BASE ?>/profile.php?id=<?= (int)$u['id'] ?>">Voir profil</a>
+<section class="seo-section" id="seo-register-comparatif">
+  <h2>Tchat Direct, une alternative moderne aux tchats anonymes classiques</h2>
+  <p>
+    Pendant longtemps, les internautes se sont tournés vers des plateformes de tchat anonymes très connues, 
+    comme certains services historiques 
+    de discussion en ligne (<span>coco gg
+    </span>...)
+    Tchat Direct propose une approche plus récente&nbsp;: interface adaptée au mobile, rooms publiques et privées, URL dédiée par salon, et inscription rapide.
+  </p>
+  <div class="seo-table-wrapper">
+    <table class="seo-table" aria-label="Comparatif entre différents types de tchats en ligne">
+      <thead>
+        <tr>
+          <th>Plateforme</th>
+          <th>Accès</th>
+          <th>Anonymat</th>
+          <th>Salons privés</th>
+          <th>URL dédiée par salon</th>
+          <th>Ecrire des posts</th>
+          <th>Commenter/liker les posts</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>Tchat Direct</td>
+          <td>Gratuit, compte simple</td>
+          <td>Pseudo uniquement</td>
+          <td>Oui, avec mot de passe</td>
+          <td>Oui</td>
+          <td>Oui</td>
+          <td>Oui</td>
+
+        </tr>
+        <tr>
+          <td>Plateformes type Coco / Coconut</td>
+          <td>Gratuit, accès variable</td>
+          <td>Souvent anonyme</td>
+          <td>Présents ou non selon le service</td>
+          <td>Généralement non dédié par salon</td>
+           <td>Non</td>
+          <td>Non</td>
+        </tr>
+        <tr>
+          <td>Tchats généralistes anciens</td>
+          <td>Accès libre</td>
+          <td>Bourré de pub</td>
+          <td>Variable</td>
+          <td>Parfois limité ou inexistant</td>
+           <td>Non</td>
+          <td>Non</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <p>
+    Sans chercher à remplacer qui que ce soit, Tchat Direct se présente simplement comme un <strong>tchat en ligne gratuit</strong> 
+    qui reprend les points forts des tchats anonymes historiques, tout en ajoutant une expérience plus structurée pour les rooms et la gestion des salons.
+  </p>
+</section>
+
+<section class="seo-section" id="seo-register-faq">
+  <h2>FAQ – Inscription et tchat gratuit</h2>
+  <div class="seo-faq">
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Pourquoi dois-je m’inscrire si le tchat est gratuit&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          L’inscription sur un <span>tchat anonyme gratuit</span> sert uniquement à créer ton pseudo et ton mot de passe. 
+          Elle permet de sécuriser l’accès à ton compte et à tes salons, sans demander d’informations personnelles.
+          Le tchat reste gratuit, et tu peux rester anonyme.
         </div>
       </div>
-    <?php endforeach; endif; ?>
+    </div>
 
-  <?php else: ?>
-    <?php
-    /* -----------------------------------------------------------
-     * 3) Feed des projets (uniquement quand on NE cherche PAS des users)
-     * ----------------------------------------------------------- */
-
-    // Indication de recherche si q non vide
-    if ($q !== ''): ?>
-      <div class="meta meta--pad">
-        Résultats pour « <?= htmlspecialchars($q,ENT_QUOTES); ?> »
-      </div>
-    <?php endif; ?>
-
-    <!-- Flash succès (ex: après création de projet) -->
-    <?php if (!empty($_SESSION['flash_success'])): ?>
-      <div class="card card--success">
-        <?= htmlspecialchars($_SESSION['flash_success'], ENT_QUOTES); unset($_SESSION['flash_success']); ?>
-      </div>
-    <?php endif; ?>
-
-    <?php if (!$projects): ?>
-      <!-- Cas sans résultats -->
-      <div class="empty">
-        <?php if ($q !== '' || $tagSlug !== '' || $mine): ?>
-          Aucun résultat.
-        <?php else: ?>
-          Aucun projet pour l’instant.
-        <?php endif; ?>
-      </div>
-
-    <?php else: ?>
-      <!-- Liste des projets -->
-      <?php foreach ($projects as $p): ?>
-        <article class="card">
-          <!-- Titre -->
-          <h3 class="card-title"><?= htmlspecialchars($p['title'],ENT_QUOTES); ?></h3>
-
-          <!-- Meta auteur + date -->
-          <div class="meta">
-            Par
-            <a href="#" class="user-link_law_projects" data-user-id="<?= (int)$p['author_id'] ?>">
-              <?= htmlspecialchars($p['author'], ENT_QUOTES) ?>
-            </a>
-            • Publié le <?= htmlspecialchars(date('d/m/Y H:i', strtotime($p['published_at']??'')),ENT_QUOTES); ?>
-          </div>
-
-          <!-- Résumé -->
-          <p><?= htmlspecialchars($p['summary'],ENT_QUOTES); ?></p>
-
-          <?php $slug = slugify($p['title']); ?>
-
-          <!-- CTA Lire -->
-          <div class="card-cta">
-            <a class="btn" href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>">Lire</a>
-          </div>
-
-          <!-- Miniature (si présente) cliquable vers la page projet -->
-          <?php if (!empty($p['cover_thumb'])): ?>
-            <a href="<?= APP_BASE ?>/p/<?= (int)$p['id'] ?>-<?= htmlspecialchars($slug, ENT_QUOTES) ?>" class="cover">
-              <img
-                src="<?= APP_BASE ?>/uploads/<?= htmlspecialchars($p['cover_thumb'], ENT_QUOTES) ?>"
-                alt="<?= htmlspecialchars($p['title'], ENT_QUOTES) ?>"
-                width="50" height="50" loading="lazy"
-                class="cover-img">
-            </a>
-          <?php endif; ?>
-
-          <!-- Chips de tags -->
-          <?php if (!empty($tagsByProject[(int)$p['id']] ?? [])): ?>
-            <div class="tag-chips">
-              <?php foreach ($tagsByProject[(int)$p['id']] as $tg): ?>
-                <a class="link_tag_chips" href="<?= tag_url($tg['slug']) ?>" class="tag-chip">
-                   #<?= htmlspecialchars($tg['name'], ENT_QUOTES) ?>
-                </a>
-              <?php endforeach; ?>
-            </div>
-          <?php endif; ?>
-
-          <!-- Compteur de likes -->
-          <span class="likes">
-            ❤ <?= (int)$p['likes_count']; ?>
-          </span>
-        </article>
-    <hr />
-
-      <?php endforeach; ?>
-
-      <!-- Pagination quand > 1 page de résultats -->
-      <?php if ($totalPages > 1): ?>
-        <div class="pager">
-          <?php if ($page > 1): ?>
-            <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page-1]) ?>">&laquo; Précédent</a>
-          <?php endif; ?>
-
-          <span class="pager-meta">Page <?= $page; ?> / <?= $totalPages; ?></span>
-
-          <?php if ($page < $totalPages): ?>
-            <a href="<?= APP_BASE ?>/index.php?<?= http_build_query($qsForPager + ['page'=>$page+1]) ?>">Suivant &raquo;</a>
-          <?php endif; ?>
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Est-ce que Tchat Direct est vraiment un tchat gratuit sans inscription lourde&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Oui. L’inscription est réduite au strict minimum&nbsp;: un pseudo et un mot de passe. 
+          Aucun long formulaire, aucun numéro de téléphone, aucune carte bancaire n’est demandée pour accéder aux salons de discussion.
         </div>
-      <?php endif; ?>
+      </div>
+    </div>
 
-    <?php endif; // fin $projects ?>
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Mon tchat est-il anonyme une fois inscrit&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Oui. Tu échanges sous un pseudo. Tu peux choisir un identifiant qui ne permet pas de te reconnaître dans la vie réelle.
+          L’objectif est de proposer un <strong>tchat anonyme gratuit</strong>, tout en gardant des règles de respect et de modération.
+        </div>
+      </div>
+    </div>
 
-  <?php endif; // fin !$isUserQuery ?>
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Puis-je créer un salon privé avec mot de passe&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Oui. Après inscription et connexion, tu peux créer des rooms privées protégées par mot de passe.
+          Seules les personnes à qui tu communiques ce mot de passe pourront rejoindre le salon.
+        </div>
+      </div>
+    </div>
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Comment fonctionne la rencontre tchat gratuit sur Tchat Direct&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Tu peux rejoindre des salons publics thématiques ou créer ton propre espace de discussion.
+          La rencontre se fait par le dialogue, sans algorithme de matching, dans un cadre anonyme et sobre, 
+          centré sur l’échange par messages.
+        </div>
+      </div>
+    </div>
+
+
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>        Un tchat adulte sans inscription, est-ce que c’est vraiment rare ?&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+      Non, il existe plusieurs plateformes de <span>tchatche en ligne</span>.
+      Cependant, les <span>tchats adultes</span> sans inscription restent peu nombreux, car beaucoup de sites 
+      imposent une <span>création de compte</span> ou des étapes compliquées. Un service de Tchat Coquin fait partie 
+      des exceptions : accès direct, anonyme, rapide, idéal pour des échanges légers et des rencontres occasionnelles. 
+      La majorité des autres chats en ligne ne proposent pas une expérience aussi simple 
+      et immédiate (comfirmation de mail avant de pouvoir écrire ou demande un abonnement )parfois demande même les deux (abonnement et email...)
+
+        </div>
+      </div>
+    </div>
+
+
+
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Y a-t-il une application mobile ou un tchat mobile gratuit&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Le site est conçu pour fonctionner sur mobile, directement dans ton navigateur. 
+          Tu peux donc utiliser Tchat Direct comme un <strong>tchat mobile gratuit</strong> sans installer d’application.
+        </div>
+      </div>
+    </div>
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Quelle est la différence avec les anciens tchats anonymes connus&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Tchat Direct reprend l’idée du tchat en ligne anonyme, mais avec une interface plus récente&nbsp;: 
+          meilleure lisibilité, gestion des rooms publiques et privées, URL dédiée par salon, et inscription simplifiée.
+        </div>
+      </div>
+    </div>
+
+
+    <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Comment supprimer mon compte si je ne souhaite plus utiliser le tchat&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Tu peux contacter l’administrateur du site ou utiliser les options prévues (lorsqu’elles sont disponibles) 
+          pour demander la suppression de ton compte. L’objectif est de te laisser le choix d’utiliser le service ou non, sans contrainte.
+        </div>
+      </div>
+    </div>
+
+
+      <div class="seo-accordion__item">
+      <button class="seo-accordion__question" type="button">
+        <span>Est-ce que Tchat Direct convient aussi à une utilisation plus sérieuse (amitié, échanges de groupe)&nbsp;?</span>
+        <span class="seo-accordion__icon">›</span>
+      </button>
+      <div class="seo-accordion__answer">
+        <div class="seo-accordion__answer-inner">
+          Oui. Les rooms privées et les salons publics thématiques permettent aussi de créer des espaces orientés amitié, 
+          discussions de groupe, entraide ou simple échange quotidien, sans forcément chercher la rencontre.
+        </div>
+      </div>
+    </div>
+
+
+
+  </div>
+</section>
+<footer class="site-footer brutal" role="contentinfo">
+
+  <div class="footer-inner">
+
+    <div class="footer-col">
+      <h3>Tchat Direct</h3>
+      <p>
+        Plateforme moderne de salons publics et privés.
+        Discussion libre, anonyme ou privée.
+      </p>
+    </div>
+
+
+
+
+    <div class="footer-col">
+      <h4>Navigation</h4>
+      <ul>
+        <li><a href="/rooms.php">Salons publics</a></li>
+        <li><a href="auth_page.php">Connexion / Inscription</a></li>
+        <li><a href="blog/blog.php">Blog</a></li>
+      </ul>
+    </div>
+<!--
+    <div class="footer-col">
+      <h4>Légal</h4>
+      <ul>
+        <li><a href="/mentions-legales.php">Mentions légales</a></li>
+        <li><a href="/confidentialite.php">Confidentialité</a></li>
+        <li><a href="/cgu.php">CGU</a></li>
+      </ul>
+    </div>
+
+  </div>
+      -->
+  <div class="footer-bottom">
+    © <?= date('Y') ?> Tchat Direct — BETA
+  </div>
+      
+</footer>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 </main>
 
+<script> // Logique d’affichage du formulaire de connexion/inscription
+  const loginBox = document.getElementById('loginBox');
+  const registerBox = document.getElementById('registerBox');
+  const btnLogin = document.getElementById('btnShowLogin');
+  const btnRegister = document.getElementById('btnShowRegister');
+  const linkToRegister = document.getElementById('linkToRegister');
+  const linkToLogin = document.getElementById('linkToLogin');
+  const cardTitle = document.getElementById('cardTitle');
 
-<!-- MODAL USER -->                   <!-- MODAL USER -->
+  const nextVal = <?= json_encode($next, JSON_UNESCAPED_SLASHES) ?>;
 
-<div id="userModal" class="user_modal">
-  <div class="user_modal-box">
-    <div class="modal-head">
-      <strong id="umPseudo" class="modal-title">Pseudo</strong>
-      <button id="umClose" class="btn btn-muted" type="button">×</button>
-    </div>
-
-
-
-      <!-- INFOS PROFIL -->
-    <div id="umInfos" class="muted um-infos">
-      <!-- rempli en JS -->
-    </div>
-
-    <div class="muted">Projets publiés : <span id="umCount">0</span></div>
-
-    <div class="muted">Situation : <span id="umStatus">—</span></div>
-<div class="muted">Sexe : <span id="umSex">—</span> • Taille : <span id="umHeight">—</span></div>
-
-
-    <div style="margin-top:12px">
-      <a id="umLink" class="btn" href="#">Voir le profil</a>
-    </div>
-
-    <button id="umMsgToggle" class="btn" type="button">Envoyer un message</button>
-
-    <form id="umMsgForm" enctype="multipart/form-data" class="um-form" style="display:none">
-      <textarea name="body" rows="4" maxlength="2000" required placeholder="Ton message…" class="um-textarea"></textarea>
-
-     
-
-<label style="display:block;margin-top:10px">Image (optionnel)
-  <input id="umImage" name="image" type="file"
-         accept="image/*" capture="environment"
-         style="display:block;margin-top:6px">
-</label>
-
-<!-- preview -->
-<div id="umPreviewWrap" style="display:none;margin-top:8px">
-  <img id="umPreview" alt="Aperçu"
-       style="max-width:160px;max-height:160px;border-radius:8px;display:block">
-  <button type="button" id="umClearImg"
-          class="btn" style="background:#374151;margin-top:6px">Retirer l’image</button>
-</div>
-
-      <input type="hidden" name="recipient_id" id="umRecipient">
-      <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'],ENT_QUOTES) ?>">
-      <button class="btn" type="submit" style="margin-top:8px">Envoyer</button>
-      <div id="umMsgStatus" style="font-size:12px;color:#94a3b8;margin-top:6px"></div>
-
-    </form>
-  </div>
-</div>
-
-
-<script>
-
-  
-
-const umSex   = document.getElementById('umSex');
-const umHeight= document.getElementById('umHeight');
-const umStatus= document.getElementById('umStatus');
-
-const BASE     = '<?= APP_BASE ?>';
-const modal    = document.getElementById('userModal');
-const umPseudo = document.getElementById('umPseudo');
-const umCount  = document.getElementById('umCount');
-const umClose  = document.getElementById('umClose');
-const umLink   = document.getElementById('umLink');
-
-const umMsgToggle = document.getElementById('umMsgToggle');
-const umMsgForm   = document.getElementById('umMsgForm');
-const umRecipient = document.getElementById('umRecipient');
-const umMsgStatus = document.getElementById('umMsgStatus');
-
-
-const umImage      = document.getElementById('umImage');
-const umPreview    = document.getElementById('umPreview');
-const umPreviewWrap= document.getElementById('umPreviewWrap');
-const umClearImg   = document.getElementById('umClearImg');
-
-
-let umPreviewURL = null;
-
-function hidePreview(){
-  if (umPreviewURL) URL.revokeObjectURL(umPreviewURL);
-  umPreviewURL = null;
-  umPreview.src = '';
-  umPreviewWrap.style.display = 'none';
-}
-
-umClearImg.addEventListener('click', () => {
-  umImage.value = '';           // retire le fichier
-  hidePreview();
-});
-
-umImage.addEventListener('change', () => {
-  hidePreview();
-  const f = umImage.files && umImage.files[0];
-  if (!f) return
-
-
-
-
-  // garde-fous (mêmes règles que serveur)
-  const okType = ['image/jpeg','image/png','image/webp'].includes(f.type);
-  if (!okType){ alert('Formats autorisés : JPG, PNG, WebP.'); umImage.value=''; return; }
-  if (f.size > 5*1024*1024){ alert('Image trop lourde (max 5 Mo).'); umImage.value=''; return; }
-
-  umPreviewURL = URL.createObjectURL(f);
-  umPreview.src = umPreviewURL;
-  umPreviewWrap.style.display = 'block';
-});
-
-
-
-// Reset preview à l’ouverture/fermeture de la modale
-document.addEventListener('click', (e)=>{
-  if (e.target.id === 'umClose') hidePreview();
-});
-modal.addEventListener('click', (e)=>{ if (e.target === modal) hidePreview(); });
-
-
-umMsgToggle.addEventListener('click', ()=> {
-  umMsgForm.style.display = umMsgForm.style.display==='none' ? 'block' : 'none';
-});
-
-// open modal on user click
-const umInfos = document.getElementById('umInfos');
-
-document.addEventListener('click', async (e) => {
-  const a = e.target.closest('.user-link, .js-open-user');
-  if (!a) return;
-  e.preventDefault();
-  const id = a.getAttribute('data-user-id');
-
-  try {
-    const r = await fetch(`${BASE}/user_card.php?id=${encodeURIComponent(id)}`, {cache:'no-store'});
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const j = await r.json();
-    if (!j.ok) throw new Error(j.error || 'Réponse invalide');
-
-  umPseudo.textContent = j.pseudo;
-umCount.textContent  = j.projects_count;
-umStatus.textContent = j.relationship_status ?? '—';
-umSex.textContent    = j.sex ?? '—';
-umHeight.textContent = (j.height_cm ? (j.height_cm + ' cm') : '—');
-umLink.href       = `${BASE}/profile.php?id=${encodeURIComponent(id)}`;
-umRecipient.value = id; // pour l’envoi de message
-
-
-    // Construit la ligne d’infos: “Homme • 175 cm”, sinon “—”
-    const parts = [];
-    if (j.sex) parts.push(j.sex);
-    if (typeof j.height_cm === 'number') parts.push(`${j.height_cm} cm`);
-    umInfos.textContent = parts.length ? parts.join(' • ') : '—';
-
-    if (parseInt(id,10) === <?= (int)$_SESSION['user_id'] ?>) {
-      umMsgToggle.style.display = 'none';
-      umMsgForm.style.display   = 'none';
+  function show(which){ // which = 'login' ou 'register'
+    if(which === 'register'){
+      registerBox.hidden = false;
+      loginBox.hidden = true;
+      if(cardTitle) cardTitle.textContent = 'Créer un compte';
+      history.replaceState(null, '', '?view=register&next=' + encodeURIComponent(nextVal));
     } else {
-      umMsgToggle.style.display = '';
+      loginBox.hidden = false;
+      registerBox.hidden = true;
+      if(cardTitle) cardTitle.textContent = 'Se connecter';
+      history.replaceState(null, '', '?view=login&next=' + encodeURIComponent(nextVal));
     }
-
-    modal.style.display  = 'flex';
-  } catch (err) {
-    
-    console.error('user_card.php error:', err);
   }
-});
 
+  btnLogin?.addEventListener('click', () => show('login'));
+  btnRegister?.addEventListener('click', () => show('register'));
+  linkToRegister?.addEventListener('click', (e) => { e.preventDefault(); show('register'); });
+  linkToLogin?.addEventListener('click', (e) => { e.preventDefault(); show('login'); });
 
-// submit messages
-umMsgForm.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  umMsgStatus.textContent = '';
-  const fd = new FormData(umMsgForm);
-  const btn = umMsgForm.querySelector('button[type="submit"]');
-  btn.disabled = true;
-  try{
-    const r = await fetch(`${BASE}/message_send.php`, { method:'POST', body:fd });
-    //const r = await fetch(`${BASE}/chat_message_send.php`, { method:'POST', body: fd });
-
-    const j = await r.json();
-    if(j.ok){
-      umMsgStatus.style.color = '#34d399';
-      umMsgStatus.textContent = 'Message envoyé ✅';
-      umMsgForm.reset();
-      refreshBadge();
-    }else{
-      umMsgStatus.style.color = '#f87171';
-      umMsgStatus.textContent = 'Envoi impossible ('+(j.error||'erreur')+')';
-    }
-  }catch(_){
-    umMsgStatus.style.color = '#f87171';
-    umMsgStatus.textContent = 'Erreur réseau.';
-  }finally{
-    btn.disabled = false;
-  }
-});
-
-
-const BADGE = document.getElementById('msgBadge'); // badge des messages non lus
-
-async function refreshBadge(){ // actualise le badge des messages non lus
-  try{
-    const r = await fetch('<?= APP_BASE ?>/unread_count.php',{cache:'no-store'});
-    if(!r.ok) throw 0;
-    const j = await r.json();
-
-    if(j.ok && typeof j.unread==='number'){ // mise à jour du badge
-      if(j.unread>0){
-        BADGE.style.display='inline-block';
-        BADGE.textContent = j.unread>99 ? '99+' : j.unread;
-
-        BADGE.classList.add('has-msg');     // ✅ AJOUT
-      } else {
-        BADGE.style.display='none';
-        BADGE.textContent='';
-
-        BADGE.classList.remove('has-msg');  // ✅ RETRAIT
-      }
-    }
-  }catch(e){}
-}
-refreshBadge();
-setInterval(refreshBadge, 20000);
-
-
-
+  // Toggle password buttons (réutilise ta logique)
+  document.querySelectorAll('.toggle-pass').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-target');
+      const input = document.getElementById(id);
+      if(!input) return;
+      const isPw = input.getAttribute('type') === 'password';
+      input.setAttribute('type', isPw ? 'text' : 'password');
+      btn.setAttribute('aria-pressed', isPw ? 'true' : 'false');
+      btn.textContent = isPw ? 'Masquer' : 'Voir';
+    });
+  });
 </script>
 
 </body>

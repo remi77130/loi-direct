@@ -12,6 +12,7 @@ body{
   border-bottom: var(--b-mid);
   background: var(--c-white);
   box-shadow: var(--sh-xs);
+  width: 100vw;
 }
 
 .b-nav{
@@ -22,6 +23,7 @@ body{
   gap: var(--sp-10);
   align-items:center;
   flex-wrap: wrap;
+  width: 100vw;
 }
 
 .b-link{

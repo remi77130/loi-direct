@@ -6,21 +6,21 @@ require __DIR__ . '/auth.php';
 require_login();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-  header('Location: index.php');
+  header('Location: feed.php');
   exit;
 }
 
 $csrf = $_POST['csrf'] ?? '';
 if (empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $csrf)) {
   $_SESSION['flash_errors'] = ["Session expirée. Réessaie."];
-  header('Location: index.php');
+  header('Location: feed.php');
   exit;
 }
 
 $projectId = (int)($_POST['project_id'] ?? 0);
 if ($projectId <= 0) {
   $_SESSION['flash_errors'] = ["Projet invalide."];
-  header('Location: index.php');
+  header('Location: feed.php');
   exit;
 }
 
@@ -34,12 +34,12 @@ $stmt->close();
 
 if (!$row) {
   $_SESSION['flash_errors'] = ["Projet introuvable."];
-  header('Location: index.php');
+  header('Location: feed.php');
   exit;
 }
 if ((int)$row['author_id'] !== (int)$_SESSION['user_id']) {
   $_SESSION['flash_errors'] = ["Action non autorisée."];
-  header('Location: index.php');
+  header('Location: feed.php');
   exit;
 }
 
@@ -70,5 +70,5 @@ try {
 }
 
 $base = rtrim(dirname($_SERVER['PHP_SELF']), '/\\');
-header('Location: ' . $base . '/index.php?mine=1');
+header('Location: ' . $base . '/feed.php?mine=1');
 exit;

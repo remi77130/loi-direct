@@ -139,7 +139,7 @@ if (!empty($_FILES['avatar']['name'])) {
         );
         if ($st->execute()){
           $_SESSION['flash_success'] = 'Profil mis à jour.';
-          header('Location: '.rtrim(APP_BASE,'/').'/index.php', true, 303);
+          header('Location: '.rtrim(APP_BASE,'/').'/feed.php', true, 303);
           exit;
         }
         $st->close();

@@ -13,13 +13,13 @@
         Salut, <?= htmlspecialchars($_SESSION['pseudo'], ENT_QUOTES) ?> 👋
       </a>
 
-      <a href="<?= APP_BASE ?>/index.php" class="nav-link">Récents</a>
-      <a href="<?= APP_BASE ?>/quiz/quizzes.php" class="nav-link">Quiz</a>
-      <a href="<?= APP_BASE ?>/index.php?mine=1" class="nav-link">Mes post</a>
+      <a href="<?= APP_BASE ?>/feed.php" class="nav-link">Récents</a>
+      <!--<a href="<?= APP_BASE ?>/quiz/quizzes.php" class="nav-link">Quiz</a> // en attente de la section quiz -->
+      <a href="<?= APP_BASE ?>/feed.php?mine=1" class="nav-link">Mes post</a>
       <a href="<?= APP_BASE ?>/chat_rooms.php" class="nav-link--hot" rel="noopener">Rooms</a>
-      <a href="<?= APP_BASE ?>/" class="nav-link" rel="noopener">Boutique</a>
+     <!-- <a href="<?= APP_BASE ?>/" class="nav-link" rel="noopener">Boutique</a> // en attente de la boutique  -->
 
-      <form action="<?= APP_BASE ?>/index.php" method="get" class="nav-search">
+      <form action="<?= APP_BASE ?>/feed.php" method="get" class="nav-search">
         <input class="nav-input" name="q" placeholder="Rechercher…">
       <!--  <select class="nav-select" name="scope">
           <option value="">Tout</option>

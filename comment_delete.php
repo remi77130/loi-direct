@@ -5,10 +5,10 @@ require __DIR__ . '/db.php';
 require __DIR__ . '/auth.php';
 require_login();
 
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: index.php'); exit; }
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') { header('Location: feed.php'); exit; }
 if (empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $_POST['csrf'] ?? '')) {
   $_SESSION['flash_errors'] = ['Session expirée.'];
-  header('Location: index.php'); exit;
+  header('Location: feed.php'); exit;
 }
 
 $cid = (int)($_POST['comment_id'] ?? 0);

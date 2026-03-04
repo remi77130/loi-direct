@@ -34,13 +34,14 @@ $canonical = (defined('APP_BASE') ? APP_BASE : '') . '/blog/' . $slug;
 
 <body>
 
+
 <header class="b-header">
   <nav class="b-nav">
-    <a class="b-link" href="<?= APP_BASE ?>/../">Accueil</a>
-  <a class="b-link" href="blog.php">← Retour au blog</a>
-    <a class="b-link" href="<?= APP_BASE ?>/login.php">Se connecter</a>
-                  <a class="b-link b-link--cta" href="<?= APP_BASE ?>/register.php">Créer un accès</a>
-
+    <a class="b-link" href="<?= APP_BASE ?>/index.php">Accueil</a>
+    <!--<a class="b-link b-link--active" href="<?= APP_BASE ?>/../blog.php">Blog</a>-->
+    <a class="b-link" href="<?= APP_BASE ?>/auth_page.php">Se connecter</a>
+    
+    <a class="b-link b-link--cta" href="<?= APP_BASE ?>/auth_page.php">S’inscrire</a>
   </nav>
 </header>
 
@@ -194,11 +195,31 @@ $canonical = (defined('APP_BASE') ? APP_BASE : '') . '/blog/' . $slug;
           Photos trop parfaites, discours incohérent, demande d’argent, demande de contenu intime trop vite,
           ou tentative de te déplacer sur une plateforme chelou. Dans le doute : tu bloques.
         </p>
+
+
+
+        
+      <hr>
+
+      <section aria-label="Appel à l’action">
+        <p>
+          <strong>Envie de tester ?</strong> <br> <br>
+
+              <a class="b-link b-link--cta" href="<?= APP_BASE ?>/auth_page.php">Créer un accès</a>
+                  <a class="b-link" href="<?= APP_BASE ?>/auth_page.php">Se connecter</a>
+
+        </p>
+      </section>
       </section>
 
       <footer class="b-footer">
 
       </footer>
+
+
+
+
+
 
     </article>
   </main>

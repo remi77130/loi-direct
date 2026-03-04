@@ -108,7 +108,7 @@ if (empty($_SESSION['csrf'])) {
    Déjà connecté ?
 ========================= */
 if (!empty($_SESSION['user_id'])) {
-  header('Location: '.app_base().'/index.php', true, 303);
+  header('Location: '.app_base().'/feed.php', true, 303);
   exit;
 }
 

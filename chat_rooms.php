@@ -216,7 +216,7 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
 
   </div>
 <div class="return">
-  <a class="nav-link" href="<?= APP_BASE ?>/index.php">&larr; Retour</a>
+  <a class="nav-link" href="<?= APP_BASE ?>/feed.php">&larr; Retour</a>
 
 </div>
 </div>

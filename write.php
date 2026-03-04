@@ -7,10 +7,10 @@ require __DIR__ . '/auth.php';
 require_login();
 
 // CSRF token
-if (empty($_SESSION['csrf'])) {
+if (empty($_SESSION['csrf'])) { // Génère un token CSRF unique par session (16 octets aléatoires, hexadécimal)
   $_SESSION['csrf'] = bin2hex(random_bytes(16));
 }
-$csrf = $_SESSION['csrf'];
+$csrf = $_SESSION['csrf']; // Ce token doit être inclus dans le formulaire et vérifié à la réception (save_project.php) pour éviter les attaques CSRF.
 ?>
 <!doctype html>
 <html lang="fr">
@@ -46,7 +46,7 @@ $csrf = $_SESSION['csrf'];
 </head>
 <body>
 <header>
-  <div><a href="index.php">&larr; Retour</a></div>
+  <div><a href="feed.php">&larr; Retour</a></div>
   <strong>Loi Direct — Rédaction</strong>
   <div>Connecté en tant que <span style="color:#e5e7eb"><?php echo htmlspecialchars($_SESSION['pseudo'],ENT_QUOTES); ?></span></div>
 </header>
@@ -71,7 +71,7 @@ Texte libre…
 - Listes
 - **Gras**, *Italique*
 - `code`
-[Un lien](https://exemple.org)" maxlength="500"></textarea>
+[Un lien](https://exemple.org)" maxlength="500000"></textarea>
 
 
 
@@ -90,10 +90,12 @@ Texte libre…
         <div class="taghint">Sépare par des virgules. Max 5 tags, 10 caractères chacun.</div>
 
         <div class="actions">
+
           <input type="hidden" name="csrf" value="<?php echo htmlspecialchars($csrf, ENT_QUOTES); ?>">
           <button class="btn" type="submit">Publier</button>
           <button class="btn" type="button" id="btnPreview">Actualiser la prévisualisation</button>
         </div>
+
         <div class="muted" style="margin-top:8px">
           Rappels : titre ≤ 180, objet ≤ 280, tags ≤ 5. Les images ne sont pas prises en charge pour l’instant.
         </div>

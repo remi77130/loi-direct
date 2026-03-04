@@ -20,11 +20,11 @@ require __DIR__ . '/../config.php'; // là où APP_BASE est défini
 
 <header class="b-header">
   <nav class="b-nav">
-    <a class="b-link" href="<?= APP_BASE ?>/../register.php">Accueil</a>
-    <a class="b-link b-link--active" href="<?= APP_BASE ?>/blog">Blog</a>
-    <a class="b-link" href="<?= APP_BASE ?>/../login.php">Se connecter</a>
+    <a class="b-link" href="<?= APP_BASE ?>/index.php">Accueil</a>
+    <!--<a class="b-link b-link--active" href="<?= APP_BASE ?>/../blog.php">Blog</a>-->
+    <a class="b-link" href="<?= APP_BASE ?>/auth_page.php">Se connecter</a>
     
-    <a class="b-link b-link--cta" href="<?= APP_BASE ?>/../register.php">S’inscrire</a>
+    <a class="b-link b-link--cta" href="<?= APP_BASE ?>/auth_page.php">S’inscrire</a>
   </nav>
 </header>
 
@@ -67,7 +67,7 @@ require __DIR__ . '/../config.php'; // là où APP_BASE est défini
 </main>
 
 <footer class="b-footer">
-  <a class="b-link" href="<?= APP_BASE ?>/register.php">Retour à l’accueil</a>
+  <a class="b-link" href="<?= APP_BASE ?>/index.php">Retour à l’accueil</a>
 </footer>
 
 </body>

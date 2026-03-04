@@ -124,7 +124,7 @@ $totalPages = max(1, (int)ceil($count / $per));
 
   .h3{}
 
-  .btn{background:#2563eb;color:#fff;border:none;border-radius:10px;padding:8px 12px;text-decoration:none}
+  .btn{background:#2563eb;color:#fff;border:none;border-radius:10px;padding:8px 12px;    margin-bottom: 20px;text-decoration:none}
   .meta{font-size:12px;color:#94a3b8}
 </style>
 </head>
@@ -163,17 +163,17 @@ $totalPages = max(1, (int)ceil($count / $per));
 
    
   <div class="meta">
-    <?= (int)$count ?> projet(s) publié(s)
+    <?= (int)$count ?> projet(s) publié(s) <!-- Compteur de projets publiés -->
   </div>
 
   <?php if ((int)$u['id'] === (int)$_SESSION['user_id']): ?>
     <div style="margin-top:10px">
       <a class="btn" href="<?= APP_BASE ?>/profile_edit.php">Éditer mon profil</a>
-      <a class="btn" href="<?= APP_BASE ?>/index.php">&larr; Retour au feed</a>
+      <a class="btn" href="<?= APP_BASE ?>/feed.php">&larr; Retour au feed</a>
     </div>
   <?php else: ?>
     <div style="margin-top:10px">
-      <a class="btn" href="<?= APP_BASE ?>/index.php">&larr; Retour au feed</a>
+      <a class="btn" href="<?= APP_BASE ?>/feed.php">&larr; Retour au feed</a>
     </div>
   <?php endif; ?>
 

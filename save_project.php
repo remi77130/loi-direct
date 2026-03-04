@@ -25,16 +25,16 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // CSRF
-$csrf = $_POST['csrf'] ?? '';
+$csrf = $_POST['csrf'] ?? ''; // token envoyé par le formulaire (doit correspondre à celui en session)
 if (empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $csrf)) {
-  $errors[] = "Session expirée. Recharge la page.";
+  $errors[] = "Session expirée. Recharge la page."; // message générique pour ne pas révéler la nature exacte du problème
 }
 
 $title   = trim($_POST['title']   ?? '');
 $summary = trim($_POST['summary'] ?? '');
 $body    = trim($_POST['body']    ?? '');
 $tagsRaw = trim($_POST['tags']    ?? '');
-$userId  = (int)$_SESSION['user_id'];
+$userId  = (int)$_SESSION['user_id']; // Id de l’auteur (session), pas de confiance dans un éventuel champ caché du formulaire
 
 // Règles métier
 if ($title === '' || mb_strlen($title) > 180) {
@@ -251,10 +251,10 @@ if (!$ok || !$newId) {
 if (headers_sent($f, $l)) {
     error_log("headers already sent in $f:$l");
     // fallback JS si headers HS
-    echo '<!doctype html><meta charset="utf-8"><script>location.href="'.APP_BASE.'/index.php"</script>';
+    echo '<!doctype html><meta charset="utf-8"><script>location.href="'.APP_BASE.'/feed.php"</script>'; // pas de header redirection possible, on tente une redirection JS (moins fiable, mais mieux que rien)
     exit;
 }
 
 // redirection propre (URL absolue => évite dirname/PHP_SELF surprises)
-header('Location: '.APP_BASE.'/index.php', true, 302);
+header('Location: '.APP_BASE.'/feed.php', true, 302); // 302 = redirection temporaire (pas de cache navigateur), on peut revenir à l’éditeur si besoin
 exit;

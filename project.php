@@ -195,7 +195,7 @@ unset($_SESSION['comment_draft']);
 <body>
   <div class="wrap">
     <!-- Lien retour feed -->
-    <a href="<?php echo $base; ?>/index.php">&larr; Retour au feed</a>
+    <a href="<?php echo $base; ?>/feed.php">&larr; Retour au feed</a>
 
     <?php if (!$project): ?>
       <!-- Cas projet introuvable / non publié -->

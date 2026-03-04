@@ -14,8 +14,8 @@
   RewriteRule ^ https://tchat-direct.com%{REQUEST_URI} [L,R=301]
 
   # 2) Forcer /index.php -> /
-  RewriteCond %{THE_REQUEST} \s/+index\.php[\s?] [NC]
-  RewriteRule ^index\.php$ / [L,R=301]
+  RewriteCond %{THE_REQUEST} \s/+index\.php[\s?] [NC]  # détecte les requêtes vers /index.php
+  RewriteRule ^index\.php$ / [L,R=301] # redirige vers la racine
 
   # 3) URL SEO pour le blog
   # /blog -> blog.php

@@ -186,7 +186,7 @@ usort($threads, fn($a, $b) => $b['last_at'] <=> $a['last_at']);
       </div>
     <?php endforeach; ?>
 
-    <p><a class="backlink" href="<?= APP_BASE ?>/index.php">← Retour</a></p>
+    <p><a class="backlink" href="<?= APP_BASE ?>/feed.php">← Retour</a></p>
   </div>
 
   <!-- Modal suppression thread -->

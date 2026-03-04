@@ -13,10 +13,10 @@ require __DIR__ . '/config.php'; // APP_BASE etc.
 $roomId = filter_input(INPUT_GET, 'id', FILTER_VALIDATE_INT, [
     'options' => ['min_range' => 1],
 ]);
-$slugGet = (string)($_GET['slug'] ?? '');
+$slugGet = (string)($_GET['slug'] ?? ''); // slug optionnel pour SEO, pas besoin de validation stricte (on redirigera vers le slug canonique)
 
 if (!$roomId) {
-    header('Location: '.rtrim(APP_BASE,'/').'/index.php', true, 302); // Rediriger vers la page d’accueil quand il n’y a pas d’id :
+    header('Location: '.rtrim(APP_BASE,'/').'/feed.php', true, 302); // Rediriger vers la page d’accueil quand il n’y a pas d’id :
     exit;
 }
 
@@ -208,7 +208,7 @@ if (!empty($msgs)) {
 <body class="neo">
 
 <header class="site-header">
-  <a href="index.php" class="logo-link">
+  <a href="feed.php" class="logo-link">
 <img src="<?= APP_BASE ?>/uploads/tchat_direct_logo.webp" class="logo-img" alt="Tchat Direct">
   </a>
 </header>
