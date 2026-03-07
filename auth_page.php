@@ -1,6 +1,8 @@
 <?php
 // auth_page.php: page de connexion et d’inscription, avec gestion des erreurs et redirections.
-include __DIR__ . '/auth_page_action.php'; ?>
+include __DIR__ . '/auth_page_action.php'; 
+$next = $next ?? ''; //
+?>
 
 
 
@@ -72,7 +74,7 @@ include __DIR__ . '/auth_page_action.php'; ?>
         <div class="pass-wrap">
           <input type="password" id="password_login" name="password"
                  minlength="8" maxlength="128"
-                 required placeholder="••••••••" autocomplete="password_hash"> 
+                 required placeholder="••••••••" autocomplete="current-password"> 
           <button type="button" class="toggle-pass" data-target="password_login" aria-pressed="false">Voir</button>
         </div>
 
@@ -147,7 +149,6 @@ include __DIR__ . '/auth_page_action.php'; ?>
 <script>
   const loginBox = document.getElementById('loginBox');
   const registerBox = document.getElementById('registerBox');
-  const btnLogin = document.getElementById('btnShowLogin');
   const btnRegister = document.getElementById('btnShowRegister');
   const linkToRegister = document.getElementById('linkToRegister');
   const linkToLogin = document.getElementById('linkToLogin');
@@ -169,7 +170,6 @@ include __DIR__ . '/auth_page_action.php'; ?>
     }
   }
 
-  btnLogin?.addEventListener('click', () => show('login'));
   btnRegister?.addEventListener('click', () => show('register'));
   linkToRegister?.addEventListener('click', (e) => { e.preventDefault(); show('register'); });
   linkToLogin?.addEventListener('click', (e) => { e.preventDefault(); show('login'); });

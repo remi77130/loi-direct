@@ -2,8 +2,9 @@
 
 <header class="site-header">
   <div class="h-wrap">
-    <a class="brand" href="<?= APP_BASE ?>/">Tchat direct</a>
 
+    <a class="brand" href="">Tchat direct</a>
+    
     <button class="nav-toggle" aria-expanded="false" aria-controls="primary-nav" aria-label="Ouvrir le menu">
       MENU
     </button>

@@ -13,6 +13,16 @@ session_start();
 require __DIR__ . '/db.php';
 require __DIR__ . '/config.php'; // APP_BASE
 
+
+// Solution safe : fallback automatique
+
+if (!function_exists('mb_strlen')) { // fallback basique, pas multibyte-safe (mais on limite à 20 chars, donc ça devrait aller) C’est pas aussi “unicode clean” qu’mbstring, mais ça évite un crash prod.
+  function mb_strlen($s) { return strlen($s); }
+}
+if (!function_exists('mb_substr')) { // fallback basique, pas multibyte-safe
+  function mb_substr($s, $start, $len = null) { return $len === null ? substr($s, $start) : substr($s, $start, $len); }
+}
+
 /* =========================
    Brute-force config
 ========================= */
@@ -35,8 +45,9 @@ function safe_next(string $next): string {
   return $next;
 }
 
+/* si tu n’as pas un reverse-proxy maîtrisé (Cloudflare, Nginx/HAProxy devant Apache, etc.), tu dois arrêter d’utiliser HTTP_X_FORWARDED_FOR. Sinon n’importe qui peut faker ce header et contourner ton ban/rate-limit IP.
 function get_client_ip(): string {
-  if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+  if (!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) { // attention, peut contenir plusieurs IP séparées par des virgules, la première est l’IP réelle du client (si le header est bien formé)
     $parts = explode(',', $_SERVER['HTTP_X_FORWARDED_FOR']);
     $ip = trim($parts[0]);
     if (filter_var($ip, FILTER_VALIDATE_IP)) return $ip;
@@ -45,7 +56,14 @@ function get_client_ip(): string {
     return $_SERVER['REMOTE_ADDR'];
   }
   return '0.0.0.0';
+}*/
+// Version plus simple et plus fiable si tu n’es pas derrière un reverse-proxy : REMOTE_ADDR, même si ça peut être le proxy de ton hébergeur, c’est toujours mieux que rien et ça évite les contournements faciles.
+function get_client_ip(): string { //
+  $ip = $_SERVER['REMOTE_ADDR'] ?? ''; // REMOTE_ADDR est plus fiable que HTTP_X_FORWARDED_FOR, qui peut être spoofé par le client. Si tu es derrière un reverse-proxy, configure-le pour qu’il mette l’IP réelle du client dans REMOTE_ADDR ou dans un header personnalisé que tu valides strictement.
+  return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '0.0.0.0';
 }
+
+
 
 function ip_is_banned(mysqli $db, string $ip): bool {
   $q = $db->prepare('SELECT 1 FROM ip_bans WHERE ip=? AND `until` > NOW() LIMIT 1');
@@ -106,11 +124,21 @@ if (empty($_SESSION['csrf'])) {
 
 /* =========================
    Déjà connecté ?
-========================= */
+========================= 
 if (!empty($_SESSION['user_id'])) {
   header('Location: '.app_base().'/feed.php', true, 303);
   exit;
 }
+  */
+
+
+if (!empty($_SESSION['user_id'])) {
+  $next = safe_next((string)($_GET['next'] ?? '/chat_rooms.php'));
+  header('Location: '.app_base().$next, true, 303);
+  exit;
+}
+
+
 
 /* =========================
    next + view
@@ -266,7 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
               $st->close();
             } else {
               $res = null;
-              if (method_exists($st, 'get_result')) {
+              if (method_exists($st, 'get_result')) { //fallback quand `get_result()` n’est pas dispo (environnements sans mysqlnd)
                 $res = $st->get_result();
                 if ($res === false) {
                   error_log('login get_result returned false: '.$st->error);

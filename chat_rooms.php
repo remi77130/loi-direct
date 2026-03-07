@@ -6,6 +6,30 @@ require __DIR__.'/config.php';
 require __DIR__.'/auth.php';
 require_login();
 if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
+
+/* Page principale des salons de chat publics et privés.
+chat fonctionne avec beaucoup d’API PHP :
+
+chat_rooms_list.php
+chat_room_create.php
+chat_room_delete.php
+chat_room_unlock.php
+chat_messages_fetch.php
+chat_message_send.php
+chat_message_like.php
+chat_presence_ping.php
+chat_presence_list.php
+chat_typing.php
+chat_typing_list.php
+chat_dm_send.php
+chat_dm_typing.php
+chat_dm_typing_list.php
+
+
+*/
+
+
+
 ?>
 <!doctype html><html lang="fr"><head>
 <meta charset="utf-8">
@@ -161,7 +185,7 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
       </div>
 
 
-      <!-- DM form -->
+      <!-- DM form CHAT PUBLIC -->
        
       <form id="dmSend" method="post" enctype="multipart/form-data" autocomplete="off"> 
         <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'] ?? '', ENT_QUOTES) ?>">
@@ -256,8 +280,9 @@ if (empty($_SESSION['csrf'])) $_SESSION['csrf']=bin2hex(random_bytes(16));
     <button id="toBottom" type="button" aria-label="Aller en bas">▼</button>
 <div id="typingIndicator" class="typingbar typing-indicator" aria-live="polite"></div>
 
+<!-- Formulaire d’envoi de message  PRIVEE -->
+<div class="container_chatForm"> 
 
-<div class="container_chatForm">
   <form id="chatForm" enctype="multipart/form-data">
     <input type="hidden" name="room_id" id="room_id" value="">
     <input type="hidden" name="csrf" value="<?= htmlspecialchars($_SESSION['csrf'], ENT_QUOTES) ?>">
@@ -506,7 +531,7 @@ lockClose?.addEventListener('click', () => {
 roomDeleteBtn?.addEventListener('click', async () => {  
   if (!currentRoom) return; 
 
-  const ok = confirm("Tu es sur de vouloir supprimer ce salon ?\Tous les messages associés seront définitivement supprimés.");
+  const ok =confirm("Tu es sûr de vouloir supprimer ce salon ?\nTous les messages associés seront définitivement supprimés.");
   if (!ok) return;
 
   const fd = new FormData();
@@ -598,36 +623,85 @@ function stopTypingWatch(){
 }
 
 // Lance le polling typing pour une room
+// Lance la surveillance des utilisateurs en train d'écrire dans un salon
 function startTypingWatch(roomId){
-  stopTypingWatch(); // au cas où
 
+  // On arrête un éventuel ancien timer
+  // (si on change de salon par exemple)
+  stopTypingWatch();
+
+  // Sécurité : si aucun salon n'est fourni → on ne fait rien
   if (!roomId) return;
 
-typingInterval = setInterval(() => {
-  fetch(`${BASE}/chat_typing_list.php?room_id=` + encodeURIComponent(roomId), {
-    method: 'GET',
-    credentials: 'same-origin',
-    headers: {
-      'Accept': 'application/json'
-    }
-  })
+  // setInterval = exécute le code toutes les X millisecondes
+  // ici toutes les 2 secondes
+  typingInterval = setInterval(() => {
 
-    .then(r => r.ok ? r.json() : Promise.reject())
-    .then(data => {
+    // On interroge le serveur pour savoir
+    // quels utilisateurs sont en train d'écrire
+    fetch(`${BASE}/chat_typing_list.php?room_id=` + encodeURIComponent(roomId), {
+
+      // requête HTTP
+      method: 'GET',
+
+      // envoie les cookies de session (important pour l'auth)
+      credentials: 'same-origin',
+
+      // on indique qu'on attend du JSON
+      headers: {
+        'Accept': 'application/json'
+      },
+
+      // empêche le navigateur de servir une version en cache
+      cache: 'no-store'
+    })
+
+    // Vérifie la réponse HTTP
+    .then(async (r) => {
+
+      // si le serveur renvoie une erreur (404, 500, 403...)
+      if (!r.ok) {
+
+        // on déclenche une erreur pour passer dans le catch
+        throw new Error(`HTTP ${r.status} sur chat_typing_list.php`);
+      }
+
+      // sinon on convertit la réponse en JSON
+      return r.json();
+    })
+
+    // Traitement des données JSON renvoyées par le serveur
+    .then((data) => {
+
+      // sécurité : si la réponse est invalide
       if (!data || !data.ok){
+
+        // message dans la console pour debug
+        console.warn('Typing list invalide :', data);
+
+        // on vide l'indicateur "X est en train d'écrire"
         updateTypingIndicator([]);
+
         return;
       }
-      // data.users = [{id:..., pseudo:...}, ...] (d’après ton PHP)
+
+      // sinon on met à jour la liste des utilisateurs
+      // en train d'écrire dans le salon
       updateTypingIndicator(data.users || []);
     })
-    .catch(() => {
-      // En cas d’erreur réseau, on masque
+
+    // Gestion des erreurs réseau / serveur
+    .catch((err) => {
+
+      // affiche l'erreur dans la console pour debug
+      console.error('Erreur polling typing room :', err);
+
+      // par sécurité on masque l'indicateur typing
       updateTypingIndicator([]);
     });
-  }, 2000); // toutes les 2 secondes
-}
 
+  }, 2000); // la requête est répétée toutes les 2 secondes
+}
 
 
 const chatInput = document.getElementById('chatInput'); 
@@ -1190,7 +1264,7 @@ setTimeout(() => {
  * - Si un salon est ouvert: liste des actifs du salon; sinon: liste globale.
  */
 
-const PRESENCE_KEY = localStorage.getItem('presence_uuid')
+const PRESENCE_KEY = localStorage.getItem('presence_uuid') // UUID unique pour identifier cet onglet dans la BDD (session_key)
   || (() => { const u = crypto.randomUUID(); localStorage.setItem('presence_uuid', u); return u; })();
 
 let presenceTimer = null;       // Ping BDD
@@ -1200,13 +1274,13 @@ function startPresence() {
   stopPresence(); // pas de doublon
 
   // Ping last_seen
-  presenceTimer = setInterval(presencePing, 2000);
+  presenceTimer = setInterval(presencePing, 5000); // toutes les 5s
   presencePing();
 
   // Rafraîchit l’affichage
   if (presenceInline) {
     refreshInlinePresence();
-    presenceListTimer = setInterval(refreshInlinePresence, 1000);
+    presenceListTimer = setInterval(refreshInlinePresence, 5000); // toutes les 5s
   }
 }
 function stopPresence() {
@@ -1375,11 +1449,18 @@ function renderMessage(m){
     const body = document.createElement('div');
     body.className = 'msg-body';
     body.style.whiteSpace = 'pre-wrap';
+
     const span = document.createElement('span');
-    const mentionRegex = /(@[A-Za-zÀ-ÖØ-öø-ÿ0-9_.-]+)/g;
-    const safe = escapeHtml(m.body);
-    const htmlWithMentions = String(m.body).replace(mentionRegex, '<span class="mention">$1</span>');
-    span.innerHTML = htmlWithMentions;
+
+      // regex pour détecter les @mentions
+    const mentionRegex = /(^|\s)@([A-Za-zÀ-ÖØ-öø-ÿ0-9_.-]{2,30})/g;
+    // 1️⃣ on échappe le texte utilisateur pour éviter les injections HTML (XSS)
+    const safe = escapeHtml(m.body); // Il faut échapper avant d’injecter, puis appliquer le marquage des mentions sur le texte échappé, pas sur le brut.
+    
+const htmlWithMentions = safe.replace(
+  mentionRegex,'$1<a class="mention" data-user="$2">@$2</a>'
+);
+span.innerHTML = htmlWithMentions;
     if (m.color && /^#[0-9A-Fa-f]{6}$/.test(m.color)) span.style.color = m.color;
     body.appendChild(span);
     content.appendChild(body);
@@ -1738,10 +1819,10 @@ dmForm?.addEventListener('submit', async (e)=>{
       const text = await r.text();
       throw new Error('HTTP '+r.status+' '+text);
     }
-    const j = await r.json();
+    const j = await r.json(); // { ok:1 } ou { ok:0, error:'...' }
     if(!j.ok) throw new Error(j.error||'error');
     dmBody.value = '';
-const imgInput = dmForm.querySelector('input[name="image"]');
+const imgInput = dmForm.querySelector('input[name="file"]'); // reset input file
 if (imgInput) imgInput.value = '';    dmHint.textContent = 'Message envoyé.';
   }catch(err){
     const msg = String(err.message||'Erreur');

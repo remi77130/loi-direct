@@ -52,11 +52,7 @@ include __DIR__ . '/auth_page_action.php'; ?>
 
   <h1 >Tchat direct</h1>
 
-  <h2>Nos dernier salon actifs</h2>
 
-
-
-    <hr>
 
 
 
@@ -377,7 +373,7 @@ include __DIR__ . '/auth_page_action.php'; ?>
     <div class="footer-col">
       <h4>Navigation</h4>
       <ul>
-        <li><a href="/rooms.php">Salons publics</a></li>
+       <!-- <li><a href="/rooms.php">Salons publics</a></li> -->
         <li><a href="auth_page.php">Connexion / Inscription</a></li>
         <li><a href="blog/blog.php">Blog</a></li>
       </ul>
@@ -421,13 +417,12 @@ include __DIR__ . '/auth_page_action.php'; ?>
 <script> // Logique d’affichage du formulaire de connexion/inscription
   const loginBox = document.getElementById('loginBox');
   const registerBox = document.getElementById('registerBox');
-  const btnLogin = document.getElementById('btnShowLogin');
   const btnRegister = document.getElementById('btnShowRegister');
   const linkToRegister = document.getElementById('linkToRegister');
   const linkToLogin = document.getElementById('linkToLogin');
   const cardTitle = document.getElementById('cardTitle');
 
-  const nextVal = <?= json_encode($next, JSON_UNESCAPED_SLASHES) ?>;
+  const nextVal = <?= json_encode($next, JSON_UNESCAPED_SLASHES) ?>; // pour garder la valeur de next dans les URLs
 
   function show(which){ // which = 'login' ou 'register'
     if(which === 'register'){
@@ -443,7 +438,6 @@ include __DIR__ . '/auth_page_action.php'; ?>
     }
   }
 
-  btnLogin?.addEventListener('click', () => show('login'));
   btnRegister?.addEventListener('click', () => show('register'));
   linkToRegister?.addEventListener('click', (e) => { e.preventDefault(); show('register'); });
   linkToLogin?.addEventListener('click', (e) => { e.preventDefault(); show('login'); });
