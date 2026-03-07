@@ -34,6 +34,12 @@
         Messages <span id="msgBadge" class="msg-badge" style="display:none" >0</span>
       </a>
 
+
+<a class="nav-link" href="<?= APP_BASE ?>/chat_rooms.php" id="notifLink">
+  Notifications <span id="notifBadge" class="msg-badge" style="display:none">0</span>
+</a> <!--le lien vers les notifications, avec un badge pour afficher le nombre de notifications non lues (initialement caché avec display:none) -->
+
+
       <a class="nav-link-disconect" href="<?= APP_BASE ?>/logout.php">Se déconnecter</a>
     </nav>
   </div>
@@ -51,4 +57,60 @@
   });
 })();
 
+</script>
+
+
+<script> // Script pour charger le nombre de notifications non lues et mettre à jour le badge en temps réel
+(() => {
+  const notifBadge = document.getElementById('notifBadge');
+  if (!notifBadge) return;
+
+  const BASE = '<?= APP_BASE ?>';
+
+  async function loadNotifications() {
+    try {
+      const r = await fetch(`${BASE}/chat_notifications_list.php`, {
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!r.ok) {
+        throw new Error(`HTTP ${r.status} sur chat_notifications_list.php`);
+      }
+
+      const data = await r.json();
+
+      if (!data || !data.ok) {
+        console.warn('Notifications invalides :', data);
+        notifBadge.style.display = 'none';
+        notifBadge.textContent = '0';
+        return;
+      }
+
+      const count = Number(data.count_unread || 0);
+
+      if (count > 0) {
+        notifBadge.textContent = String(count);
+        notifBadge.style.display = 'inline-block';
+      } else {
+        notifBadge.style.display = 'none';
+        notifBadge.textContent = '0';
+      }
+
+    } catch (err) {
+      console.error('Erreur chargement notifications :', err);
+      notifBadge.style.display = 'none';
+      notifBadge.textContent = '0';
+    }
+  }
+
+  // chargement immédiat
+  loadNotifications();
+
+  // refresh toutes les 10 secondes
+  setInterval(loadNotifications, 10000);
+})();
 </script>

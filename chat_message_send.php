@@ -67,6 +67,63 @@ $body = trim((string)($_POST['body'] ?? ''));
 $body = preg_replace('/[\p{Cc}\p{Cf}&&[^\n\t]]/u','',$body);
 $body = mb_substr($body,0,2000);
 
+
+// Détection des @mentions dans le message
+$mentionedPseudos = [];
+
+if ($body !== '') {
+  preg_match_all('/(^|\s)@([A-Za-zÀ-ÖØ-öø-ÿ0-9_.-]{2,30})/u', $body, $matches); // regex pour détecter les @mentions, en capturant le pseudo dans le groupe 2 (sans le @)
+
+  // $matches[2] contient uniquement les pseudos sans le @
+  if (!empty($matches[2])) {
+    $mentionedPseudos = array_values(array_unique($matches[2])); // on garde uniquement les pseudos uniques pour éviter les requêtes redondantes
+  }
+}
+
+
+// Recherche des user_id correspondant aux pseudos mentionnés
+$mentionedUserIds = [];
+
+if (!empty($mentionedPseudos)) {
+  $placeholders = implode(',', array_fill(0, count($mentionedPseudos), '?')); // on crée une chaîne de placeholders pour la requête préparée, ex: "?, ?, ?"
+
+  $sql = "SELECT id, pseudo
+          FROM users
+          WHERE pseudo IN ($placeholders)";
+
+  $st = $mysqli->prepare($sql);
+
+  if (!$st) {
+    http_response_code(500);
+    echo json_encode(['ok' => false, 'error' => 'prepare_mentions_lookup']);
+    exit;
+  }
+
+  $types = str_repeat('s', count($mentionedPseudos));
+  $st->bind_param($types, ...$mentionedPseudos); // on lie les pseudos en tant que paramètres de la requête préparée
+  $st->execute();
+
+  $res = $st->get_result();
+
+  while ($row = $res->fetch_assoc()) {
+    $targetId = (int)($row['id'] ?? 0);
+
+    // on évite de se mentionner soi-même
+    if ($targetId > 0 && $targetId !== $user_id) {
+      $mentionedUserIds[] = $targetId;
+    }
+  }
+
+  $st->close();
+
+  // sécurité anti doublons
+  $mentionedUserIds = array_values(array_unique($mentionedUserIds));
+}
+
+
+
+
+
 $fileUrl = $fileMime = null;
 $w = $h = null;
 
@@ -129,7 +186,88 @@ if (!empty($_FILES['file']['name'])) {
 
 if ($body === '' && !$fileUrl) { echo json_encode(['ok'=>false,'error'=>'empty']); exit; }
 
-/* 4) Insert */
+
+
+
+$mysqli->begin_transaction();
+
+try {
+  // 1) Insertion du message
+  $st = $mysqli->prepare("
+    INSERT INTO chat_messages
+      (room_id, sender_id, body, file_url, file_mime, file_w, file_h, color)
+    VALUES
+      (?, ?, ?, ?, ?, ?, ?, ?)
+  ");
+
+  if (!$st) {
+    throw new RuntimeException('prepare_insert_message');
+  }
+
+  $st->bind_param('iisssiis', $room_id, $user_id, $body, $fileUrl, $fileMime, $w, $h, $color);
+
+  if (!$st->execute()) {
+    $st->close();
+    throw new RuntimeException('execute_insert_message');
+  }
+
+  $message_id = (int)$st->insert_id;
+  $st->close();
+
+  // 2) Insertion des notifications de mention
+  // On ne fait rien si aucune mention valide n'a été trouvée
+  if (!empty($mentionedUserIds)) {
+    $stNotif = $mysqli->prepare("
+      INSERT IGNORE INTO chat_notifications
+        (user_id, sender_id, room_id, message_id, type, is_read, created_at)
+      VALUES
+        (?, ?, ?, ?, 'mention', 0, NOW())
+    ");
+
+    if (!$stNotif) {
+      throw new RuntimeException('prepare_insert_notification');
+    }
+
+    foreach ($mentionedUserIds as $targetUserId) {
+      $targetUserId = (int)$targetUserId;
+
+      if ($targetUserId <= 0 || $targetUserId === $user_id) {
+        continue;
+      }
+
+      $stNotif->bind_param('iiii', $targetUserId, $user_id, $room_id, $message_id);
+
+      if (!$stNotif->execute()) {
+        $stNotif->close();
+        throw new RuntimeException('execute_insert_notification');
+      }
+    }
+
+    $stNotif->close();
+  }
+
+  // 3) Tout est OK → commit
+  $mysqli->commit();
+
+  echo json_encode([
+    'ok' => true,
+    'id' => $message_id
+  ]);
+  exit;
+
+} catch (Throwable $e) {
+  $mysqli->rollback();
+  http_response_code(500);
+
+  echo json_encode([
+    'ok' => false,
+    'error' => 'db'
+  ]);
+  exit;
+}
+
+
+/* 4) Insert 07.03.26
 $mysqli->begin_transaction();
 $st = $mysqli->prepare("INSERT INTO chat_messages (room_id,sender_id,body,file_url,file_mime,file_w,file_h, color) VALUES (?,?,?,?,?,?,?,?)");
 $st->bind_param('iisssiis', $room_id, $user_id, $body, $fileUrl, $fileMime, $w, $h, $color);
@@ -137,3 +275,4 @@ $ok = $st->execute(); $id = $ok ? $st->insert_id : 0; $st->close();
 
 if ($ok) { $mysqli->commit(); echo json_encode(['ok'=>true,'id'=>$id]); }
 else { $mysqli->rollback(); http_response_code(500); echo json_encode(['ok'=>false,'error'=>'db']); }
+*/

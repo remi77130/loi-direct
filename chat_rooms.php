@@ -1445,7 +1445,7 @@ function renderMessage(m){
   
 
   // Corps texte (mentions colorées)
-  if (m.body) {
+  if (m.body) { // sécurité : on vérifie que m.body existe avant de tenter de l’afficher
     const body = document.createElement('div');
     body.className = 'msg-body';
     body.style.whiteSpace = 'pre-wrap';
