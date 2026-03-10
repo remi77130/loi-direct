@@ -369,6 +369,7 @@ closeChat() arrête bien stopTypingWatch() → plus de polling. */
 
 
 
+<script src="<?= APP_BASE ?>/assets/js/chat/config.js" defer></script>
 
 /* === Références DOM + état global ========================================= */
 const BASE = '<?= APP_BASE ?>';                        // Base URL de l’app
@@ -387,7 +388,9 @@ const toBottom       = document.getElementById('toBottom');       // Bouton “a
 const roomDeleteBtn = document.getElementById('roomDeleteBtn');   // Bouton supprimer salon
 const roomShareBtn  = document.getElementById('roomShareBtn'); // Bouton Partager
 const urlParams     = new URLSearchParams(window.location.search); // URLSearchParams
-const initialRoomId = parseInt(urlParams.get('room') || '0', 10) || 0; 
+const initialRoomId = parseInt(urlParams.get('room') || '0', 10) || 0;
+const initialMessageId = parseInt(urlParams.get('msg') || '0', 10) || 0; // pour focus sur un message précis à l’ouverture du salon (ex : chat_rooms.php?room=5&msg=123 pour ouvrir le salon 5 et faire scrollIntoView() sur le message 123)
+
 const chatBackBtn    = document.getElementById('chatBackBtn');    // ← Retour
 const typingIndicator = document.getElementById('typingIndicator'); // bandeau "X écrit"
 
@@ -439,6 +442,7 @@ let lastTypingSent = 0;   // Qui écrit
 let typingInterval = null; // timer pour polling des gens qui écrivent
 let dmTypingTimer  = null; 
 let lastDmTypingSent = 0;
+let initialMessageFocused = false; // pour éviter de faire plusieurs focusMessageInView() sur le même message à l’ouverture du salon (ex : ?msg=123) si jamais le message n’est pas dans les 50 premiers et qu’il faut faire plusieurs fetch pour le trouver, on veut faire scrollIntoView() et la surbrillance de focusMessageInView() une seule fois au moment où il est enfin chargé, pas à chaque fetch intermédiaire où il n’est pas encore présent dans le DOM
 
 
 
@@ -519,6 +523,31 @@ lockClose?.addEventListener('click', () => {
 
 
 
+// Fonction pour faire scroll sur un message précis et le mettre en surbrillance temporaire (ex : après un @mention ou à l’ouverture du salon si URL avec ?msg=123)
+function focusMessageInView(messageId) {
+  if (!messageId) return false;
+
+  const target = document.getElementById(`msg-${messageId}`);
+  if (!target) return false;
+
+  target.scrollIntoView({
+    behavior: 'smooth',
+    block: 'center'
+  });
+
+  target.classList.add('msg-focus');
+
+  setTimeout(() => {
+    target.classList.remove('msg-focus');
+  }, 2500);
+
+  // Nettoie ?msg=... dans l'URL sans recharger la page
+  const url = new URL(window.location);
+  url.searchParams.delete('msg');
+  window.history.replaceState(null, '', url); // on remplace l’historique actuel (sans recharger) pour nettoyer l’URL après le focus sur le message, ça évite d’avoir un message obsolète dans ?msg=... si jamais on partage l’URL ou si on change de salon et qu’on revient ensuite sur ce salon (pour éviter de faire scroll sur un message qui n’existe plus ou qui n’est pas dans les 50 premiers et qui ne serait donc pas chargé dans le DOM)
+
+  return true;
+}
 
 
 
@@ -1380,6 +1409,16 @@ function openRoom(id, name) {
  * @param {boolean} opts.reloadRooms - recharge la liste des salons après fermeture
  * @param {boolean} opts.clearUrl    - retire ?room= de l’URL
  */
+
+
+
+
+
+
+
+
+
+
 /* =============================================================================
  *                                 MESSAGES
  * =============================================================================*/
@@ -1396,6 +1435,15 @@ function renderMessage(m){
 
  // Bulle de base
   el.className = 'msg';
+
+// Identifiant HTML du message (ex : msg-450)
+el.id = `msg-${m.id}`; // Utile pour faire scrollIntoView() sur un message précis, ou pour le supprimer facilement du DOM après une modération par exemple.
+
+// On stocke l'id du message dans le DOM
+// Exemple final : <div class="msg ..." data-message-id="450">
+el.dataset.messageId = String(m.id || '');
+
+
 
   // Alignement gauche/droite selon l’auteur
   const isMine = Number(m.sender_id || 0) === Number(CURRENT_USER_ID || 0);
@@ -1600,11 +1648,20 @@ async function handleLikeClick(btn){
 // Récupère les nouveaux messages
 async function fetchMessages(){
   if (!currentRoom) return;
-  try{
-    const r = await fetch(`${BASE}/chat_messages_fetch.php?room_id=${currentRoom}&after_id=${lastId}`, {
-      cache:'no-store', credentials:'same-origin'
-    });
 
+  try {
+    let url = `${BASE}/chat_messages_fetch.php?room_id=${currentRoom}&after_id=${lastId}`; // on demande les messages après le dernier qu’on a déjà
+
+    // Au tout premier chargement de la room, si l'URL contient ?msg=...
+    // on demande au backend un bloc centré sur ce message
+    if (lastId === 0 && initialMessageId > 0) {
+      url += `&focus_id=${initialMessageId}`;
+    }
+
+    const r = await fetch(url, { // sécurité : on veut vraiment les dernières données, pas du cache
+      cache: 'no-store', // on veut vraiment les dernières données, pas du cache
+      credentials: 'same-origin' // pour envoyer les cookies de session et CSRF
+    });
 
 if (!r.ok) {
   if (r.status === 410) {
@@ -1617,19 +1674,30 @@ if (!r.ok) {
   }
   return;
 }
-
     const j = await r.json();
     if (!j.ok) return;
 
-    if (j.messages.length){
-      const stick = isNearBottom(chatMsgs);
-      const frag = document.createDocumentFragment();
-      j.messages.forEach(m => { frag.appendChild(renderMessage(m)); lastId = Math.max(lastId, m.id); });
-      chatMsgs.appendChild(frag);
-      if (stick) scrollToBottom(chatMsgs, true);
-      toBottom.style.display = isNearBottom(chatMsgs) ? 'none' : 'block';
-    }
-  } catch {}
+if (j.messages.length){ // s’il y a des messages à afficher
+  const stick = isNearBottom(chatMsgs);
+  const frag = document.createDocumentFragment();
+
+  j.messages.forEach(m => { // pour chaque message reçu
+    frag.appendChild(renderMessage(m));
+    lastId = Math.max(lastId, m.id);
+  });
+
+  chatMsgs.appendChild(frag);
+
+  if (!initialMessageFocused && initialMessageId > 0) {
+    setTimeout(() => {
+      const ok = focusMessageInView(initialMessageId);
+      if (ok) initialMessageFocused = true;
+    }, 100);
+  }
+
+  if (stick) scrollToBottom(chatMsgs, true);
+  toBottom.style.display = isNearBottom(chatMsgs) ? 'none' : 'block';
+} }  catch {}
 }
 
 function handleRoomExpired(){

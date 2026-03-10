@@ -315,6 +315,14 @@ body{
   background: color-mix(in srgb, var(--c-black) 65%, transparent);
 }
 
+/* ===== Messages list ===== */
+.msg-focus {
+  outline: 3px solid #000000;
+  outline-offset: 2px;
+  transition: outline 0.3s ease;
+  background-color: #00ff2a;
+}
+
 
 /* ===============================
    MSG AVATAR — NEO BRUTAL

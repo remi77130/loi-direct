@@ -7,6 +7,10 @@ require __DIR__ . '/config.php';
 require __DIR__ . '/db.php';
 require __DIR__ . '/auth.php';
 
+
+/* chat_notifications_read.php
+Ce script reçoit une requête POST pour marquer une notification comme lue (is_read = 1) dans la base de données. Il vérifie que l’utilisateur est connecté, que le paramètre id de la notification est valide, et que la notification appartient bien à l’utilisateur connecté (user_id) pour éviter les abus. Ensuite, il effectue la mise à jour dans la base de données et renvoie une réponse JSON indiquant si l’opération a réussi ou s’il y a eu une erreur (par exemple : notification introuvable, pas d’accès à cette notification, erreur de base de données, etc.). Ce script est appelé depuis le frontend lorsqu’un utilisateur clique sur une notification pour la marquer comme lue, ce qui permet de mettre à jour le badge de notifications en temps réel et d’éviter que les notifications déjà consultées restent affichées comme non lues.
+*/
 header('Content-Type: application/json; charset=utf-8');
 
 require_login();
