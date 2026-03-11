@@ -369,7 +369,6 @@ closeChat() arrête bien stopTypingWatch() → plus de polling. */
 
 
 
-<script src="<?= APP_BASE ?>/assets/js/chat/config.js" defer></script>
 
 /* === Références DOM + état global ========================================= */
 const BASE = '<?= APP_BASE ?>';                        // Base URL de l’app
