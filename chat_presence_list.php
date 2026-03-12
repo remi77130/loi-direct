@@ -9,6 +9,9 @@ require_login();
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 
+// c’est lui qui renvoie les données JSON de chaque salon (id, nom, privé ou pas, éphémère ou pas, date du dernier message ou date de création si pas de message, nombre d’utilisateurs actifs dans le salon)
+// si room_id > 0 → liste des actifs pour CE salon 
+
 $room_id = isset($_GET['room_id']) ? (int)$_GET['room_id'] : 0;
 $ttl = 45; // secondes de fraîcheur
 

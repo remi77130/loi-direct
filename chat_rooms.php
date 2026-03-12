@@ -1177,30 +1177,39 @@ async function loadRooms(){
 RLIST.innerHTML = j.rooms.map(x => { // pour chaque salon
   const priv = Number(x.is_private) === 1; // salon privé ?
   const eph  = Number(x.is_ephemeral) === 1; // salon éphémère ?
-  
-
-  const last = x.last_at ? new Date(x.last_at.replace(' ','T')).toLocaleString() : '—'; // date dernier message
-
+  const last = x.last_at ? new Date(x.last_at.replace(' ','T')).toLocaleString() : '—'; // date dernier message // ou date création si pas de message, formatée en local
+  const active = Number(x.active_count || 0); // nombre d'actifs (en ligne) dans le salon
+  const sender = (x.last_sender || '').trim();
+  const preview = (x.last_preview || '').trim();
+ const previewText = preview
+  ? `${sender ? '<b>'+escapeHtml(sender)+'</b> : ' : ''}${escapeHtml(preview)}`
+  : '';
   // Texte du badge (priorité: protégé > éphémère > public)
- const icons = `
+  const icons = `
     <div class="room-icons" aria-label="Attributs du salon">
       ${priv ? `<span class="ico ico-lock" title="Salon protégé" aria-label="protégé">🔒</span>` : ``}
       ${eph  ? `<span class="ico ico-eph"  title="Salon éphémère (24h)" aria-label="éphémère">⏳</span>` : ``}
     </div>
   `;
+return `
+  <div class="row room"
+       data-id="${x.id}"
+       data-name="${escapeHtml(x.name)}"
+       data-private="${priv ? 1 : 0}"
+       data-ephemeral="${eph ? 1 : 0}"
+       data-created-by="${x.created_by}">
+    ${icons}
+    <div class="room-main">
+      <div class="room-top">
+        <strong>${escapeHtml(x.name)}</strong>
+        ${active > 0 ? `<span class="room-users">(${active})</span>` : ``}
+      </div>
+      ${previewText ? `<div class="room-preview">${previewText}</div>` : ``}
+    </div>
+    <div class="mut">${last}</div>
+  </div>`;
 
-  return `
- 
-    <div class="row room"
-         data-id="${x.id}"
-         data-name="${escapeHtml(x.name)}"
-         data-private="${priv ? 1 : 0}"
-         data-ephemeral="${eph ? 1 : 0}"
-         data-created-by="${x.created_by}">
-      ${icons}
-      <div><strong>${escapeHtml(x.name)}${priv ? ' ' : ''}</strong></div>
-      <div class="mut">${last}</div>
-    </div>`;
+
 }).join('');
 
   } catch {

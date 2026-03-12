@@ -172,6 +172,32 @@ body{
   margin-top: var(--sp-16);
 }
 
+
+.room-main{
+  min-width: 0;
+}
+
+.room-top{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.room-preview{
+  font-size:13px;
+  color:#9ca3af;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.room-preview b{
+
+  font-weight:bold;
+}
+
+
 .row.room{
   border: var(--b-mid);
   background: var(--c-white);
