@@ -7,6 +7,22 @@ require __DIR__ . '/db.php';
 require __DIR__ . '/auth.php';
 require_login();
 
+/* BUG : Conclusion nette
+La cause la plus probable
+
+Le doublon "a rejoint le salon" vient du fait que :
+
+ton front envoie un ping de présence avec room_id toutes les 5 secondes
+
+et ton backend doit probablement interpréter ce ping comme une nouvelle entrée dans le salon
+
+Donc la règle correcte doit être :
+
+chat_presence_ping.php met juste à jour la présence
+
+un message système "a rejoint le salon" doit être créé une seule fois, uniquement lors d’une vraie entrée dans le salon
+
+pas à chaque ping*/ 
 
 /* Ce fichier sert uniquement à mettre à jour la présence utilisateur dans un salon.
 
@@ -44,7 +60,7 @@ Donc un même utilisateur peut apparaître avec plusieurs sessions.
 | last_seen est mis à jour à chaque "ping".
 | Les utilisateurs actifs sont ceux dont last_seen est récent.
 |
-*/*/ 
+*/
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store');
 

@@ -1723,6 +1723,17 @@ if (j.messages.length){ // s’il y a des messages à afficher
 
   chatMsgs.appendChild(frag);
 
+
+
+
+
+
+
+
+
+
+  
+
   if (!initialMessageFocused && initialMessageId > 0) {
     setTimeout(() => {
       const ok = focusMessageInView(initialMessageId);
