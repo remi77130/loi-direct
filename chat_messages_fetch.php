@@ -59,6 +59,8 @@ $baseSelect = "
     m.created_at,
     m.file_url,
     m.file_mime,
+    m.message_type,
+    m.system_event,
     m.file_w,
     m.file_h,
     u.avatar_url AS avatar_url,

@@ -145,21 +145,6 @@ chat_dm_typing_list.php
 
 
 
-    
-<!-- Modale utilisateurs actifs -->
-<div id="activeModal" class="active_modal" hidden>
-
-
-  <div class="modal-box">
-    <div class="modal-head">
-      <strong>Utilisateurs actifs</strong>
-      <button id="activeClose" type="button" class="btn">X</button>
-    </div>
-    <div id="activeModalBody"></div>
-  </div>
-</div>
-
-
 
 
 <div id="userModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="umName" hidden>
@@ -249,6 +234,18 @@ chat_dm_typing_list.php
 
 <div id="chatModal" class="modal" hidden>
   <div id="chatBox">
+
+<div id="activeModal" class="active_modal" hidden>
+  <div class="active-modal-box">
+    <div class="modal-head">
+      <strong>Utilisateurs actifs</strong>
+      <button id="activeClose" type="button" class="btn">X</button>
+    </div>
+    <div id="activeModalBody"></div>
+  </div>
+</div>
+
+
     <div id="chatHead">
       <div class="chatHead-main">
          <button id="chatBackBtn" type="button" class="btn btn-ghost btn_retour">
@@ -1014,33 +1011,46 @@ chatModal?.addEventListener('click', (e) => {
 
 /* === Modale image ========================================================== */
 
+function closeActiveModal(){
+  if (activeModal) activeModal.hidden = true;
+}
+
 function openImgModal(src){
-  if (!imgModal || !imgModalImg) return;   // HTML optionnel
+  if (!imgModal || !imgModalImg) return;
   imgModalImg.src = src;
   imgModal.hidden = false;
 }
+
 function closeImgModal(){
   if (!imgModal || !imgModalImg) return;
   imgModal.hidden = true;
   imgModalImg.removeAttribute('src');
 }
-// Ferme la modale image en cliquant sur le fond
-imgModal?.addEventListener('click', e => { if (e.target === imgModal) closeImgModal(); });
 
-// Échap ferme toutes les modales (image, user, lock)
+// Ferme la modale image en cliquant sur le fond
+imgModal?.addEventListener('click', e => {
+  if (e.target === imgModal) closeImgModal();
+});
+
+// Ferme la modale actifs en cliquant sur le fond
+activeModal?.addEventListener('click', e => {
+  if (e.target === e.currentTarget) closeActiveModal();
+});
+
+// Ferme avec le bouton X
+activeClose?.addEventListener('click', closeActiveModal);
+
+// Échap ferme toutes les modales
 document.addEventListener('keydown', e => {
   if (e.key !== 'Escape') return;
+
   if (!imgModal?.hidden) closeImgModal();
   if (userModal && !userModal.hidden) userModal.hidden = true;
   if (lockModal && !lockModal.hidden) lockModal.hidden = true;
+  if (activeModal && !activeModal.hidden) closeActiveModal();
 });
 
 /* === Modale “actifs” (liste complète) ===================================== */
-
-activeModal?.addEventListener('click', e => {
-  if (e.target === e.currentTarget) activeModal.hidden = true;
-});
-activeClose?.addEventListener('click', () => { activeModal.hidden = true; });
 
 // Ouvre la modale et charge la liste d’actifs du salon courant
 showActive?.addEventListener('click', async () => {
@@ -1438,11 +1448,28 @@ chatMsgs?.addEventListener('scroll', () => {
 toBottom?.addEventListener('click', () => scrollToBottom(chatMsgs, true));
 
 // Rendu d’un message
+
+
 function renderMessage(m){
+  if ((m.message_type || 'user') === 'system') {
+    const el = document.createElement('div');
+    el.className = 'msg msg--system';
+    el.id = `msg-${m.id}`;
+    el.dataset.messageId = String(m.id || '');
+
+    const sender = escapeHtml(m.sender || 'Utilisateur');
+    const body = escapeHtml(m.body || '');
+
+    el.innerHTML = `<div class="msg-system-text">— ${sender} ${body} —</div>`;
+    return el;
+  }
+
+
   const el = document.createElement('div');
 
- // Bulle de base
+  // Bulle de base
   el.className = 'msg';
+
 
 // Identifiant HTML du message (ex : msg-450)
 el.id = `msg-${m.id}`; // Utile pour faire scrollIntoView() sur un message précis, ou pour le supprimer facilement du DOM après une modération par exemple.

@@ -50,13 +50,44 @@ if ((int)$is_private === 1 && empty($_SESSION['rooms_ok'][$room_id])) {
 }
 
 /* 2) Rate limiting */
-$st = $mysqli->prepare("SELECT COUNT(*) FROM chat_messages WHERE sender_id=? AND created_at >= (NOW() - INTERVAL 30 SECOND)");
-$st->bind_param('i', $user_id); $st->execute(); $st->bind_result($cnt30); $st->fetch(); $st->close();
-if ($cnt30 >= 3) { http_response_code(429); echo json_encode(['ok'=>false,'error'=>'rate_glob']); exit; }
+$st = $mysqli->prepare("
+  SELECT COUNT(*)
+  FROM chat_messages
+  WHERE sender_id = ?
+    AND message_type = 'user'
+    AND created_at >= (NOW() - INTERVAL 30 SECOND)
+");
+$st->bind_param('i', $user_id);
+$st->execute();
+$st->bind_result($cnt30);
+$st->fetch();
+$st->close();
 
-$st = $mysqli->prepare("SELECT COUNT(*) FROM chat_messages WHERE room_id=? AND sender_id=? AND created_at >= (NOW() - INTERVAL 5 SECOND)");
-$st->bind_param('ii', $room_id, $user_id); $st->execute(); $st->bind_result($cnt5); $st->fetch(); $st->close();
-if ($cnt5 >= 2) { http_response_code(429); echo json_encode(['ok'=>false,'error'=>'rate_room']); exit; }
+if ($cnt30 >= 3) {
+  http_response_code(429);
+  echo json_encode(['ok'=>false,'error'=>'rate_glob']);
+  exit;
+}
+
+$st = $mysqli->prepare("
+  SELECT COUNT(*)
+  FROM chat_messages
+  WHERE room_id = ?
+    AND sender_id = ?
+    AND message_type = 'user'
+    AND created_at >= (NOW() - INTERVAL 5 SECOND)
+");
+$st->bind_param('ii', $room_id, $user_id);
+$st->execute();
+$st->bind_result($cnt5);
+$st->fetch();
+$st->close();
+
+if ($cnt5 >= 2) {
+  http_response_code(429);
+  echo json_encode(['ok'=>false,'error'=>'rate_room']);
+  exit;
+}
 
 $last = (float)($_SESSION['last_msg_at'] ?? 0);
 if ((microtime(true) - $last) < 0.8) { http_response_code(429); echo json_encode(['ok'=>false,'error'=>'rate_fast']); exit; }
