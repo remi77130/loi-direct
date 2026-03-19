@@ -27,6 +27,12 @@ include __DIR__ . '/auth_page_action.php'; ?>
 <header class="b-header">
 
 
+<p style="font-size: 0.80rem; line-height: 1.6; padding:12px">
+ <strong>Nouvelle version V0.8.10</strong>, mise en place de notifications, salons publics et privés, URL dédiée par salon, 
+ interface adaptée au mobile&nbsp;
+
+</p>
+
 <!--
 <a href="<?= app_base() ?>/" class="logo-link">
   <img src="<?= app_base() ?>/uploads/tchat_direct_logo.webp"
@@ -48,8 +54,6 @@ include __DIR__ . '/auth_page_action.php'; ?>
 <main id="main-content">
 
 
-
-
   <h1 >Tchat direct</h1>
 
 
@@ -59,6 +63,8 @@ include __DIR__ . '/auth_page_action.php'; ?>
 
 <!-- SEO – Bloc inscription Tchat Direct -->
 <section class="seo-section" id="seo-register-intro">
+
+
   <h2>S’inscrire sur un site de tchat gratuit et anonyme</h2>
   <p>
     Tchat Direct est un <strong>site de tchat gratuit</strong> penser pour les échanges en temps réel, sans inscription compliquée ni démarches interminables. 

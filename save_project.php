@@ -30,11 +30,22 @@ if (empty($_SESSION['csrf']) || !hash_equals($_SESSION['csrf'], $csrf)) {
   $errors[] = "Session expirée. Recharge la page."; // message générique pour ne pas révéler la nature exacte du problème
 }
 
+
+$isPaid = isset($_POST['is_paid']) && $_POST['is_paid'] === '1' ? 1 : 0;
+$unlockPointsPrice = isset($_POST['unlock_points_price']) ? (int)$_POST['unlock_points_price'] : 0;
+$creatorUserId = (int)($_SESSION['user_id'] ?? 0);
+
+
+
+
 $title   = trim($_POST['title']   ?? '');
 $summary = trim($_POST['summary'] ?? '');
 $body    = trim($_POST['body']    ?? '');
 $tagsRaw = trim($_POST['tags']    ?? '');
 $userId  = (int)$_SESSION['user_id']; // Id de l’auteur (session), pas de confiance dans un éventuel champ caché du formulaire
+
+
+
 
 // Règles métier
 if ($title === '' || mb_strlen($title) > 180) {
@@ -49,6 +60,17 @@ if ($body === '') {
 if (mb_strlen($body) > 30000) {
   $errors[] = "Le texte dépasse la limite (~30 000 caractères).";
 }
+
+
+// Contenu payant
+if ($isPaid === 1) {
+    if ($unlockPointsPrice < 1) {
+        $errors[] = "Le prix en points doit être supérieur ou égal à 1.";
+    }
+} else {
+    $unlockPointsPrice = 0;
+}
+
 
 // Tags: max 5, chacun ≤ 24 (alphanum + tiret/underscore/espaces)
 $tagsArr = [];
@@ -73,9 +95,37 @@ if ($errors) {
   exit;
 }
 
+
 // Insertion
-$stmt = $mysqli->prepare('INSERT INTO law_projects (author_id, title, summary, body_markdown, status, published_at) VALUES (?,?,?,?, "published", NOW())');
-$stmt->bind_param('isss', $userId, $title, $summary, $body);
+
+$sql = 'INSERT INTO law_projects (
+    author_id,
+    creator_user_id,
+    title,
+    summary,
+    body_markdown,
+    status,
+    published_at,
+    is_paid,
+    unlock_points_price
+) VALUES (?, ?, ?, ?, ?, "published", NOW(), ?, ?)';
+
+$stmt = $mysqli->prepare($sql);
+if (!$stmt) {
+    http_response_code(500);
+    exit('Erreur SQL prepare.');
+}
+
+$stmt->bind_param(
+    'iisssii',
+    $userId,
+    $creatorUserId,
+    $title,
+    $summary,
+    $body,
+    $isPaid,
+    $unlockPointsPrice
+);
 $ok = $stmt->execute();
 $newId = $stmt->insert_id ?? 0;
 $stmt->close();

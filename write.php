@@ -99,6 +99,33 @@ Texte libre…
         <div class="muted" style="margin-top:8px">
           Rappels : titre ≤ 180, objet ≤ 280, tags ≤ 5. Les images ne sont pas prises en charge pour l’instant.
         </div>
+
+
+
+<hr style="margin:16px 0;border:0;border-top:1px solid #334155">
+
+<h3 style="margin:0 0 6px">Monétisation</h3>
+
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+  <input type="checkbox" id="is_paid" name="is_paid" value="1">
+  Contenu payant
+</label>
+
+<div id="priceWrap" style="display:none;margin-top:10px">
+  <label for="unlock_points_price">Prix en points</label>
+  <input 
+    type="number" 
+    id="unlock_points_price" 
+    name="unlock_points_price" 
+    min="1" 
+    placeholder="ex: 50"
+  >
+  <div class="muted">Définit le prix pour débloquer ce contenu</div>
+</div>
+
+
+
+
       </section>
 
       <!-- Preview -->
@@ -125,6 +152,21 @@ const bodyEl = document.getElementById('body');
 const tagsEl = document.getElementById('tags');
 const ctTitle = document.getElementById('ctTitle');
 const ctSummary = document.getElementById('ctSummary');
+
+// Toggle prix 
+const isPaidCheckbox = document.getElementById('is_paid'); // case à cocher pour activer le contenu payant
+const priceWrap = document.getElementById('priceWrap'); // conteneur du champ de prix, affiché uniquement si le contenu payant est activé
+
+function togglePrice() {
+  priceWrap.style.display = isPaidCheckbox.checked ? 'block' : 'none';
+}
+
+isPaidCheckbox.addEventListener('change', togglePrice);
+togglePrice();
+
+
+
+
 
 function updateCounts(){
   ctTitle.textContent = `${titleEl.value.length}/180`;
