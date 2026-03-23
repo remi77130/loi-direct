@@ -515,7 +515,7 @@ const modal    = document.getElementById('userModal');
 const umPseudo = document.getElementById('umPseudo');
 const umCount  = document.getElementById('umCount');
 const umClose  = document.getElementById('umClose');
-const umLink   = document.getElementById('umLink');
+const umLink   = document.getElementById('umLink'); // lien vers le profil complet
 
 const umMsgToggle = document.getElementById('umMsgToggle');
 const umMsgForm   = document.getElementById('umMsgForm');

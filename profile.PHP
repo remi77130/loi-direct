@@ -132,7 +132,6 @@ $totalPages = max(1, (int)ceil($count / $per));
 
 
 
-
   <div class="wrap">
     <!-- En-tête du profil (pseudo + compteur + retour) -->
     <div class="card">
@@ -161,22 +160,37 @@ $totalPages = max(1, (int)ceil($count / $per));
   </div>
 
 
-   
-  <div class="meta">
-    <?= (int)$count ?> projet(s) publié(s) <!-- Compteur de projets publiés -->
+<div class="meta">
+  <?= (int)$count ?> projet(s) publié(s)
+</div>
+
+<?php if ((int)$u['id'] === (int)$_SESSION['user_id']): ?>
+  <div style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap;">
+    
+    <!-- Éditer profil -->
+    <a class="btn" href="<?= APP_BASE ?>/profile_edit.php">
+      Éditer mon profil
+    </a>
+
+    <!-- Dashboard créateur -->
+    <a class="btn" href="<?= APP_BASE ?>/creator_dashboard.php">
+      Mes gains créateur
+    </a>
+
+    <!-- Retour feed -->
+    <a class="btn btn-secondary" href="<?= APP_BASE ?>/feed.php">
+      &larr; Retour au feed
+    </a>
+
   </div>
 
-  <?php if ((int)$u['id'] === (int)$_SESSION['user_id']): ?>
-    <div style="margin-top:10px">
-      <a class="btn" href="<?= APP_BASE ?>/profile_edit.php">Éditer mon profil</a>
-      <a class="btn" href="<?= APP_BASE ?>/feed.php">&larr; Retour au feed</a>
-    </div>
-  <?php else: ?>
-    <div style="margin-top:10px">
-      <a class="btn" href="<?= APP_BASE ?>/feed.php">&larr; Retour au feed</a>
-    </div>
-  <?php endif; ?>
-
+<?php else: ?>
+  <div style="margin-top:10px">
+    <a class="btn btn-secondary" href="<?= APP_BASE ?>/feed.php">
+      &larr; Retour au feed
+    </a>
+  </div>
+<?php endif; ?>
 </div>
 
     <!-- Boucle projets : titre, date, résumé, bouton Lire, et vignette si présente -->
