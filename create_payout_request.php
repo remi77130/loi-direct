@@ -37,12 +37,12 @@ En prod, il faudra l’ajouter. Mais pour avancer doucement, le cœur comptable 
 // --------------------------------------------------
 // Config MVP
 // --------------------------------------------------
-const MIN_PAYOUT_EUR = 20.00;
+const MIN_PAYOUT_EUR = 20.00; // Montant minimum de retrait pour éviter les micro-payouts qui coûtent plus cher en frais PayPal que ce qu’ils rapportent (et qui sont pénibles à gérer pour nous et les créateurs)
 
 // --------------------------------------------------
 // Helpers
 // --------------------------------------------------
-function redirect_with_message(string $path, string $type, string $message): never
+function redirect_with_message(string $path, string $type, string $message): never // type = 'success' | 'error'
 {
     $location = APP_BASE . $path;
     $separator = (strpos($location, '?') !== false) ? '&' : '?';

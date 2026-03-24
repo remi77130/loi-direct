@@ -26,6 +26,12 @@ define('APP_BASE', rtrim($base, '/')); // ex: /loi
 define('BLOG_BASE', APP_BASE . '/blog');
 
 
+// 
+
+define('ADMIN_LOGIN', 'admin'); // Login admin fixe (pas de gestion des rôles dans ce projet, juste un accès admin unique)
+define('ADMIN_PASSWORD_HASH', '$2y$10$zPUY7JgInUnPH0wCBaIlIeN/hfM4iEE7Nwx22SzNBWaJOpO8fk1jm'); // Hash du mot de passe admin généré par password_hash() (ex: $2y$10$abc...)
+
+
 function random_punchline(string $pseudo): string { // Phrase dacceuil 
   $lines = [
     "Bienvenue {pseudo} ! Ton compte est chaud bouillant 🔥",
