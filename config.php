@@ -11,7 +11,10 @@ UPLOAD_URL = URL publique correspondante.
 UPLOAD_MAX_MB = 5 et UPLOAD_MAX_FILES = 5 limitent poids et nombre d’images.
 MIME autorisés: jpeg, png, webp.
 THUMB_MAX_W / THUMB_MAX_H = dimensions max des miniatures générées.
-Conclusion: ce fichier pose le cadre global (routes, punchlines, règles d’upload).*/
+Conclusion: ce fichier pose le cadre global (routes, punchlines, règles d’upload).
+
+-- Je n’ai pas mis de CSRF token ici pour garder l’étape simple.
+En prod, il faudra l’ajouter. Mais pour avancer doucement, le cœur comptable est là.*/
 
 declare(strict_types=1);
 $docRoot = realpath($_SERVER['DOCUMENT_ROOT']);
